@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface Props {
   credits: number | null;
-  summoned: boolean;
-  showTransform: boolean;
   consoleLines: string[];
   statusText: string;
-  onSummonToggle: () => void;
   onTransform: () => void;
   onLogout: () => void;
   onOpenStats: () => void;
@@ -14,10 +11,9 @@ interface Props {
 }
 
 export default function Window({
-  credits, summoned, showTransform, consoleLines, statusText,
-  onSummonToggle, onTransform, onLogout, onOpenStats, children,
+  credits, consoleLines, statusText,
+  onTransform, onLogout, onOpenStats, children,
 }: Props) {
-  const [logOpen, setLogOpen] = useState(true);
   const consoleRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -40,25 +36,10 @@ export default function Window({
 
         {/* 메뉴바 */}
         <div className="menubar">
-          <button
-            className={`mascot-summon ${summoned ? 'is-summoned' : ''}`}
-            onClick={onSummonToggle}
-          >
-            {summoned ? '†승천†' : '†강림†'}
-          </button>
-          {showTransform && (
-            <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
-          )}
+          <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
           <span className="menu-spacer" />
           <span className="menu-info">크레딧 <b>{credits ?? '—'}</b></span>
           <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
-          <button
-            className="menu-btn"
-            onClick={() => setLogOpen((o) => !o)}
-            title="진행 로그"
-          >
-            {logOpen ? '▼ LOG' : '▲ LOG'}
-          </button>
           <button className="menu-btn" onClick={onLogout}>로그아웃</button>
         </div>
 
@@ -66,7 +47,7 @@ export default function Window({
         <div id="pane">{children}</div>
 
         {/* 인라인 진행 로그 */}
-        <div className={`console-strip${logOpen ? '' : ' is-hidden'}`}>
+        <div className="console-strip">
           <pre ref={consoleRef} className="console">{consoleLines.join('\n')}</pre>
         </div>
 

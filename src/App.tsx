@@ -32,7 +32,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('standard');
-  const [summoned, setSummoned] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [log, setLog] = useState<string[]>(['> ✞추리극장✞ 준비완료. 카테고리를 골라줘… ♡']);
 
@@ -45,7 +44,6 @@ export default function App() {
     setBusy(true);
     setResult(null);
     setTier(cfg.tier);
-    if (!summoned) { mascot.current?.summon(); setSummoned(true); }
     push(`> 출제 중… [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
     try {
       const { text, balance } = await proxyGenerateText(
@@ -161,11 +159,6 @@ export default function App() {
     push('> 새 문제를 준비할게. 카테고리를 골라줘! ♡');
   }
 
-  function handleSummonToggle() {
-    if (summoned) { mascot.current?.banish(); setSummoned(false); }
-    else { mascot.current?.summon(); setSummoned(true); }
-  }
-
   async function handleLogout() {
     await signOut();
   }
@@ -185,11 +178,8 @@ export default function App() {
     <>
       <Window
         credits={profile?.credits ?? null}
-        summoned={summoned}
-        showTransform={summoned}
         consoleLines={log}
         statusText={statusText}
-        onSummonToggle={handleSummonToggle}
         onTransform={() => mascot.current?.transform()}
         onLogout={() => void handleLogout()}
         onOpenStats={() => setStatsOpen(true)}

@@ -145,7 +145,7 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   const bubbleTimer   = useRef<number | null>(null);
   const idleTimer     = useRef<number | null>(null);
 
-  const [, force] = useState(0);
+  const [renderTick, setRenderTick] = useState(0);
 
   function setImg(kind: LineKind) {
     if (imgRef.current) {
@@ -180,15 +180,9 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
 
   function setForm(name: Form) {
     formRef.current = name;
-    const root = rootRef.current;
-    if (root) {
-      root.dataset.form = name;
-      root.classList.remove(FORMS.choten.cls, FORMS.ame.cls);
-      root.classList.add(FORMS[name].cls);
-    }
     if (imgRef.current) imgRef.current.src = FORMS[name].img;
     document.body.classList.toggle('mode-ame', name === 'ame');
-    force((n) => n + 1);
+    setRenderTick((n) => n + 1);
   }
 
   function transform() {
@@ -206,12 +200,11 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
     summonedRef.current = true;
     const root = rootRef.current;
     if (root) {
-      root.classList.remove('mascot-hidden', 'ascending');
       root.classList.add('descending');
       window.setTimeout(() => root.classList.remove('descending'), 700);
     }
     bumpIdle();
-    force((n) => n + 1);
+    setRenderTick((n) => n + 1);
   }
 
   function banish() {
@@ -222,19 +215,21 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
       root.classList.remove('descending');
       root.classList.add('ascending');
       window.setTimeout(() => {
-        root.classList.add('mascot-hidden');
         root.classList.remove('ascending');
         if (bubbleRef.current) bubbleRef.current.hidden = true;
       }, 480);
     }
     if (idleTimer.current) clearTimeout(idleTimer.current);
-    force((n) => n + 1);
+    setRenderTick((n) => n + 1);
   }
 
   useImperativeHandle(ref, () => ({
     say, event, summon, banish, transform,
     isSummoned: () => summonedRef.current,
   }));
+
+  // 마운트 시 자동 강림
+  useEffect(() => { summon(); }, []);
 
   // 드래그 이동 — pointerdown에서 위치를 바꾸지 않고 실제 이동 시작(6px) 때만 인라인 스타일 적용
   useEffect(() => {
@@ -312,8 +307,9 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   }, []);
 
   const form = formRef.current;
+  void renderTick; // re-render trigger
   return (
-    <div ref={rootRef} className={`mascot ${FORMS[form].cls} mascot-hidden`} data-form={form}>
+    <div ref={rootRef} className={`mascot ${FORMS[form].cls}${summonedRef.current ? '' : ' mascot-hidden'}`} data-form={form}>
       <div ref={bubbleRef} className="mascot-bubble" hidden />
       <div className="mascot-stack">
         <div className="mascot-fx" aria-hidden="true">
