@@ -33,7 +33,7 @@ export default function App() {
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('standard');
   const [statsOpen, setStatsOpen] = useState(false);
-  const [log, setLog] = useState<string[]>(['> ✞추리극장✞ 준비완료. 카테고리를 골라줘… ♡']);
+  const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 
   function push(line: string) {
     setLog((l) => [...l, line].slice(-50));

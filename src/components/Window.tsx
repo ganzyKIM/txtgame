@@ -26,7 +26,7 @@ export default function Window({
       <div className="window">
         {/* 타이틀바 */}
         <div className="titlebar">
-          <span className="title-text">✞추리극장✞ &nbsp;—&nbsp; 편차치 99 초텐짱의 와쿠와쿠 <span className="blink">♥</span></span>
+          <span className="title-text">초텐짱의 편차치99 ✞퀴즈대합전✞ <span className="blink">♥</span></span>
           <div className="title-btns">
             <button className="tbtn" title="최소화">_</button>
             <button className="tbtn" title="최대화">▢</button>
@@ -54,7 +54,7 @@ export default function Window({
         {/* 상태바 */}
         <div className="statusbar">
           <span>{statusText}</span>
-          <span>Gemini · Supabase · ✞추리극장✞</span>
+          <span>Gemini · Supabase · ✞퀴즈대합전✞</span>
         </div>
       </div>
     </div>
