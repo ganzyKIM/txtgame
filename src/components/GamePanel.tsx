@@ -41,7 +41,7 @@ export default function GamePanel({ state, judging, result, onReveal, onGuess, o
 
           <div className="gauge" title="공개한 힌트 / 탈락 임계값">
             <div
-              className="gauge-fill"
+              className={`gauge-fill${judging ? ' is-judging' : ''}`}
               style={{ width: `${Math.min(100, (state.revealedCount / puzzle.maxHints) * 100)}%` }}
             />
             <div className="gauge-label">

@@ -92,6 +92,7 @@ export default function App() {
     if (!game.puzzle || game.phase !== 'playing') return;
     setJudging(true);
     push(`> 추측: "${text}"`);
+    mascot.current?.event('judging');
     try {
       const res = await judgeGuess(game.puzzle, text, tier);
       if (typeof res.balance === 'number') applyBalance(res.balance);

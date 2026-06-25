@@ -288,6 +288,8 @@ button{font-family:inherit;}
 .gauge{height:16px;background:#fff;border:2px solid;
   border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);position:relative;}
 .gauge-fill{height:100%;background:linear-gradient(var(--magenta),var(--magenta-d));transition:width .3s;}
+.gauge-fill.is-judging{animation:gaugeThump .5s ease-in-out infinite;}
+@keyframes gaugeThump{0%,100%{filter:brightness(1);}50%{filter:brightness(1.35) saturate(1.4);transform:scaleY(1.18);}}
 .gauge-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:10px;color:var(--ink);text-shadow:0 0 3px #fff;}
 
