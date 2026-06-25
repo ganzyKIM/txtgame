@@ -15,18 +15,13 @@ export interface TextTierInfo {
  */
 export const TEXT_TIERS: TextTierInfo[] = [
   {
-    tier: 'standard',
-    label: 'Flash (기본)',
-    priceNote: '저렴 · 빠름',
-  },
-  {
     tier: 'pro',
     label: 'Pro (고품질)',
     priceNote: '더 까다로운 출제·판정',
   },
 ];
 
-export const DEFAULT_TEXT_TIER: TextTier = 'standard';
+export const DEFAULT_TEXT_TIER: TextTier = 'pro';
 
 export function tierLabel(tier: TextTier): string {
   return TEXT_TIERS.find((t) => t.tier === tier)?.label ?? tier;

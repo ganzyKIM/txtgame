@@ -31,7 +31,7 @@ export default function App() {
   const [result, setResult] = useState<GameResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [judging, setJudging] = useState(false);
-  const [tier, setTier] = useState<TextTier>('standard');
+  const [tier, setTier] = useState<TextTier>('pro');
   const [statsOpen, setStatsOpen] = useState(false);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 

@@ -23,7 +23,7 @@ export default function StartScreen({ busy, onStart }: Props) {
   const [customCat, setCustomCat] = useState('');
   const [theme, setTheme] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [tier, setTier] = useState<TextTier>('standard');
+  const [tier, setTier] = useState<TextTier>('pro');
 
   const isCustom = catKey === CUSTOM_KEY;
   const categoryLabel = isCustom
@@ -105,21 +105,23 @@ export default function StartScreen({ busy, onStart }: Props) {
             <small className="note">{DIFFICULTIES.find((d) => d.key === difficulty)?.note}</small>
           </div>
 
-          <div className="ctl-group">
-            <label className="ctl-label">◆ 출제 모델</label>
-            <div className="seg">
-              {TEXT_TIERS.map((t) => (
-                <button
-                  key={t.tier}
-                  className={`seg-btn ${tier === t.tier ? 'active' : ''}`}
-                  onClick={() => setTier(t.tier)}
-                >
-                  {t.label}
-                </button>
-              ))}
+          {TEXT_TIERS.length > 1 && (
+            <div className="ctl-group">
+              <label className="ctl-label">◆ 출제 모델</label>
+              <div className="seg">
+                {TEXT_TIERS.map((t) => (
+                  <button
+                    key={t.tier}
+                    className={`seg-btn ${tier === t.tier ? 'active' : ''}`}
+                    onClick={() => setTier(t.tier)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <small className="note">{TEXT_TIERS.find((t) => t.tier === tier)?.priceNote}</small>
             </div>
-            <small className="note">{TEXT_TIERS.find((t) => t.tier === tier)?.priceNote}</small>
-          </div>
+          )}
 
           <button className="btn btn-primary" onClick={start} disabled={!canStart}>
             {busy ? '천사쨩이 문제 내는 중… ✦' : '✞ 퀴즈 스타-토 ✞'}
