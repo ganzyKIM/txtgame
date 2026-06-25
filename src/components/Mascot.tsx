@@ -1,0 +1,289 @@
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+
+/* ════════════════════════════════════════════════════════════════════
+   Mascot — 니디걸 오버도즈 컨셉 마스코트(천사쨩 ⟷ 아메)를
+   퀴즈 진행자(출제자)로 포팅. (webp_editor/mascot.js → React)
+   ════════════════════════════════════════════════════════════════════ */
+
+export type Form = 'kangel' | 'ame';
+export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle';
+
+export interface MascotHandle {
+  say: (text: string, holdMs?: number) => void;
+  event: (kind: LineKind) => void;
+  summon: () => void;
+  banish: () => void;
+  transform: () => void;
+  isSummoned: () => boolean;
+}
+
+const FORMS: Record<Form, { img: string; name: string; cls: string }> = {
+  kangel: { img: '/char/kangel.png', name: '천사쨩', cls: 'form-kangel' },
+  ame: { img: '/char/ame.png', name: '아메', cls: 'form-ame' },
+};
+
+const LINES: Record<Form, Record<LineKind, string[]>> = {
+  kangel: {
+    intro: [
+      '자, P! 천사쨩이 문제 하나 숨겨놨어! 맞혀봐♡',
+      '오늘의 정답은 비밀이야~ 힌트 보고 맞혀줘!',
+      '준비됐어? 천사쨩이 낸 문제, 적게 보고 맞히면 칭찬해줄게♡',
+      '집중집중! 힌트는 조금씩만 열어야 고득점이야!',
+    ],
+    hint: [
+      '힌트 하나 더 줄게~ 잘 봐♡',
+      '이거면 감 오지 않아? 천사쨩 친절하지?♡',
+      '자, 다음 힌트! 너무 많이 열면 안 돼~',
+      '조금씩 가까워지고 있어! 힘내!',
+    ],
+    correct: [
+      '정답이야!! 역시 P 똑똑해!♡',
+      '딩동댕~! 천사쨩 감동했어!',
+      '맞혔어!! 봤지? 우리 P 천재라니까♡',
+      '대단해! 이렇게 빨리 맞히다니!♡',
+    ],
+    wrong: [
+      '땡! 아쉽다… 다시 생각해봐!',
+      '음~ 그건 아니야. 힌트 더 볼래?',
+      '아깝다! 조금만 더 고민해봐♡',
+      '아니야아니야~ 천사쨩 믿고 다시!',
+    ],
+    eliminated: [
+      '으앙… 이번엔 못 맞혔네. 정답 알려줄게…',
+      '힌트를 너무 많이 썼어… 다음엔 더 잘하자!',
+      '아쉬워라… 그래도 천사쨩이랑 또 하자, 응?',
+    ],
+    win: [
+      '클리어~!♡ 천사쨩이 박수 쳐줄게! 짝짝짝!',
+      '해냈다! P 최고야!♡',
+      '완벽한 추리였어! 자랑스러워!♡',
+    ],
+    idle: [
+      'P~ 힌트 열거나 정답 말해봐!♡',
+      '천천히 생각해도 돼. 천사쨩 기다릴게~',
+      '감 왔어? 안 왔으면 힌트 하나 더!',
+    ],
+  },
+  ame: {
+    intro: [
+      '…문제 냈어. 맞혀봐. 별 기대는 안 해.',
+      '정답은 숨겨뒀어. …찾을 수 있겠어?',
+      '힌트는 조금씩만 줄게. …많이 보면 지는 거야.',
+      '…시작할게. 조용히 따라와.',
+    ],
+    hint: [
+      '…힌트. 이걸로 알겠어?',
+      '하나 더. …너무 의지하진 마.',
+      '…이 정도면 감이 올 텐데.',
+      '다음 힌트야. …잘 봐둬.',
+    ],
+    correct: [
+      '…맞았어. 제법이네.',
+      '정답. …조금 놀랐어.',
+      '…그래, 그거야. 잘했어.',
+      '맞혔네. …나쁘지 않아.',
+    ],
+    wrong: [
+      '…아니야. 다시.',
+      '틀렸어. …그럴 줄 알았어.',
+      '음… 그건 아니야.',
+      '…아니라니까. 더 생각해.',
+    ],
+    eliminated: [
+      '…끝났어. 정답은 이거였어.',
+      '못 맞혔네. …역시 어려웠나.',
+      '…힌트를 다 써버렸어. 정답 알려줄게.',
+    ],
+    win: [
+      '…클리어. 잘했어, 정말.',
+      '풀었네. …나도 기뻐. 조금.',
+      '…인정할게. 훌륭했어.',
+    ],
+    idle: [
+      '…아직 거기 있어? 정답 말해도 돼.',
+      '천천히 해. …기다릴 테니까.',
+      '…힌트 열거나, 추측하거나. 골라.',
+    ],
+  },
+};
+
+const TRANSFORM_LINE: Record<Form, string> = {
+  kangel: '변신— ☆ 초절정☆귀염뽀짝☆천사쨩, 등장!♡',
+  ame: '…가면, 벗을게. 이게 진짜 나야.',
+};
+
+function pick(arr: string[]) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<Form>('kangel');
+  const summonedRef = useRef(false);
+  const bubbleTimer = useRef<number | null>(null);
+  const idleTimer = useRef<number | null>(null);
+
+  const [, force] = useState(0); // 폼 변경 시 리렌더
+
+  function say(text: string, holdMs = 3200) {
+    const bubble = bubbleRef.current;
+    if (!bubble || !text) return;
+    bubble.textContent = text;
+    bubble.hidden = false;
+    bubble.classList.remove('pop');
+    void bubble.offsetWidth;
+    bubble.classList.add('pop');
+    if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = window.setTimeout(() => { bubble.hidden = true; }, holdMs);
+  }
+
+  function event(kind: LineKind) {
+    const bank = LINES[formRef.current][kind] ?? LINES[formRef.current].idle;
+    say(pick(bank));
+  }
+
+  function bumpIdle() {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = window.setTimeout(() => {
+      if (summonedRef.current) { event('idle'); bumpIdle(); }
+    }, 45000);
+  }
+
+  function setForm(name: Form) {
+    formRef.current = name;
+    const root = rootRef.current;
+    if (root) {
+      root.dataset.form = name;
+      root.classList.remove(FORMS.kangel.cls, FORMS.ame.cls);
+      root.classList.add(FORMS[name].cls);
+    }
+    if (imgRef.current) imgRef.current.src = FORMS[name].img;
+    document.body.classList.toggle('mode-ame', name === 'ame');
+    force((n) => n + 1);
+  }
+
+  function transform() {
+    const root = rootRef.current;
+    if (!root || root.classList.contains('transforming')) return;
+    const next: Form = formRef.current === 'kangel' ? 'ame' : 'kangel';
+    root.classList.add('transforming');
+    if (bubbleRef.current) bubbleRef.current.hidden = true;
+    window.setTimeout(() => { setForm(next); say(TRANSFORM_LINE[next], 3400); }, 480);
+    window.setTimeout(() => root.classList.remove('transforming'), 1300);
+  }
+
+  function summon() {
+    if (summonedRef.current) return;
+    summonedRef.current = true;
+    const root = rootRef.current;
+    if (root) {
+      root.classList.remove('mascot-hidden', 'ascending');
+      root.classList.add('descending');
+      window.setTimeout(() => root.classList.remove('descending'), 700);
+    }
+    bumpIdle();
+    force((n) => n + 1);
+  }
+
+  function banish() {
+    if (!summonedRef.current) return;
+    summonedRef.current = false;
+    const root = rootRef.current;
+    if (root) {
+      root.classList.remove('descending');
+      root.classList.add('ascending');
+      window.setTimeout(() => {
+        root.classList.add('mascot-hidden');
+        root.classList.remove('ascending');
+        if (bubbleRef.current) bubbleRef.current.hidden = true;
+      }, 480);
+    }
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    force((n) => n + 1);
+  }
+
+  useImperativeHandle(ref, () => ({
+    say, event, summon, banish, transform,
+    isSummoned: () => summonedRef.current,
+  }));
+
+  // 드래그 이동 (right/bottom 좌표계 고정)
+  useEffect(() => {
+    const root = rootRef.current;
+    const img = imgRef.current;
+    if (!root || !img) return;
+    let drag: { sx: number; sy: number; startRight: number; startBottom: number; moved: boolean } | null = null;
+
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const r = root.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const curRight = vw - r.right, curBottom = vh - r.bottom;
+      root.style.left = 'auto'; root.style.top = 'auto';
+      root.style.right = curRight + 'px'; root.style.bottom = curBottom + 'px';
+      drag = { sx: e.clientX, sy: e.clientY, startRight: curRight, startBottom: curBottom, moved: false };
+      img.setPointerCapture(e.pointerId);
+      root.classList.add('dragging');
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+      if (!drag.moved) return;
+      const w = root.offsetWidth, h = root.offsetHeight;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let nr = drag.startRight - dx, nb = drag.startBottom - dy;
+      nr = Math.max(-(w * 0.5), Math.min(vw - w * 0.5, nr));
+      nb = Math.max(-(h * 0.6), Math.min(vh - h, nb));
+      root.style.right = nr + 'px'; root.style.bottom = nb + 'px';
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!drag) return;
+      const moved = drag.moved;
+      drag = null;
+      root.classList.remove('dragging');
+      try { img.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+      if (!moved && !root.classList.contains('transforming') && summonedRef.current) {
+        event('idle');
+        bumpIdle();
+      }
+    };
+
+    img.addEventListener('pointerdown', onDown);
+    img.addEventListener('pointermove', onMove);
+    img.addEventListener('pointerup', onUp);
+    const onErr = () => root.classList.add('img-missing');
+    const onLoad = () => root.classList.remove('img-missing');
+    img.addEventListener('error', onErr);
+    img.addEventListener('load', onLoad);
+    return () => {
+      img.removeEventListener('pointerdown', onDown);
+      img.removeEventListener('pointermove', onMove);
+      img.removeEventListener('pointerup', onUp);
+      img.removeEventListener('error', onErr);
+      img.removeEventListener('load', onLoad);
+    };
+  }, []);
+
+  const form = formRef.current;
+  return (
+    <div ref={rootRef} className={`mascot ${FORMS[form].cls} mascot-hidden`} data-form={form}>
+      <div ref={bubbleRef} className="mascot-bubble" hidden />
+      <div className="mascot-stack">
+        <div className="mascot-fx" aria-hidden="true">
+          <span className="fx-flash" />
+          <span className="fx-ring" /><span className="fx-ring fx-ring2" />
+          <span className="fx-spark s1">✦</span><span className="fx-spark s2">✧</span>
+          <span className="fx-spark s3">★</span><span className="fx-spark s4">✦</span>
+          <span className="fx-spark s5">✧</span><span className="fx-spark s6">❤</span>
+        </div>
+        <img ref={imgRef} className="mascot-img" src={FORMS.kangel.img} alt="마스코트" draggable={false} />
+        <div className="mascot-fallback">천사쨩 (이미지 없음)<small>public/char/ 에 넣어주세요</small></div>
+      </div>
+    </div>
+  );
+});
+
+export default Mascot;

@@ -1,0 +1,65 @@
+import type { ReactNode } from 'react';
+
+interface Props {
+  credits: number | null;
+  summoned: boolean;
+  showTransform: boolean;
+  consoleLines: string[];
+  statusText: string;
+  onSummonToggle: () => void;
+  onTransform: () => void;
+  onLogout: () => void;
+  children: ReactNode;
+}
+
+export default function Window({
+  credits, summoned, showTransform, consoleLines, statusText,
+  onSummonToggle, onTransform, onLogout, children,
+}: Props) {
+  return (
+    <div className="desktop">
+      <div className="window">
+        {/* 타이틀바 */}
+        <div className="titlebar">
+          <span className="title-text">✞추리극장✞ &nbsp;—&nbsp; 편차치 99 초텐짱의 와쿠와쿠 <span className="blink">♥</span></span>
+          <div className="title-btns">
+            <button className="tbtn" title="최소화">_</button>
+            <button className="tbtn" title="최대화">▢</button>
+            <button className="tbtn tbtn-x" title="닫기" onClick={onLogout}>✕</button>
+          </div>
+        </div>
+
+        {/* 메뉴바 */}
+        <div className="menubar">
+          <button
+            className={`mascot-summon ${summoned ? 'is-summoned' : ''}`}
+            onClick={onSummonToggle}
+          >
+            {summoned ? '†승천†' : '†강림†'}
+          </button>
+          {showTransform && (
+            <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
+          )}
+          <span className="menu-spacer" />
+          <span className="menu-info">크레딧 <b>{credits ?? '—'}</b></span>
+          <button className="menu-btn" onClick={onLogout}>로그아웃</button>
+        </div>
+
+        {/* 본문 */}
+        <div id="pane">{children}</div>
+
+        {/* 콘솔 */}
+        <div className="console-wrap">
+          <div className="console-title">▌진행 로그 <span className="cursor">▍</span></div>
+          <pre className="console">{consoleLines.join('\n')}</pre>
+        </div>
+
+        {/* 상태바 */}
+        <div className="statusbar">
+          <span>{statusText}</span>
+          <span>Gemini · Supabase · ✞추리극장✞</span>
+        </div>
+      </div>
+    </div>
+  );
+}
