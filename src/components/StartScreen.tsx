@@ -122,7 +122,7 @@ export default function StartScreen({ busy, onStart }: Props) {
           </div>
 
           <button className="btn btn-primary" onClick={start} disabled={!canStart}>
-            {busy ? '천사쨩이 문제 내는 중… ✦' : '† 강림 & 게임 시작 †'}
+            {busy ? '천사쨩이 문제 내는 중… ✦' : '✞ 퀴즈 스타-토 ✞'}
           </button>
         </div>
 
