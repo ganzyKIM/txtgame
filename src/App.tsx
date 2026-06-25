@@ -45,6 +45,8 @@ export default function App() {
     setResult(null);
     setTier(cfg.tier);
     push(`> 출제 중… [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
+    mascot.current?.event('loading');
+    const loadingTick = window.setInterval(() => mascot.current?.event('loading'), 4000);
     try {
       const { text, balance } = await proxyGenerateText(
         cfg.tier,
@@ -68,6 +70,7 @@ export default function App() {
       mascot.current?.say('으… 출제에 실패했어. 다시 해줄래?');
       setGame(emptyGame);
     } finally {
+      window.clearInterval(loadingTick);
       setBusy(false);
     }
   }

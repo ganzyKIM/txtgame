@@ -5,7 +5,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
    ════════════════════════════════════════════════════════════════════ */
 
 export type Form = 'choten' | 'ame';
-export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle';
+export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading';
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -30,6 +30,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     eliminated: '/char/choten_angry.png',
     win:        '/char/choten_dere.png',
     idle:       '/char/choten_peace.png',
+    loading:    '/char/choten_peace.png',
   },
   ame: {
     intro:      '/char/ame_default.png',
@@ -39,6 +40,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     eliminated: '/char/ame_yandere.png',
     win:        '/char/ame_dere.png',
     idle:       '/char/ame_smoking.png',
+    loading:    '/char/ame_smoking.png',
   },
 };
 
@@ -83,6 +85,14 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '천천히 생각해도 돼. 천사쨩 기다릴게~',
       '감 왔어? 안 왔으면 힌트 하나 더!',
     ],
+    loading: [
+      '잠깐만~ 천사쨩이 문제 고르는 중이야♡',
+      '으음… 어떤 걸 숨길까~ 기대해줘!♡',
+      '좋은 힌트 만드는 건 시간이 걸려! 조금만♡',
+      '거의 다 됐어! 아마도…♡',
+      '뭘 출제할지 고민 중이야~ 잠시만♡',
+      '천사쨩 열심히 생각하는 중! 기다려줘♡',
+    ],
   },
   ame: {
     intro: [
@@ -123,6 +133,14 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '…아직 거기 있어? 정답 말해도 돼.',
       '천천히 해. …기다릴 테니까.',
       '…힌트 열거나, 추측하거나. 골라.',
+    ],
+    loading: [
+      '…생각하는 중이야. 기다려.',
+      '…금방 돼. 조용히 있어.',
+      '좋은 문제는 쉽지 않아… 잠깐만.',
+      '…아직이야. 조금만 더.',
+      '힌트 배치하는 중이야… 곧.',
+      '…서두르지 마. 제대로 만들어줄게.',
     ],
   },
 };
