@@ -32,7 +32,7 @@ body{
     url('/back/back_choten.png') center/cover no-repeat fixed;
   background-attachment:fixed;
   display:flex; align-items:center; justify-content:center;
-  padding:8px 16px;
+  padding:36px 24px;
   -webkit-font-smoothing:none; image-rendering:pixelated;
 }
 button{font-family:inherit;}
@@ -44,7 +44,7 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:100%;max-width:1040px;height:calc(100vh - 16px);display:flex;flex-direction:column;}
+.desktop{width:100%;max-width:1040px;height:calc(100vh - 72px);display:flex;flex-direction:column;}
 .window{
   flex:1; min-height:0; overflow:hidden;
   background:var(--win-bg);
@@ -266,8 +266,9 @@ button{font-family:inherit;}
 .start-settings .btn-primary{margin-top:auto;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .cat-btn{
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:10px 4px;font-size:11px;color:var(--ink);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  aspect-ratio:1;
+  font-size:11px;color:var(--ink);cursor:pointer;
   background:var(--face);
   border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
 }
