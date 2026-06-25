@@ -1,11 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 /* ════════════════════════════════════════════════════════════════════
-   Mascot — 니디걸 오버도즈 컨셉 마스코트(천사쨩 ⟷ 아메)를
-   퀴즈 진행자(출제자)로 포팅. (webp_editor/mascot.js → React)
+   Mascot — 쵸텐(천사쨩) ⟷ 아메, 퀴즈 진행자
    ════════════════════════════════════════════════════════════════════ */
 
-export type Form = 'kangel' | 'ame';
+export type Form = 'choten' | 'ame';
 export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle';
 
 export interface MascotHandle {
@@ -18,12 +17,33 @@ export interface MascotHandle {
 }
 
 const FORMS: Record<Form, { img: string; name: string; cls: string }> = {
-  kangel: { img: '/char/kangel.png', name: '천사쨩', cls: 'form-kangel' },
-  ame: { img: '/char/ame.png', name: '아메', cls: 'form-ame' },
+  choten: { img: '/char/choten_default.png', name: '천사쨩', cls: 'form-choten' },
+  ame:    { img: '/char/ame_default.png',    name: '아메',   cls: 'form-ame'    },
+};
+
+const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
+  choten: {
+    intro:      '/char/choten_default.png',
+    hint:       '/char/choten_peace.png',
+    correct:    '/char/choten_dere.png',
+    wrong:      '/char/choten_angry.png',
+    eliminated: '/char/choten_angry.png',
+    win:        '/char/choten_dere.png',
+    idle:       '/char/choten_peace.png',
+  },
+  ame: {
+    intro:      '/char/ame_default.png',
+    hint:       '/char/ame_smoking.png',
+    correct:    '/char/ame_dere.png',
+    wrong:      '/char/ame_yandere.png',
+    eliminated: '/char/ame_yandere.png',
+    win:        '/char/ame_dere.png',
+    idle:       '/char/ame_smoking.png',
+  },
 };
 
 const LINES: Record<Form, Record<LineKind, string[]>> = {
-  kangel: {
+  choten: {
     intro: [
       '자, P! 천사쨩이 문제 하나 숨겨놨어! 맞혀봐♡',
       '오늘의 정답은 비밀이야~ 힌트 보고 맞혀줘!',
@@ -108,8 +128,8 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
 };
 
 const TRANSFORM_LINE: Record<Form, string> = {
-  kangel: '변신— ☆ 초절정☆귀염뽀짝☆천사쨩, 등장!♡',
-  ame: '…가면, 벗을게. 이게 진짜 나야.',
+  choten: '변신— ☆ 초절정☆귀염뽀짝☆천사쨩, 등장!♡',
+  ame:    '…가면, 벗을게. 이게 진짜 나야.',
 };
 
 function pick(arr: string[]) {
@@ -117,15 +137,21 @@ function pick(arr: string[]) {
 }
 
 const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const rootRef   = useRef<HTMLDivElement>(null);
+  const imgRef    = useRef<HTMLImageElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const formRef = useRef<Form>('kangel');
-  const summonedRef = useRef(false);
-  const bubbleTimer = useRef<number | null>(null);
-  const idleTimer = useRef<number | null>(null);
+  const formRef   = useRef<Form>('choten');
+  const summonedRef   = useRef(false);
+  const bubbleTimer   = useRef<number | null>(null);
+  const idleTimer     = useRef<number | null>(null);
 
-  const [, force] = useState(0); // 폼 변경 시 리렌더
+  const [, force] = useState(0);
+
+  function setImg(kind: LineKind) {
+    if (imgRef.current) {
+      imgRef.current.src = LINE_IMAGES[formRef.current][kind];
+    }
+  }
 
   function say(text: string, holdMs = 3200) {
     const bubble = bubbleRef.current;
@@ -140,6 +166,7 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   }
 
   function event(kind: LineKind) {
+    setImg(kind);
     const bank = LINES[formRef.current][kind] ?? LINES[formRef.current].idle;
     say(pick(bank));
   }
@@ -156,7 +183,7 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
     const root = rootRef.current;
     if (root) {
       root.dataset.form = name;
-      root.classList.remove(FORMS.kangel.cls, FORMS.ame.cls);
+      root.classList.remove(FORMS.choten.cls, FORMS.ame.cls);
       root.classList.add(FORMS[name].cls);
     }
     if (imgRef.current) imgRef.current.src = FORMS[name].img;
@@ -167,7 +194,7 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   function transform() {
     const root = rootRef.current;
     if (!root || root.classList.contains('transforming')) return;
-    const next: Form = formRef.current === 'kangel' ? 'ame' : 'kangel';
+    const next: Form = formRef.current === 'choten' ? 'ame' : 'choten';
     root.classList.add('transforming');
     if (bubbleRef.current) bubbleRef.current.hidden = true;
     window.setTimeout(() => { setForm(next); say(TRANSFORM_LINE[next], 3400); }, 480);
@@ -209,36 +236,53 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
     isSummoned: () => summonedRef.current,
   }));
 
-  // 드래그 이동 (right/bottom 좌표계 고정)
+  // 드래그 이동 — pointerdown에서 위치를 바꾸지 않고 실제 이동 시작(6px) 때만 인라인 스타일 적용
   useEffect(() => {
     const root = rootRef.current;
-    const img = imgRef.current;
+    const img  = imgRef.current;
     if (!root || !img) return;
-    let drag: { sx: number; sy: number; startRight: number; startBottom: number; moved: boolean } | null = null;
+
+    let drag: {
+      sx: number; sy: number;
+      startRight: number; startBottom: number;
+      moved: boolean;
+    } | null = null;
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
-      const r = root.getBoundingClientRect();
+      const r  = root.getBoundingClientRect();
       const vw = window.innerWidth, vh = window.innerHeight;
-      const curRight = vw - r.right, curBottom = vh - r.bottom;
-      root.style.left = 'auto'; root.style.top = 'auto';
-      root.style.right = curRight + 'px'; root.style.bottom = curBottom + 'px';
-      drag = { sx: e.clientX, sy: e.clientY, startRight: curRight, startBottom: curBottom, moved: false };
+      drag = {
+        sx: e.clientX, sy: e.clientY,
+        startRight:  vw - r.right,
+        startBottom: vh - r.bottom,
+        moved: false,
+      };
       img.setPointerCapture(e.pointerId);
       root.classList.add('dragging');
     };
+
     const onMove = (e: PointerEvent) => {
       if (!drag) return;
       const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) {
+        drag.moved = true;
+        // 처음 움직일 때만 인라인 스타일로 전환 (클릭만 할 때는 위치 변경 없음)
+        root.style.left = 'auto'; root.style.top = 'auto';
+        root.style.right  = drag.startRight  + 'px';
+        root.style.bottom = drag.startBottom + 'px';
+      }
       if (!drag.moved) return;
       const w = root.offsetWidth, h = root.offsetHeight;
       const vw = window.innerWidth, vh = window.innerHeight;
-      let nr = drag.startRight - dx, nb = drag.startBottom - dy;
+      let nr = drag.startRight  - dx;
+      let nb = drag.startBottom - dy;
       nr = Math.max(-(w * 0.5), Math.min(vw - w * 0.5, nr));
-      nb = Math.max(-(h * 0.6), Math.min(vh - h, nb));
-      root.style.right = nr + 'px'; root.style.bottom = nb + 'px';
+      nb = Math.max(-(h * 0.6), Math.min(vh - h,       nb));
+      root.style.right  = nr + 'px';
+      root.style.bottom = nb + 'px';
     };
+
     const onUp = (e: PointerEvent) => {
       if (!drag) return;
       const moved = drag.moved;
@@ -253,17 +297,17 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
 
     img.addEventListener('pointerdown', onDown);
     img.addEventListener('pointermove', onMove);
-    img.addEventListener('pointerup', onUp);
-    const onErr = () => root.classList.add('img-missing');
+    img.addEventListener('pointerup',   onUp);
+    const onErr  = () => root.classList.add('img-missing');
     const onLoad = () => root.classList.remove('img-missing');
     img.addEventListener('error', onErr);
-    img.addEventListener('load', onLoad);
+    img.addEventListener('load',  onLoad);
     return () => {
       img.removeEventListener('pointerdown', onDown);
       img.removeEventListener('pointermove', onMove);
-      img.removeEventListener('pointerup', onUp);
+      img.removeEventListener('pointerup',   onUp);
       img.removeEventListener('error', onErr);
-      img.removeEventListener('load', onLoad);
+      img.removeEventListener('load',  onLoad);
     };
   }, []);
 
@@ -279,8 +323,10 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
           <span className="fx-spark s3">★</span><span className="fx-spark s4">✦</span>
           <span className="fx-spark s5">✧</span><span className="fx-spark s6">❤</span>
         </div>
-        <img ref={imgRef} className="mascot-img" src={FORMS.kangel.img} alt="마스코트" draggable={false} />
-        <div className="mascot-fallback">천사쨩 (이미지 없음)<small>public/char/ 에 넣어주세요</small></div>
+        <img ref={imgRef} className="mascot-img" src={FORMS.choten.img} alt="마스코트" draggable={false} />
+        <div className="mascot-fallback">
+          천사쨩 (이미지 없음)<small>public/char/ 에 넣어주세요</small>
+        </div>
       </div>
     </div>
   );
