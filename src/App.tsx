@@ -10,6 +10,7 @@ import { buildSetupPrompt, parsePuzzle } from './game/puzzle';
 import { judgeGuess } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult } from './save/cloudSave';
+import StatsModal from './components/StatsModal';
 import type { GameResult, GameState } from './game/types';
 import type { TextTier } from './types';
 
@@ -32,6 +33,7 @@ export default function App() {
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('standard');
   const [summoned, setSummoned] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [log, setLog] = useState<string[]>(['> ✞추리극장✞ 준비완료. 카테고리를 골라줘… ♡']);
 
   function push(line: string) {
@@ -190,6 +192,7 @@ export default function App() {
         onSummonToggle={handleSummonToggle}
         onTransform={() => mascot.current?.transform()}
         onLogout={() => void handleLogout()}
+        onOpenStats={() => setStatsOpen(true)}
       >
         {game.phase === 'setup' ? (
           <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
@@ -205,6 +208,9 @@ export default function App() {
         )}
       </Window>
       <Mascot ref={mascot} />
+      {statsOpen && user && (
+        <StatsModal userId={user.id} onClose={() => setStatsOpen(false)} />
+      )}
     </>
   );
 }

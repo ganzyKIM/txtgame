@@ -1,10 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { GameResult } from '../game/types';
 
-/**
- * 게임 결과를 quiz_results 테이블에 저장한다.
- * 테이블이 아직 없거나 RLS 오류여도 게임 흐름을 막지 않도록 조용히 무시한다.
- */
 export async function saveResult(userId: string, r: GameResult): Promise<void> {
   try {
     await supabase.from('quiz_results').insert({
@@ -25,23 +21,74 @@ export async function saveResult(userId: string, r: GameResult): Promise<void> {
 export interface Stats {
   plays: number;
   wins: number;
+  winRate: number;
   bestScore: number;
+  avgScore: number;
+  bestRank: string;
 }
 
-/** 누적 전적 (총 플레이 / 승리 / 최고점) */
-export async function getStats(): Promise<Stats> {
+export async function getStats(userId: string): Promise<Stats> {
+  const empty: Stats = { plays: 0, wins: 0, winRate: 0, bestScore: 0, avgScore: 0, bestRank: '-' };
   try {
     const { data, error } = await supabase
       .from('quiz_results')
-      .select('won, score')
+      .select('won, score, rank')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(1000);
-    if (error || !data) return { plays: 0, wins: 0, bestScore: 0 };
+      .limit(500);
+    if (error || !data) return empty;
+
     const plays = data.length;
-    const wins = data.filter((d) => d.won).length;
-    const bestScore = data.reduce((m, d) => Math.max(m, d.score ?? 0), 0);
-    return { plays, wins, bestScore };
+    const wonRows = data.filter((d) => d.won);
+    const wins = wonRows.length;
+    const winRate = plays > 0 ? Math.round((wins / plays) * 100) : 0;
+    const bestScore = wonRows.reduce((m, d) => Math.max(m, d.score ?? 0), 0);
+    const avgScore = wins > 0 ? Math.round(wonRows.reduce((s, d) => s + (d.score ?? 0), 0) / wins) : 0;
+
+    const RANK_ORDER = ['S', 'A', 'B', 'C'];
+    const bestRank = RANK_ORDER.find((r) => wonRows.some((d) => d.rank === r)) ?? '-';
+
+    return { plays, wins, winRate, bestScore, avgScore, bestRank };
   } catch {
-    return { plays: 0, wins: 0, bestScore: 0 };
+    return empty;
+  }
+}
+
+export interface Ranking {
+  totalPlayers: number;
+  beaten: number;
+  topPercent: number;
+  myBestScore: number;
+}
+
+export async function getRanking(userId: string): Promise<Ranking | null> {
+  try {
+    // 내 최고점
+    const { data: myData } = await supabase
+      .from('quiz_results')
+      .select('score')
+      .eq('user_id', userId)
+      .eq('won', true)
+      .order('score', { ascending: false })
+      .limit(1);
+
+    const myBestScore = myData?.[0]?.score ?? 0;
+
+    // SECURITY DEFINER RPC로 전체 순위 조회 (RLS 우회)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rankData } = await (supabase as any)
+      .rpc('quiz_ranking', { p_score: myBestScore }) as { data: { total_players: number; beaten: number } | null };
+
+    if (!rankData) return null;
+
+    const totalPlayers = Number(rankData.total_players) || 0;
+    const beaten = Number(rankData.beaten) || 0;
+    const topPercent = totalPlayers > 0
+      ? Math.max(1, 100 - Math.round((beaten / totalPlayers) * 100))
+      : 100;
+
+    return { totalPlayers, beaten, topPercent, myBestScore };
+  } catch {
+    return null;
   }
 }
