@@ -43,9 +43,9 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:100%;max-width:1040px;height:100%;}
+.desktop{width:100%;max-width:1040px;height:calc(100vh - 16px);display:flex;flex-direction:column;}
 .window{
-  width:100%; height:100%;
+  flex:1; min-height:0; overflow:hidden;
   background:var(--win-bg);
   border:3px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
   box-shadow:0 0 0 1px var(--magenta-d), 6px 6px 0 rgba(150,40,120,.35), 0 0 40px rgba(255,80,200,.5);
@@ -89,8 +89,8 @@ button{font-family:inherit;}
 .menu-btn:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);transform:translateY(1px);}
 
 /* ── 본문 ── */
-#pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow-y:auto;}
-.body{flex:1; display:flex;gap:10px;padding:10px; min-height:0;}
+#pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;}
+.body{flex:1; display:flex;gap:10px;padding:10px; min-height:0; overflow:hidden;}
 .panel{
   background:var(--pink-0);
   border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
@@ -257,11 +257,11 @@ button{font-family:inherit;}
    시작 화면 (출제 설정)
    ════════════════════════════════════════════════════════════════════ */
 /* 시작 화면 — 게임 패널과 동일한 2열 구조로 너비 안정화 */
-.start-body{flex:1;display:grid;grid-template-columns:1.3fr 1fr;gap:10px;min-height:0;}
-.start-cat{display:flex;flex-direction:column;gap:8px;}
-.start-cat .ctl-group{flex:1;display:flex;flex-direction:column;}
-.start-cat .cat-grid{flex:1;}
-.start-settings{display:flex;flex-direction:column;gap:8px;}
+.start-body{flex:1;display:grid;grid-template-columns:1.3fr 1fr;gap:10px;min-height:0;overflow:hidden;}
+.start-cat{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;}
+.start-cat .ctl-group{flex:1;display:flex;flex-direction:column;min-height:0;}
+.start-cat .cat-grid{flex:1;overflow-y:auto;}
+.start-settings{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;}
 .start-settings .btn-primary{margin-top:auto;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .cat-btn{
@@ -278,9 +278,9 @@ button{font-family:inherit;}
 /* ════════════════════════════════════════════════════════════════════
    게임 플레이 화면
    ════════════════════════════════════════════════════════════════════ */
-.game-grid{display:flex;gap:10px;flex:1;min-height:0;flex-wrap:wrap;}
-.game-left{flex:1.2;min-width:280px;display:flex;flex-direction:column;gap:8px;}
-.game-right{flex:1;min-width:260px;display:flex;flex-direction:column;gap:8px;}
+.game-grid{display:flex;gap:10px;flex:1;min-height:0;overflow:hidden;}
+.game-left{flex:1.2;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;}
+.game-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;}
 
 /* 진행 막대 */
 .gauge{height:16px;background:#fff;border:2px solid;
@@ -290,7 +290,7 @@ button{font-family:inherit;}
   font-size:10px;color:var(--ink);text-shadow:0 0 3px #fff;}
 
 /* 힌트 리스트 */
-.hint-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:120px;}
+.hint-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0;}
 .hint-item{
   display:flex;gap:8px;padding:8px;font-size:12px;line-height:1.5;
   background:var(--pink-1);
