@@ -29,12 +29,14 @@ const DIFFICULTY_GUIDE: Record<Difficulty, string> = {
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
 export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty): string {
+  const seed = Math.floor(Math.random() * 99991) + 10000;
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
     `[카테고리] ${categoryLabel}`,
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
+    `[다양성 시드] ${seed} — 이 숫자를 참고해 매번 예측 불가능하고 의외성 있는 정답을 선택하라. 가장 유명하고 자주 나올 법한 대표 답변(예: 인물→아이슈타인, 음식→피자, 동물→사자 등)은 피하고, 카테고리 안에서 색다른 선택을 해야 한다.`,
     '',
     '규칙:',
     '1. 정답(answer)은 구체적인 하나의 대상이어야 한다 (사람/작품/사물/장소 등의 고유한 이름).',

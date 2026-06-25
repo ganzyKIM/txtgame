@@ -9,9 +9,10 @@ interface Props {
   onReveal: () => void;
   onGuess: (text: string) => void;
   onRestart: () => void;
+  onEliminate: () => void;
 }
 
-export default function GamePanel({ state, judging, result, onReveal, onGuess, onRestart }: Props) {
+export default function GamePanel({ state, judging, result, onReveal, onGuess, onRestart, onEliminate }: Props) {
   const [guess, setGuess] = useState('');
   const puzzle = state.puzzle;
   if (!puzzle) return null;
@@ -59,11 +60,13 @@ export default function GamePanel({ state, judging, result, onReveal, onGuess, o
           </div>
 
           {!finished && (
-            <button className="btn btn-lav" onClick={onReveal} disabled={!canReveal}>
-              {remaining > 0
-                ? `🔓 힌트 열기 (남은 ${remaining}개 — 열수록 점수 ↓)`
-                : '⚠ 더 열면 탈락이야!'}
-            </button>
+            remaining > 0
+              ? <button className="btn btn-lav" onClick={onReveal} disabled={!canReveal}>
+                  🔓 힌트 열기 (남은 {remaining}개 — 열수록 점수 ↓)
+                </button>
+              : <button className="btn" style={{ background: 'linear-gradient(#ffd0e8,#ffb0d8)', borderColor: 'var(--bevel-lt) #c03070 #c03070 var(--bevel-lt)' }} onClick={onEliminate} disabled={judging}>
+                  ⚠ 포기하고 정답 보기
+                </button>
           )}
         </section>
 

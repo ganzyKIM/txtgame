@@ -156,6 +156,24 @@ export default function App() {
     }
   }
 
+  function handleEliminate() {
+    if (!game.puzzle || game.phase !== 'playing') return;
+    const r: GameResult = {
+      category: game.puzzle.category,
+      theme: game.puzzle.theme,
+      answer: game.puzzle.answer,
+      hintsUsed: game.revealedCount,
+      won: false,
+      score: 0,
+      rank: '-',
+    };
+    setGame((g) => ({ ...g, phase: 'lost' }));
+    setResult(r);
+    push(`> ⚠ 포기… 정답은 "${game.puzzle.answer}"`);
+    mascot.current?.event('eliminated');
+    if (user) void saveResult(user.id, r);
+  }
+
   function handleRestart() {
     setGame(emptyGame);
     setResult(null);
@@ -197,6 +215,7 @@ export default function App() {
             onReveal={handleReveal}
             onGuess={(t) => void handleGuess(t)}
             onRestart={handleRestart}
+            onEliminate={handleEliminate}
           />
         )}
       </Window>
