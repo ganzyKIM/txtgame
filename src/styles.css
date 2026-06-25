@@ -26,6 +26,7 @@ body{
   font-family:'Galmuri11','MS Gothic','Apple SD Gothic Neo',monospace;
   font-size:13px; color:var(--ink);
   background:
+    linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
     radial-gradient(circle at 20% 15%, rgba(255,200,236,.55) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(217,192,255,.55) 0, transparent 45%),
     url('/back/back_choten.png') center/cover no-repeat fixed;
@@ -447,6 +448,7 @@ body.mode-ame{
   --bevel-lt:#3a2050; --bevel-dk:#08030c; --bevel-dk2:#060209;
   --face:#201230; --win-bg:#180c22;
   background:
+    linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)),
     radial-gradient(circle at 20% 15%, rgba(26,8,40,.6) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(13,8,24,.6) 0, transparent 45%),
     url('/back/back_ame.png') center/cover no-repeat fixed;
