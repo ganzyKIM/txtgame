@@ -435,9 +435,40 @@ button{font-family:inherit;}
 @media(max-height:760px){.mascot-img{height:340px;}}
 @media(max-width:1280px){.mascot{right:6px;}}
 @media(max-width:820px){
-  .body{flex-direction:column;}
-  .cat-grid{grid-template-columns:repeat(2,1fr);}
-  .mascot{transform:scale(.62); transform-origin:bottom right;}
+  /* 패딩 축소 + 동적 뷰포트 높이(주소창 잘림 방지) */
+  body{padding:8px;}
+  .desktop{height:calc(100dvh - 16px);}
+
+  /* body가 세로로 스크롤 — 내부 overflow 해제 */
+  .body{flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+  .game-grid{flex-direction:column;overflow:visible;min-height:unset;}
+  .game-left{overflow:visible;flex:none;}
+  .game-right{overflow-y:visible;flex:none;}
+  .hint-list{overflow:visible;flex:none;}
+
+  /* 시작 화면 — 1열 */
+  .start-body{grid-template-columns:1fr;overflow:visible;min-height:unset;}
+  .start-cat .cat-grid{flex:none;overflow:visible;}
+  .start-settings .btn-primary{margin-top:8px;}
+  .cat-grid{grid-template-columns:repeat(4,1fr);}
+
+  /* 콘솔 높이 축소 */
+  .console-strip .console{height:48px;}
+  .console-strip{max-height:64px;}
+
+  /* 폰트 크기 보정 */
+  .cat-btn{font-size:11px;}
+  .cat-btn .cat-emoji{font-size:16px;}
+  .hint-item{font-size:13px;}
+  .gauge-label{font-size:11px;}
+  .note{font-size:11px;}
+  .ctl-label{font-size:12px;}
+  .seg-btn{font-size:12px;}
+  .panel-title{font-size:13px;}
+  .guess-log{font-size:12px;}
+
+  /* 마스코트 축소 */
+  .mascot{transform:scale(.5);transform-origin:bottom right;}
 }
 
 /* ════════════════════════════════════════════════════════════════════
