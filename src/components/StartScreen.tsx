@@ -40,84 +40,92 @@ export default function StartScreen({ busy, onStart }: Props) {
   return (
     <div className="body">
       <div className="start-body">
-        <div className="ctl-group">
-          <label className="ctl-label">◆ 카테고리를 골라줘 <b>♡</b></label>
-          <div className="cat-grid">
-            {CATEGORIES.map((c) => (
+
+        {/* 왼쪽: 카테고리 선택 */}
+        <div className="start-cat">
+          <div className="ctl-group">
+            <label className="ctl-label">◆ 카테고리를 골라줘 <b>♡</b></label>
+            <div className="cat-grid">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  className={`cat-btn ${catKey === c.key ? 'active' : ''}`}
+                  onClick={() => setCatKey(c.key)}
+                >
+                  <span className="cat-emoji">{c.emoji}</span>
+                  {c.label}
+                </button>
+              ))}
               <button
-                key={c.key}
-                className={`cat-btn ${catKey === c.key ? 'active' : ''}`}
-                onClick={() => setCatKey(c.key)}
+                className={`cat-btn ${isCustom ? 'active' : ''}`}
+                onClick={() => setCatKey(CUSTOM_KEY)}
               >
-                <span className="cat-emoji">{c.emoji}</span>
-                {c.label}
+                <span className="cat-emoji">✏️</span>
+                직접 입력
               </button>
-            ))}
-            <button
-              className={`cat-btn ${isCustom ? 'active' : ''}`}
-              onClick={() => setCatKey(CUSTOM_KEY)}
-            >
-              <span className="cat-emoji">✏️</span>
-              직접 입력
-            </button>
+            </div>
+            {isCustom && (
+              <input
+                className="text-input"
+                style={{ marginTop: 8 }}
+                placeholder="예) K-POP 아이돌, 그리스 신화, 마블 히어로…"
+                value={customCat}
+                onChange={(e) => setCustomCat(e.target.value)}
+              />
+            )}
           </div>
-          {isCustom && (
+        </div>
+
+        {/* 오른쪽: 세부 설정 + 시작 */}
+        <div className="start-settings">
+          <div className="ctl-group">
+            <label className="ctl-label">◆ 세부 주제·컨셉 (선택)</label>
             <input
               className="text-input"
-              style={{ marginTop: 8 }}
-              placeholder="예) K-POP 아이돌, 그리스 신화, 마블 히어로…"
-              value={customCat}
-              onChange={(e) => setCustomCat(e.target.value)}
+              placeholder="비워두면 천사쨩이 알아서 골라줘!"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
             />
-          )}
-        </div>
-
-        <div className="ctl-group">
-          <label className="ctl-label">◆ 세부 주제·컨셉 (선택)</label>
-          <input
-            className="text-input"
-            placeholder="비워두면 천사쨩이 알아서 골라줘!"
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
-          />
-        </div>
-
-        <div className="ctl-group">
-          <label className="ctl-label">◆ 난이도</label>
-          <div className="seg">
-            {DIFFICULTIES.map((d) => (
-              <button
-                key={d.key}
-                className={`seg-btn ${difficulty === d.key ? 'active' : ''}`}
-                onClick={() => setDifficulty(d.key)}
-              >
-                {d.label}
-              </button>
-            ))}
           </div>
-          <small className="note">{DIFFICULTIES.find((d) => d.key === difficulty)?.note}</small>
-        </div>
 
-        <div className="ctl-group">
-          <label className="ctl-label">◆ 출제 모델</label>
-          <div className="seg">
-            {TEXT_TIERS.map((t) => (
-              <button
-                key={t.tier}
-                className={`seg-btn ${tier === t.tier ? 'active' : ''}`}
-                onClick={() => setTier(t.tier)}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="ctl-group">
+            <label className="ctl-label">◆ 난이도</label>
+            <div className="seg">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d.key}
+                  className={`seg-btn ${difficulty === d.key ? 'active' : ''}`}
+                  onClick={() => setDifficulty(d.key)}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <small className="note">{DIFFICULTIES.find((d) => d.key === difficulty)?.note}</small>
           </div>
-          <small className="note">{TEXT_TIERS.find((t) => t.tier === tier)?.priceNote}</small>
+
+          <div className="ctl-group">
+            <label className="ctl-label">◆ 출제 모델</label>
+            <div className="seg">
+              {TEXT_TIERS.map((t) => (
+                <button
+                  key={t.tier}
+                  className={`seg-btn ${tier === t.tier ? 'active' : ''}`}
+                  onClick={() => setTier(t.tier)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <small className="note">{TEXT_TIERS.find((t) => t.tier === tier)?.priceNote}</small>
+          </div>
+
+          <button className="btn btn-primary" onClick={start} disabled={!canStart}>
+            {busy ? '천사쨩이 문제 내는 중… ✦' : '† 강림 & 게임 시작 †'}
+          </button>
         </div>
 
-        <button className="btn btn-primary" onClick={start} disabled={!canStart}>
-          {busy ? '천사쨩이 문제 내는 중… ✦' : '† 강림 & 게임 시작 †'}
-        </button>
       </div>
     </div>
   );

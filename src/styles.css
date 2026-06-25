@@ -20,9 +20,9 @@
 
 *{box-sizing:border-box;}
 [hidden]{display:none !important;}
-html{min-height:100%;}
+html{height:100%;}
 body{
-  margin:0; min-height:100vh;
+  margin:0; height:100vh; overflow:hidden;
   font-family:'Galmuri11','MS Gothic','Apple SD Gothic Neo',monospace;
   font-size:13px; color:var(--ink);
   background:
@@ -43,12 +43,12 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:100%;max-width:1040px;}
+.desktop{width:100%;max-width:1040px;height:100%;}
 .window{
+  width:100%; height:100%;
   background:var(--win-bg);
   border:3px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
   box-shadow:0 0 0 1px var(--magenta-d), 6px 6px 0 rgba(150,40,120,.35), 0 0 40px rgba(255,80,200,.5);
-  min-height:calc(100vh - 16px);
   display:flex; flex-direction:column;
 }
 
@@ -89,7 +89,7 @@ button{font-family:inherit;}
 .menu-btn:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);transform:translateY(1px);}
 
 /* ── 본문 ── */
-#pane{flex:1; display:flex; flex-direction:column; min-height:0;}
+#pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow-y:auto;}
 .body{flex:1; display:flex;gap:10px;padding:10px; min-height:0;}
 .panel{
   background:var(--pink-0);
@@ -147,18 +147,40 @@ button{font-family:inherit;}
 }
 .text-input::placeholder{color:#c79bbd;}
 
-/* ── 콘솔 ── */
-.console-wrap{margin:0 10px 10px;}
-.console-title{background:var(--lav-2);color:#3a1a55;padding:2px 8px;font-size:11px;}
+/* ── 커서 깜빡임 (공통) ── */
 .cursor{animation:blink 1s steps(1) infinite;}
+
+/* ── 콘솔 (플로팅 창에서 사용) ── */
 .console{
-  margin:0;padding:8px;height:110px;overflow:auto;
-  background:#2a0a28;color:#ff9be8;font-family:'Galmuri11',monospace;font-size:11px;line-height:1.5;
-  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+  margin:0;padding:8px;overflow:auto;
+  background:#2a0a28;color:#ff9be8;font-family:'Galmuri11',monospace;font-size:13px;line-height:1.6;
   white-space:pre-wrap;word-break:break-all;text-shadow:0 0 4px rgba(255,100,210,.5);
 }
-.console::-webkit-scrollbar{width:14px;}
+.console::-webkit-scrollbar{width:12px;}
 .console::-webkit-scrollbar-thumb{background:var(--magenta);border:2px solid #2a0a28;}
+
+/* ── 플로팅 로그 창 ── */
+.console-float{
+  position:fixed; left:8px; bottom:8px; width:400px; z-index:190;
+  border:2px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+  box-shadow:4px 4px 0 rgba(150,40,120,.35), 0 0 20px rgba(255,80,200,.25);
+  transition:transform .25s ease, opacity .25s ease;
+}
+.console-float.is-hidden{
+  transform:translateY(calc(100% + 16px));
+  opacity:0; pointer-events:none;
+}
+.console-float-titlebar{
+  display:flex; justify-content:space-between; align-items:center;
+  background:linear-gradient(90deg,var(--magenta),var(--pink-3));
+  color:#fff; padding:3px 6px; font-size:11px; user-select:none;
+}
+.console-float-close{
+  font-size:10px; padding:1px 6px; cursor:pointer; font-family:inherit;
+  background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.45); color:#fff; line-height:1.4;
+}
+.console-float-close:hover{background:rgba(255,255,255,.38);}
+.console-float .console{height:160px;}
 
 /* ── 상태바 ── */
 .statusbar{display:flex;justify-content:space-between;
@@ -193,7 +215,13 @@ button{font-family:inherit;}
 /* ════════════════════════════════════════════════════════════════════
    시작 화면 (출제 설정)
    ════════════════════════════════════════════════════════════════════ */
-.start-body{display:flex;flex-direction:column;gap:10px;max-width:560px;margin:0 auto;width:100%;}
+/* 시작 화면 — 게임 패널과 동일한 2열 구조로 너비 안정화 */
+.start-body{flex:1;display:grid;grid-template-columns:1.3fr 1fr;gap:10px;min-height:0;}
+.start-cat{display:flex;flex-direction:column;gap:8px;}
+.start-cat .ctl-group{flex:1;display:flex;flex-direction:column;}
+.start-cat .cat-grid{flex:1;}
+.start-settings{display:flex;flex-direction:column;gap:8px;}
+.start-settings .btn-primary{margin-top:auto;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .cat-btn{
   display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -401,8 +429,9 @@ body.mode-ame .tbtn-x{background:#4a1535;}
 body.mode-ame .panel-title{background:linear-gradient(90deg, #3a0d28, #2a1035); text-shadow:1px 1px 0 #08030c;}
 body.mode-ame .btn-primary{background:linear-gradient(#5a1a40, #30081e);}
 body.mode-ame .btn-lav{background:linear-gradient(var(--lav-1), var(--lav-2));}
-body.mode-ame .console-title{background:#1a1030; color:#7a5a8a;}
 body.mode-ame .console{background:#08030f; color:#9a7ab0; text-shadow:0 0 4px rgba(150,80,180,.4);}
+body.mode-ame .console-float{box-shadow:4px 4px 0 rgba(10,5,20,.7), 0 0 20px rgba(80,20,60,.4);}
+body.mode-ame .console-float-titlebar{background:linear-gradient(90deg,#3a0d28,#2a0820);}
 body.mode-ame .gauge{background:#120810;}
 body.mode-ame .hint-item{background:#1e1228; color:#ecd8f8;}
 body.mode-ame .menu-info{color:#d080b8;} body.mode-ame .menu-info b{color:#ecd8f8;}
