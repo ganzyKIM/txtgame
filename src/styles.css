@@ -29,7 +29,7 @@ body{
     linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
     radial-gradient(circle at 20% 15%, rgba(255,200,236,.55) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(217,192,255,.55) 0, transparent 45%),
-    url('/back/back_choten.png') center/cover no-repeat fixed;
+    url('/back/back_choten.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
   display:flex; align-items:center; justify-content:center;
   padding:36px 24px;
@@ -474,6 +474,46 @@ button{font-family:inherit;}
 /* 힌트 카운터 (타이틀바 오른쪽) */
 .soup-hint-counter{font-size:10px;font-weight:normal;color:#ffe8f8;opacity:.9;}
 
+/* ── 끝말잇기 ── */
+.wc-timerbar{
+  width:100%;height:10px;margin-bottom:8px;background:#1a0024;overflow:hidden;
+  border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);
+}
+.wc-timerbar-fill{
+  height:100%;background:repeating-linear-gradient(90deg,#ff44c8 0 8px,#c8009a 8px 10px);
+  transition:width 1s linear;
+}
+.wc-chain{
+  flex:1;min-height:0;overflow:hidden auto;display:flex;flex-direction:column;gap:6px;
+  padding:8px;margin-bottom:8px;background:var(--pink-0);
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.wc-word{
+  display:flex;align-items:center;gap:8px;font-size:14px;padding:6px 10px;max-width:80%;
+  border:2px solid;
+}
+.wc-ai{align-self:flex-start;background:#fff;
+  border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);}
+.wc-player{align-self:flex-end;background:var(--lav-1);
+  border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);}
+.wc-who{font-size:10px;font-weight:bold;flex:none;padding:1px 6px;color:#fff;background:var(--magenta-d);}
+.wc-player .wc-who{background:#6a4a9a;}
+.wc-text{color:var(--ink);font-weight:bold;letter-spacing:.5px;}
+.wc-thinking{opacity:.7;}
+.wc-thinking .wc-text{font-weight:normal;font-style:italic;}
+.wc-need{font-size:12px;color:var(--ink);text-align:center;margin-bottom:6px;}
+.wc-need b{color:var(--magenta-d);font-size:15px;}
+.wc-error{font-size:12px;color:#c23a6a;font-weight:bold;text-align:center;margin:4px 0;}
+
+body.mode-ame .wc-chain{background:#0d0818;border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .wc-ai{background:#160d1e;border-color:var(--bevel-lt) #3a1a50 #3a1a50 var(--bevel-lt);}
+body.mode-ame .wc-player{background:#251630;border-color:var(--bevel-lt) #4a1538 #4a1538 var(--bevel-lt);}
+body.mode-ame .wc-text{color:#ecd8f8;}
+body.mode-ame .wc-need{color:#c8a8e0;}
+body.mode-ame .wc-need b{color:#7ab0d0;}
+body.mode-ame .wc-timerbar{background:#08030f;border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .wc-timerbar-fill{background:repeating-linear-gradient(90deg,#d080b8 0 8px,#8a2060 8px 10px);}
+
 /* 힌트 말풍선 */
 .soup-hint-turn{
   display:flex;align-items:baseline;gap:7px;font-size:12px;
@@ -658,14 +698,14 @@ body.is-minimized{
   background:
     radial-gradient(circle at 20% 15%, rgba(255,200,236,.3) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(217,192,255,.3) 0, transparent 45%),
-    url('/back/back_choten.png') center/cover no-repeat fixed;
+    url('/back/back_choten.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
 }
 body.mode-ame.is-minimized{
   background:
     radial-gradient(circle at 20% 15%, rgba(26,8,40,.3) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(13,8,24,.3) 0, transparent 45%),
-    url('/back/back_ame.png') center/cover no-repeat fixed;
+    url('/back/back_ame.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
 }
 
@@ -701,7 +741,7 @@ body.mode-ame{
     linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5)),
     radial-gradient(circle at 20% 15%, rgba(26,8,40,.6) 0, transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(13,8,24,.6) 0, transparent 45%),
-    url('/back/back_ame.png') center/cover no-repeat fixed;
+    url('/back/back_ame.webp') center/cover no-repeat fixed;
 }
 body.mode-ame .window{background:#180c22; box-shadow:0 0 0 1px #4a1538, 6px 6px 0 rgba(30,10,50,.7), 0 0 40px rgba(100,20,80,.4);}
 body.mode-ame .panel{background:#160d1e;}
