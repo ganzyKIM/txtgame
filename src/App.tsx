@@ -247,10 +247,11 @@ export default function App() {
             busy ? (
               <div className="generating-full">
                 <div className="generating-wrap">
-                  <div className="generating-label">문제 출제 중… ✦</div>
+                  <div className="generating-label">◆ 문제 출제 중 ◆</div>
                   <div className="generating-bar-bg">
                     <div className="generating-bar-fill" />
                   </div>
+                  <div className="generating-sub">Please wait ♡</div>
                 </div>
               </div>
             ) : (

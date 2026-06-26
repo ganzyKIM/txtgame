@@ -334,13 +334,51 @@ button{font-family:inherit;}
 .restart-btns .btn-primary{flex:1;}
 .restart-btns .btn{flex:1;}
 
-/* 로딩바 (출제 중 — setup 전체 화면 + GamePanel 인라인 공통) */
+/* 로딩바 — DOS × 귀염뽀짝 스타일 */
 .generating-full{flex:1;display:flex;align-items:center;justify-content:center;}
-.generating-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;animation:fadeIn .2s ease;}
-.generating-label{font-size:13px;color:var(--magenta-d);font-weight:bold;letter-spacing:.05em;}
-.generating-bar-bg{width:100%;max-width:240px;height:10px;background:#f0d0e8;border-radius:6px;overflow:hidden;border:1px solid #d090c0;}
-.generating-bar-fill{height:100%;width:60%;background:linear-gradient(90deg,#ff9ec8,#c06090,#ff9ec8);background-size:200% 100%;border-radius:6px;animation:genSlide 1.2s ease-in-out infinite;}
-@keyframes genSlide{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.generating-wrap{
+  display:flex;flex-direction:column;align-items:stretch;gap:10px;
+  padding:0;min-width:240px;max-width:300px;
+  background:var(--win-bg);
+  border:2px solid;
+  border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);
+  box-shadow:2px 2px 0 var(--bevel-dk2);
+  animation:fadeIn .2s ease;
+}
+.generating-label{
+  font-size:11px;font-weight:bold;color:#fff;
+  background:linear-gradient(90deg,#c0198a,#e040b0);
+  padding:4px 8px;letter-spacing:.08em;text-align:center;
+  border-bottom:1px solid var(--bevel-dk);
+  white-space:nowrap;
+}
+.generating-bar-bg{
+  margin:10px 12px 2px;height:18px;
+  background:#1a0024;
+  border:2px solid;
+  border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);
+  overflow:hidden;padding:2px;
+}
+.generating-bar-fill{
+  height:100%;width:0%;
+  background:repeating-linear-gradient(90deg,#ff44c8 0 10px,#c8009a 10px 12px);
+  animation:dosFill 12s ease-out forwards;
+}
+.generating-sub{
+  font-size:10px;color:var(--ink-soft);
+  text-align:right;padding:0 12px 10px;
+  letter-spacing:.04em;
+}
+@keyframes dosFill{
+  0%{width:0%}
+  10%{width:18%}
+  25%{width:38%}
+  45%{width:57%}
+  65%{width:71%}
+  82%{width:80%}
+  95%{width:86%}
+  100%{width:88%}
+}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ════════════════════════════════════════════════════════════════════
