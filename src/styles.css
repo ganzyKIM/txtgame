@@ -268,7 +268,8 @@ button{font-family:inherit;}
 .start-cat{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;}
 .start-cat .ctl-group{flex:1;display:flex;flex-direction:column;min-height:0;}
 .start-cat .cat-grid{flex:1;overflow-y:auto;}
-.start-settings{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;}
+.start-settings{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;scrollbar-width:none;}
+.start-settings::-webkit-scrollbar{display:none;}
 .start-settings .btn-primary{margin-top:auto;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;overflow:hidden;align-content:start;}
 .cat-btn{
