@@ -12,7 +12,7 @@ import { judgeGuess } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult } from './save/cloudSave';
 import StatsModal from './components/StatsModal';
-import type { GameResult, GameState } from './game/types';
+import type { GameResult, GameState, Puzzle } from './game/types';
 import type { TextTier } from './types';
 
 // ── 카테고리별 정답 이력 (localStorage 영속화) ──────────────────────
@@ -33,6 +33,14 @@ function addExclusion(map: Record<string, string[]>, category: string, answer: s
   try { localStorage.setItem(EXCLUSION_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
   return updated;
 }
+
+/** 프리페치 캐시 키 — 퍼즐 내용에 영향 주는 설정이 같으면 미리 만들어둔 문제를 재사용 */
+function cfgKey(cfg: StartConfig): string {
+  return JSON.stringify([cfg.tier, cfg.difficulty, cfg.categoryLabel, cfg.theme]);
+}
+
+/** 프리페치 캐시 최대 보관 개수 (오래된 것부터 폐기) */
+const PREFETCH_CACHE_MAX = 12;
 
 const emptyGame: GameState = {
   phase: 'setup',
@@ -57,6 +65,10 @@ export default function App() {
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
+  // 미리 만들어둔 문제(키: cfgKey) — 즉시 출제용
+  const prefetchCache = useRef<Map<string, Puzzle>>(new Map());
+  // 백그라운드 생성 진행 중인 프리페치 (중복 생성 방지 + 요청 시 await 대상)
+  const prefetchInFlight = useRef<Map<string, Promise<Puzzle>>>(new Map());
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
   const greeted = useRef(false);
 
@@ -76,34 +88,91 @@ export default function App() {
     setLog((l) => [...l, line].slice(-50));
   }
 
+  // ── 한 문제 생성 (직접 출제·프리페치 공용) ────────────────────────
+  // 프록시 호출 → 크레딧 차감 반영 → 파싱 → 정답을 카테고리 제외목록에 누적.
+  async function generatePuzzle(cfg: StartConfig): Promise<Puzzle> {
+    const { text, balance } = await proxyGenerateText(
+      cfg.tier,
+      [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
+      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? []), temperature: 0.9 },
+    );
+    applyBalance(balance);
+    const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+    exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
+    return puzzle;
+  }
+
+  // 준비된 문제로 즉시 플레이 화면 전환
+  function startWithPuzzle(puzzle: Puzzle, cfg: StartConfig) {
+    setGame({
+      phase: 'playing',
+      puzzle,
+      revealedCount: 1, // 첫 힌트는 자동 공개
+      wrongGuesses: 0,
+      guesses: [],
+      difficulty: cfg.difficulty,
+    });
+    push(`> 출제 완료! 힌트 ${puzzle.hints.length}개 · 탈락 임계값 ${puzzle.maxHints} · 첫 힌트 공개`);
+    mascot.current?.event('intro');
+  }
+
+  // ── 다음 문제 백그라운드 미리 생성 ────────────────────────────────
+  // 유저가 현재 문제를 푸는 동안 같은 설정의 다음 문제를 만들어 캐시에 넣어둔다.
+  // 다른 카테고리로 가도 캐시에 남아, 나중에 같은 설정을 다시 고르면 즉시 재사용된다.
+  // (크레딧은 미리 차감되지만, 미사용분은 캐시로 회수해 낭비를 줄인다.)
+  function prefetchNext(cfg: StartConfig) {
+    const key = cfgKey(cfg);
+    if (prefetchCache.current.has(key) || prefetchInFlight.current.has(key)) return;
+    const promise = generatePuzzle(cfg);
+    prefetchInFlight.current.set(key, promise);
+    promise
+      .then((puz) => {
+        // 캐시 상한 초과 시 가장 오래된 항목부터 제거
+        if (prefetchCache.current.size >= PREFETCH_CACHE_MAX) {
+          const oldest = prefetchCache.current.keys().next().value;
+          if (oldest !== undefined) prefetchCache.current.delete(oldest);
+        }
+        prefetchCache.current.set(key, puz);
+        push('> ◇ 다음 문제를 미리 만들어뒀어 ♡');
+      })
+      .catch(() => { /* 조용히 실패 — 요청 시 즉석 생성으로 폴백 */ })
+      .finally(() => { prefetchInFlight.current.delete(key); });
+  }
+
   // ── 게임 시작: 출제 ───────────────────────────────────────────────
   async function handleStart(cfg: StartConfig) {
-    setBusy(true);
     setResult(null);
     setTier(cfg.tier);
     setLastConfig(cfg);
+    const key = cfgKey(cfg);
+
+    // 1) 미리 만들어둔 문제가 있으면 크레딧 추가 소모 없이 즉시 출제
+    const ready = prefetchCache.current.get(key);
+    if (ready) {
+      prefetchCache.current.delete(key);
+      push(`> ⚡ 미리 준비된 문제로 바로 출제! [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
+      startWithPuzzle(ready, cfg);
+      prefetchNext(cfg); // 그 다음 문제도 또 미리 준비
+      return;
+    }
+
+    // 2) 캐시에 없으면 생성 — 백그라운드 생성이 진행 중이면 그걸 기다려 대기시간을 줄인다
+    setBusy(true);
     push(`> 출제 중… [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
     mascot.current?.event('loading');
     const loadingTick = window.setInterval(() => mascot.current?.event('loading'), 4000);
     try {
-      const { text, balance } = await proxyGenerateText(
-        cfg.tier,
-        [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? []), temperature: 0.9 },
-      );
-      applyBalance(balance);
-      const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
-      exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
-      setGame({
-        phase: 'playing',
-        puzzle,
-        revealedCount: 1, // 첫 힌트는 자동 공개
-        wrongGuesses: 0,
-        guesses: [],
-        difficulty: cfg.difficulty,
-      });
-      push(`> 출제 완료! 힌트 ${puzzle.hints.length}개 · 탈락 임계값 ${puzzle.maxHints} · 첫 힌트 공개`);
-      mascot.current?.event('intro');
+      const inflight = prefetchInFlight.current.get(key);
+      let puzzle: Puzzle;
+      if (inflight) {
+        try { puzzle = await inflight; }
+        catch { puzzle = await generatePuzzle(cfg); } // 프리페치 실패 → 즉석 재생성
+      } else {
+        puzzle = await generatePuzzle(cfg);
+      }
+      prefetchCache.current.delete(key); // 방금 소비한 항목 정리
+      startWithPuzzle(puzzle, cfg);
+      prefetchNext(cfg);
     } catch (e) {
       push(`! 출제 실패: ${(e as Error).message}`);
       mascot.current?.say('으… 출제에 실패했어. 다시 해줄래?');
