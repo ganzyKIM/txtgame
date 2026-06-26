@@ -301,7 +301,7 @@ button{font-family:inherit;}
   font-size:10px;color:var(--ink);text-shadow:0 0 3px #fff;}
 
 /* 힌트 리스트 */
-.hint-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0;}
+.hint-list{display:flex;flex-direction:column;gap:6px;overflow:hidden auto;flex:1;min-height:0;}
 .hint-item{
   display:flex;gap:8px;padding:8px;font-size:12px;line-height:1.5;
   background:var(--pink-1);
