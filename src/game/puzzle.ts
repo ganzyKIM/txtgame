@@ -28,20 +28,36 @@ const DIFFICULTY_GUIDE: Record<Difficulty, string> = {
   hard: '정답은 마니아도 헷갈릴 만큼 까다로운 것으로 고르고, 힌트는 더 함축적으로, maxHints는 3~5 사이로 빡빡하게 잡아라.',
 };
 
+/** 매 출제마다 샘플링을 흩뜨리기 위한 다양성 축 (소프트 가이드) */
+const DIVERSITY_AXES = [
+  '누구나 알지만 이 카테고리에서 자주 안 나오는 의외의 선택',
+  '비서구권(아시아·아프리카·중동·중남미) 쪽',
+  '비교적 최근·현대적인 것',
+  '고전적이고 오래된 것',
+  '교과서 1순위가 아닌, 살짝 마이너하지만 흥미로운 것',
+  '서양 고전·근대 쪽',
+  '대중문화에서 자주 다뤄진 것',
+  '전문가·마니아가 좋아할 깊이 있는 것',
+];
+
 /**
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
 export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = []): string {
+  const seed = Math.floor(Math.random() * 99991) + 10000;
+  const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
     `[카테고리] ${categoryLabel}`,
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
+    `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 반드시 달라져야 한다. 절대 직전과 같은 부류의 "가장 유명한 정답"으로 기계적으로 수렴하지 마라.`,
+    `[이번 다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라. (카테고리와 부자연스러우면 무시하고, 대신 평소 잘 고르지 않던 신선한 정답을 골라라.)`,
     recentAnswers.length > 0
       ? [
-          `[절대 금지 정답 ${recentAnswers.length}개] 아래 정답들은 이미 출제된 적 있다. 이 목록에 있는 것과 동일하거나 매우 유사한 정답은 절대 선택하지 마라:`,
+          `[절대 금지 정답 ${recentAnswers.length}개] 아래 정답들은 이미 출제된 적 있다. 이 목록에 있는 것과 동일하거나, 표기만 다른 같은 대상, 또는 매우 유사한 정답은 절대 선택하지 마라:`,
           recentAnswers.map(a => `  • ${a}`).join('\n'),
           '  → 위 목록의 시대·지역·장르 편중도 파악해, 아직 다루지 않은 영역에서 골라라.',
         ].join('\n')
@@ -50,6 +66,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '  • 지역(아시아·유럽·아메리카·아프리카 등)과 시대(고대~현대)를 골고루 넘나들어라.',
     '  • 동일 인물·작품·장소가 반복되지 않도록 폭넓게 선택해라.',
     '  • 금지 목록이 특정 시대나 지역에 편중돼 있다면, 그 반대편 영역에서 정답을 골라라.',
+    '  • "가장 유명한 한두 개"가 머릿속에 먼저 떠오르면, 그건 일부러 피하고 세 번째·네 번째 후보를 골라라.',
     '',
     '규칙:',
     '1. 정답(answer)은 구체적인 하나의 대상이어야 한다 (사람/작품/사물/장소 등의 고유한 이름).',
