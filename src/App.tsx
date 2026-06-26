@@ -188,12 +188,10 @@ export default function App() {
 
   function handleMinimize() {
     setMinimized(true);
-    mascot.current?.banish();
   }
 
   function handleRestore() {
     setMinimized(false);
-    mascot.current?.summon();
   }
 
   function handleClose() {
