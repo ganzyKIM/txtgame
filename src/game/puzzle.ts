@@ -28,6 +28,27 @@ const DIFFICULTY_GUIDE: Record<Difficulty, string> = {
   hard: '정답은 마니아도 헷갈릴 만큼 까다로운 것으로 고르고, 힌트는 더 함축적으로, maxHints는 3~5 사이로 빡빡하게 잡아라.',
 };
 
+/**
+ * 매 출제마다 정답의 첫 글자(초성)를 강제로 지정해 답안 공간을 확정적으로 분산.
+ * 모델이 '가장 유명한 소수 정답'으로 수렴하는 걸 코드 레벨에서 차단한다.
+ */
+const CHOSEONG_HINTS: [string, string][] = [
+  ['ㄱ', '가·거·고·구·그·기·까·꼬 등'],
+  ['ㄴ', '나·너·노·누·느·니 등'],
+  ['ㄷ', '다·더·도·두·드·디·따·또 등'],
+  ['ㄹ', '라·레·로·루·리 등 (외래어 포함)'],
+  ['ㅁ', '마·머·모·무·므·미 등'],
+  ['ㅂ', '바·버·보·부·브·비·빠 등'],
+  ['ㅅ', '사·서·소·수·스·시·싸 등'],
+  ['ㅇ', '아·어·오·우·으·이 등'],
+  ['ㅈ', '자·저·조·주·즈·지·짜 등'],
+  ['ㅊ', '차·처·초·추·치 등'],
+  ['ㅋ', '카·커·코·쿠·크·키 등'],
+  ['ㅌ', '타·터·토·투·티 등'],
+  ['ㅍ', '파·퍼·포·푸·프·피 등'],
+  ['ㅎ', '하·허·호·후·흐·히 등'],
+];
+
 /** 매 출제마다 샘플링을 흩뜨리기 위한 다양성 축 (소프트 가이드) */
 const DIVERSITY_AXES = [
   '누구나 알지만 이 카테고리에서 자주 안 나오는 의외의 선택',
@@ -47,6 +68,7 @@ const DIVERSITY_AXES = [
 export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = []): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
+  const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
@@ -54,6 +76,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
     `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 반드시 달라져야 한다. 절대 직전과 같은 부류의 "가장 유명한 정답"으로 기계적으로 수렴하지 마라.`,
+    `[★초성 강제★] 이번 정답의 한글 표기 첫 글자는 반드시 초성 '${cho}' 소리(${choEg})로 시작해야 한다. 이 제약을 그 무엇보다 최우선으로 지켜라. '${cho}'(으)로 시작하지 않는 정답은 절대 허용되지 않는다. (이 카테고리·주제에서 '${cho}' 초성 정답이 도저히 없을 때만, 가장 덜 흔한 다른 초성으로 바꾸되 유명한 1순위 정답은 피하라.)`,
     `[이번 다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라. (카테고리와 부자연스러우면 무시하고, 대신 평소 잘 고르지 않던 신선한 정답을 골라라.)`,
     recentAnswers.length > 0
       ? [
