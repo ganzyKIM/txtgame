@@ -35,6 +35,7 @@ export default function App() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
+  const recentAnswers = useRef<string[]>([]);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 
   useEffect(() => {
@@ -58,10 +59,11 @@ export default function App() {
       const { text, balance } = await proxyGenerateText(
         cfg.tier,
         [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty), temperature: 0.9 },
+        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, recentAnswers.current), temperature: 0.9 },
       );
       applyBalance(balance);
       const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+      recentAnswers.current = [...recentAnswers.current.slice(-29), puzzle.answer];
       setGame({
         phase: 'playing',
         puzzle,
@@ -242,7 +244,18 @@ export default function App() {
           onClose={handleClose}
         >
           {game.phase === 'setup' ? (
-            <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
+            busy ? (
+              <div className="generating-full">
+                <div className="generating-wrap">
+                  <div className="generating-label">문제 출제 중… ✦</div>
+                  <div className="generating-bar-bg">
+                    <div className="generating-bar-fill" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
+            )
           ) : (
             <GamePanel
               state={game}

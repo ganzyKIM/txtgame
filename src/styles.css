@@ -334,7 +334,8 @@ button{font-family:inherit;}
 .restart-btns .btn-primary{flex:1;}
 .restart-btns .btn{flex:1;}
 
-/* 로딩바 (한번 더! 출제 중) */
+/* 로딩바 (출제 중 — setup 전체 화면 + GamePanel 인라인 공통) */
+.generating-full{flex:1;display:flex;align-items:center;justify-content:center;}
 .generating-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;animation:fadeIn .2s ease;}
 .generating-label{font-size:13px;color:var(--magenta-d);font-weight:bold;letter-spacing:.05em;}
 .generating-bar-bg{width:100%;max-width:240px;height:10px;background:#f0d0e8;border-radius:6px;overflow:hidden;border:1px solid #d090c0;}

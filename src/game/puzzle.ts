@@ -32,20 +32,19 @@ const DIFFICULTY_GUIDE: Record<Difficulty, string> = {
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty): string {
-  const seed = Math.floor(Math.random() * 99991) + 10000;
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = []): string {
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
     `[카테고리] ${categoryLabel}`,
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
-    `[랜덤 시드] ${seed}`,
-    '▸ 위 숫자를 난수 씨앗(seed)으로 삼아 정답을 결정하라. 유명하거나 쉬운 정답도 전혀 상관없다.',
-    '  핵심은 단 하나: 같은 정답이 반복되지 않도록 카테고리 전체 공간에서 고르게 샘플링하는 것이다.',
-    '  • 시드값이 달라질 때마다 반드시 다른 정답을 선택해야 한다.',
-    '  • 카테고리 안의 정답 후보를 넓게 상상한 뒤, 시드를 인덱스처럼 활용해 그 중 하나를 뽑아라.',
-    '  • 지역(아시아·유럽·아메리카·아프리카 등)과 시대(고대~현대)를 골고루 넘나들어 선택 공간을 넓혀라.',
+    recentAnswers.length > 0
+      ? `[금지 정답 — 반드시 제외] 아래 정답들은 최근에 이미 출제됐다. 절대 다시 사용하지 마라:\n${recentAnswers.map(a => `  • ${a}`).join('\n')}`
+      : '',
+    '[다양성 지침] 카테고리 전체 공간에서 고르게 샘플링해라.',
+    '  • 지역(아시아·유럽·아메리카·아프리카 등)과 시대(고대~현대)를 골고루 넘나들어라.',
+    '  • 동일 인물·작품·장소가 반복되지 않도록 폭넓게 선택해라.',
     '',
     '규칙:',
     '1. 정답(answer)은 구체적인 하나의 대상이어야 한다 (사람/작품/사물/장소 등의 고유한 이름).',
