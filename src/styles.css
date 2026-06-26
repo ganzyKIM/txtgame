@@ -724,3 +724,27 @@ body.mode-ame .mascot-transform{background:linear-gradient(#2a1040, #5a1a40); te
 body.mode-ame .fx-ring{border-color:#7a2d60;} body.mode-ame .fx-ring2{border-color:#3a1a50;}
 body.mode-ame .fx-spark.s1{color:#7a2d60;} body.mode-ame .fx-spark.s2{color:#4a1a70;} body.mode-ame .fx-spark.s3{color:#5a1a40;}
 body.mode-ame .fx-spark.s4{color:#1a3050;} body.mode-ame .fx-spark.s5{color:#6a2050;} body.mode-ame .fx-spark.s6{color:#4a1030;}
+
+/* 바다거북 수프 — 다크모드 */
+body.mode-ame .soup-intro-card{background:#180c22;}
+body.mode-ame .soup-title{color:#7ab0d0;}
+body.mode-ame .soup-lead{color:#ecd8f8;}
+body.mode-ame .soup-lead b{color:#d080b8;}
+body.mode-ame .soup-rules{color:#c8a8e0;}
+body.mode-ame .soup-rules b{color:#7ab0d0;}
+body.mode-ame .soup-eg{background:#1e1228; color:#9a7ab0;}
+body.mode-ame .soup-eg b{color:#d080b8;}
+body.mode-ame .soup-scenario{background:#120810; color:#ecd8f8; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .soup-log{background:#0d0818; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .soup-empty{color:#7a5a8a;}
+body.mode-ame .soup-q{background:#251630; color:#ecd8f8; border-color:var(--bevel-lt) #4a1538 #4a1538 var(--bevel-lt);}
+body.mode-ame .soup-q-mark{color:#d080b8;}
+body.mode-ame .soup-a{background:#160d1e; border-color:var(--bevel-lt) #3a1a50 #3a1a50 var(--bevel-lt);}
+body.mode-ame .soup-a-text{color:#ecd8f8;}
+body.mode-ame .soup-hint-turn{background:linear-gradient(120deg,#241c08,#1c1606); border-color:var(--bevel-lt) #5a3a08 #5a3a08 var(--bevel-lt); box-shadow:1px 1px 0 #3a2406;}
+body.mode-ame .soup-hint-badge{background:#3a2800; color:#e0b830; border-color:#5a3a08;}
+body.mode-ame .soup-hint-text{color:#c8a050;}
+body.mode-ame .soup-result{background:#180c22;}
+body.mode-ame .soup-result-head{color:#7ab0d0;}
+body.mode-ame .soup-result.revealed .soup-result-head{color:#c23a6a;}
+body.mode-ame .soup-solution{background:#120810; color:#ecd8f8; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
