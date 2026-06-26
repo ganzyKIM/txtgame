@@ -6,6 +6,7 @@ interface Props {
   state: GameState;
   judging: boolean;
   result: GameResult | null;
+  generating?: boolean;
   onReveal: () => void;
   onGuess: (text: string) => void;
   onRestart: () => void;
@@ -13,7 +14,7 @@ interface Props {
   onEliminate: () => void;
 }
 
-export default function GamePanel({ state, judging, result, onReveal, onGuess, onRestart, onRestartSame, onEliminate }: Props) {
+export default function GamePanel({ state, judging, result, generating, onReveal, onGuess, onRestart, onRestartSame, onEliminate }: Props) {
   const [guess, setGuess] = useState('');
   const puzzle = state.puzzle;
   if (!puzzle) return null;
@@ -104,7 +105,16 @@ export default function GamePanel({ state, judging, result, onReveal, onGuess, o
             </div>
           )}
 
-          {finished && result && (
+          {generating && (
+            <div className="generating-wrap">
+              <div className="generating-label">새 문제 출제 중… ✦</div>
+              <div className="generating-bar-bg">
+                <div className="generating-bar-fill" />
+              </div>
+            </div>
+          )}
+
+          {finished && result && !generating && (
             <div className={`result-card ${result.won ? '' : 'lost'}`}>
               <div className="result-rank">{result.won ? result.rank : '탈락'}</div>
               <div className="result-answer">

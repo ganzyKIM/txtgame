@@ -189,10 +189,9 @@ export default function App() {
   }
 
   function handleRestartSame() {
-    if (!lastConfig) return;
-    setGame(emptyGame);
+    if (!lastConfig || busy) return;
+    // setup 화면으로 돌아가지 않고 GamePanel 안에서 바로 재출제
     setResult(null);
-    push('> 같은 설정으로 다시 출제할게! ♡');
     void handleStart(lastConfig);
   }
 
@@ -249,10 +248,11 @@ export default function App() {
               state={game}
               judging={judging}
               result={result}
+              generating={busy}
               onReveal={handleReveal}
               onGuess={(t) => void handleGuess(t)}
               onRestart={handleRestart}
-            onRestartSame={lastConfig ? handleRestartSame : undefined}
+              onRestartSame={lastConfig ? handleRestartSame : undefined}
               onEliminate={handleEliminate}
             />
           )}
