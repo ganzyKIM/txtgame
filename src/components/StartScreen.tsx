@@ -79,7 +79,7 @@ export default function StartScreen({ busy, onStart, onStartSoup }: Props) {
           <button className="soup-launch" onClick={onStartSoup} disabled={busy}>
             <span className="soup-launch-emoji">🐢</span>
             <span className="soup-launch-text">
-              <b>바다거북 수프 게임</b>
+              <b>바다거북 수프 게임 (beta)</b>
               <small>예/아니오 질문으로 진상을 추리하는 수평사고 퀴즈!</small>
             </span>
           </button>
