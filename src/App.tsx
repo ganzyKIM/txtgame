@@ -34,6 +34,7 @@ export default function App() {
   const [tier, setTier] = useState<TextTier>('pro');
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function App() {
     setBusy(true);
     setResult(null);
     setTier(cfg.tier);
+    setLastConfig(cfg);
     push(`> 출제 중… [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
     mascot.current?.event('loading');
     const loadingTick = window.setInterval(() => mascot.current?.event('loading'), 4000);
@@ -186,6 +188,14 @@ export default function App() {
     push('> 새 문제를 준비할게. 카테고리를 골라줘! ♡');
   }
 
+  function handleRestartSame() {
+    if (!lastConfig) return;
+    setGame(emptyGame);
+    setResult(null);
+    push('> 같은 설정으로 다시 출제할게! ♡');
+    void handleStart(lastConfig);
+  }
+
   function handleMinimize() {
     setMinimized(true);
   }
@@ -242,6 +252,7 @@ export default function App() {
               onReveal={handleReveal}
               onGuess={(t) => void handleGuess(t)}
               onRestart={handleRestart}
+            onRestartSame={lastConfig ? handleRestartSame : undefined}
               onEliminate={handleEliminate}
             />
           )}

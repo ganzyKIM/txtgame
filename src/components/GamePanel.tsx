@@ -9,10 +9,11 @@ interface Props {
   onReveal: () => void;
   onGuess: (text: string) => void;
   onRestart: () => void;
+  onRestartSame?: () => void;
   onEliminate: () => void;
 }
 
-export default function GamePanel({ state, judging, result, onReveal, onGuess, onRestart, onEliminate }: Props) {
+export default function GamePanel({ state, judging, result, onReveal, onGuess, onRestart, onRestartSame, onEliminate }: Props) {
   const [guess, setGuess] = useState('');
   const puzzle = state.puzzle;
   if (!puzzle) return null;
@@ -114,7 +115,12 @@ export default function GamePanel({ state, judging, result, onReveal, onGuess, o
                   ? `힌트 ${result.hintsUsed}개 사용 · ${result.score}점`
                   : `힌트 ${result.hintsUsed}개를 다 썼지만 못 맞혔어…`}
               </div>
-              <button className="btn btn-primary" onClick={onRestart}>↺ 다시 하기</button>
+              <div className="restart-btns">
+                {onRestartSame && (
+                  <button className="btn btn-primary" onClick={onRestartSame}>↺ 한번 더!</button>
+                )}
+                <button className="btn" onClick={onRestart}>↩ 다른 주제</button>
+              </div>
             </div>
           )}
         </section>

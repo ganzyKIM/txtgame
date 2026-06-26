@@ -330,6 +330,9 @@ button{font-family:inherit;}
 .result-answer{font-size:15px;margin:8px 0;color:var(--ink);}
 .result-answer b{color:var(--magenta-d);}
 .result-meta{font-size:11px;color:var(--ink-soft);margin-bottom:10px;}
+.restart-btns{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+.restart-btns .btn-primary{flex:1;}
+.restart-btns .btn{flex:none;}
 
 /* ════════════════════════════════════════════════════════════════════
    마스코트 (쵸텐 ⟷ 아메) — webp_editor에서 차용
