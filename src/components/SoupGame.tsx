@@ -55,7 +55,7 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
       setPuzzle(p);
       setPhase('playing');
       push(`> 🐢 수프 완성! 「${p.title}」 — 예/아니오로 질문해봐!`);
-      mascot.current?.event('intro');
+      mascot.current?.event('soup_intro');
     } catch (e) {
       push(`! 수프 출제 실패: ${(e as Error).message}`);
       mascot.current?.say('으… 수프가 타버렸어. 다시 해줄래?');
@@ -87,9 +87,13 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
       if (verdict === '정답') {
         setPhase('solved');
         push('> ⭕ 진상을 꿰뚫었어! 클리어!');
-        mascot.current?.event('win');
+        mascot.current?.event('soup_solve');
+      } else if (verdict === '예') {
+        mascot.current?.event('soup_yes');
+      } else if (verdict === '아니오') {
+        mascot.current?.event('soup_no');
       } else {
-        mascot.current?.event(verdict === '예' ? 'correct' : 'idle');
+        mascot.current?.event('soup_irrelevant');
       }
     } catch (e) {
       setTurns((t) => [...t, { role: 'gm', text: `(판정 실패: ${(e as Error).message})`, verdict: '상관없음' }]);
@@ -121,10 +125,10 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
       if (correct) {
         setPhase('solved');
         push('> ⭕ 정답! 진상을 완벽하게 추리했어!');
-        mascot.current?.event('win');
+        mascot.current?.event('soup_solve');
       } else {
         push('> ❌ 아직 핵심이 비껴갔어. 더 질문해봐!');
-        mascot.current?.event('wrong');
+        mascot.current?.event('soup_no');
       }
     } catch (e) {
       setTurns((t) => [...t, { role: 'gm', text: `(판정 실패: ${(e as Error).message})`, verdict: '아니오' }]);
@@ -138,7 +142,7 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
     if (!puzzle) return;
     setPhase('revealed');
     push('> 🏳️ 진상을 공개했어.');
-    mascot.current?.event('eliminated');
+    mascot.current?.event('soup_reveal');
   }
 
   // ── 인트로(설명) 화면 ──────────────────────────────────────────

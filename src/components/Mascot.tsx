@@ -5,7 +5,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
    ════════════════════════════════════════════════════════════════════ */
 
 export type Form = 'choten' | 'ame';
-export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging' | 'close';
+export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging' | 'close'
+  | 'soup_intro' | 'soup_yes' | 'soup_no' | 'soup_irrelevant' | 'soup_solve' | 'soup_reveal';
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -23,28 +24,40 @@ const FORMS: Record<Form, { img: string; name: string; cls: string }> = {
 
 const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
   choten: {
-    intro:      '/char/choten_default.png',
-    hint:       '/char/choten_peace.png',
-    correct:    '/char/choten_dere.png',
-    wrong:      '/char/choten_angry.png',
-    eliminated: '/char/choten_angry.png',
-    win:        '/char/choten_dere.png',
-    idle:       '/char/choten_peace.png',
-    loading:    '/char/choten_peace.png',
-    judging:    '/char/choten_dere.png',
-    close:      '/char/choten_angry.png',
+    intro:          '/char/choten_default.png',
+    hint:           '/char/choten_peace.png',
+    correct:        '/char/choten_dere.png',
+    wrong:          '/char/choten_angry.png',
+    eliminated:     '/char/choten_angry.png',
+    win:            '/char/choten_dere.png',
+    idle:           '/char/choten_peace.png',
+    loading:        '/char/choten_peace.png',
+    judging:        '/char/choten_dere.png',
+    close:          '/char/choten_angry.png',
+    soup_intro:     '/char/choten_default.png',
+    soup_yes:       '/char/choten_dere.png',
+    soup_no:        '/char/choten_angry.png',
+    soup_irrelevant:'/char/choten_peace.png',
+    soup_solve:     '/char/choten_dere.png',
+    soup_reveal:    '/char/choten_angry.png',
   },
   ame: {
-    intro:      '/char/ame_default.png',
-    hint:       '/char/ame_smoking.png',
-    correct:    '/char/ame_dere.png',
-    wrong:      '/char/ame_yandere.png',
-    eliminated: '/char/ame_yandere.png',
-    win:        '/char/ame_dere.png',
-    idle:       '/char/ame_smoking.png',
-    loading:    '/char/ame_smoking.png',
-    judging:    '/char/ame_default.png',
-    close:      '/char/ame_yandere.png',
+    intro:          '/char/ame_default.png',
+    hint:           '/char/ame_smoking.png',
+    correct:        '/char/ame_dere.png',
+    wrong:          '/char/ame_yandere.png',
+    eliminated:     '/char/ame_yandere.png',
+    win:            '/char/ame_dere.png',
+    idle:           '/char/ame_smoking.png',
+    loading:        '/char/ame_smoking.png',
+    judging:        '/char/ame_default.png',
+    close:          '/char/ame_yandere.png',
+    soup_intro:     '/char/ame_default.png',
+    soup_yes:       '/char/ame_dere.png',
+    soup_no:        '/char/ame_yandere.png',
+    soup_irrelevant:'/char/ame_smoking.png',
+    soup_solve:     '/char/ame_dere.png',
+    soup_reveal:    '/char/ame_yandere.png',
   },
 };
 
@@ -108,6 +121,45 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '잠깐!! 우리 아직 덜 놀았잖아~!!♡',
       '어딜 가려고~? 천사쨩이 허락해야 나갈 수 있어!♡',
     ],
+    soup_intro: [
+      '이 수수께끼, 왜 그런 일이 생겼는지 알겠어?♡ 예/아니오로 물어봐!',
+      '자자자!! 비밀이 숨어있어~ 천사쨩한테 질문해봐♡',
+      '겉만 보면 이상하지? 진상은 아주 납득이 가는 거야♡ 캐내봐!',
+      '수수께끼~ 어떤 트릭이 숨어있을까♡ 천천히 파헤쳐봐!',
+      '힌트는 예/아니오로만이야! 핵심을 꿰뚫어봐♡',
+    ],
+    soup_yes: [
+      '맞아맞아!! 예!!♡',
+      '오~ 정확해! 예야!♡',
+      '그래! 잘 잡아냈어♡',
+      '예!! 날카로운데?♡',
+      '딩동~ 맞아!! 가까워지고 있어♡',
+    ],
+    soup_no: [
+      '아니야~! 다른 방향으로 생각해봐♡',
+      '땡— 아니야!♡ 다시 생각해봐!',
+      '으흠… 그건 아니라구!',
+      '아니아니~ 다른 시각으로 봐봐♡',
+      '노노노! 관점을 바꿔봐야 해♡',
+    ],
+    soup_irrelevant: [
+      '그건 이 사건이랑 별로 상관없어~ 다른 걸 물어봐♡',
+      '흠~ 관련은 없지만 좋은 시도야♡ 핵심을 파봐!',
+      '상관없는 거야~ 더 중요한 걸 찾아봐♡',
+      '음… 그건 그다지 중요하지 않아! 다른 방향으로!♡',
+    ],
+    soup_solve: [
+      '정답이이이야!!!♡♡ 진상을 완전히 꿰뚫었어!!',
+      '오오오!! 맞혔어!!! 천사쨩 감동받았어♡',
+      '완벽해!! 그게 진상이야!! 대천재♡',
+      '맞아맞아맞아!!! 훌륭해!! 박수박수!!♡',
+    ],
+    soup_reveal: [
+      '에이~ 포기야? 그럼 진상 알려줄게. 잘 들어봐♡',
+      '아쉬워라… 다음엔 꼭 맞혀!♡ 진상은~',
+      '으음~ 이번엔 어려웠나봐. 진상 공개!♡',
+      '포기는 아쉽지만~ 납득이 가는 진상이야, 봐봐♡',
+    ],
   },
   ame: {
     intro: [
@@ -167,6 +219,45 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '…어딜. 내 허락 없이는 못 나가.',
       '나가고 싶으면 나한테 물어봐. 아직 안 돼.',
       '…닫지 마. 우리 아직 안 끝났거든.',
+    ],
+    soup_intro: [
+      '…이 상황, 뭔가 이상하지? 찾아봐.',
+      '비밀이 있어. 질문으로 캐내봐.',
+      '…진상은 꽁꽁 숨겨뒀어. 각오해.',
+      '수수께끼야. …예/아니오로만 물어봐.',
+      '…잘 생각해. 보이는 게 전부가 아니야.',
+    ],
+    soup_yes: [
+      '…맞아.',
+      '예. …예리하네.',
+      '그래. …계속해.',
+      '…맞아. 가까워지고 있어.',
+      '예. …좋은 질문이었어.',
+    ],
+    soup_no: [
+      '…아니야.',
+      '아니오. …방향이 틀렸어.',
+      '…아니라니까.',
+      '다시 생각해. …아니야.',
+      '…아니야. 착각하지 마.',
+    ],
+    soup_irrelevant: [
+      '…그건 관계없어.',
+      '상관없어. 핵심을 찾아.',
+      '…그건 중요하지 않아.',
+      '…질문 방향을 바꿔.',
+    ],
+    soup_solve: [
+      '…맞혔어. 대단해, 진짜로.',
+      '정답이야. …인정할게. 훌륭했어.',
+      '…꿰뚫었네. 나도 놀랐어.',
+      '…맞아. 그게 진상이야. 잘했어.',
+    ],
+    soup_reveal: [
+      '…포기야? 그럼 진상 알려줄게.',
+      '아쉽네. …잘 들어.',
+      '…진상이야. 납득이 가지?',
+      '…포기하는 거야. 알려줄게.',
     ],
   },
 };
