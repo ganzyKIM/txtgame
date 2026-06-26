@@ -15,6 +15,25 @@ import StatsModal from './components/StatsModal';
 import type { GameResult, GameState } from './game/types';
 import type { TextTier } from './types';
 
+// ── 카테고리별 정답 이력 (localStorage 영속화) ──────────────────────
+const EXCLUSION_KEY = 'txtgame_exclusions_v1';
+const MAX_PER_CATEGORY = 40;
+
+function loadExclusions(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(EXCLUSION_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+  } catch { return {}; }
+}
+
+function addExclusion(map: Record<string, string[]>, category: string, answer: string): Record<string, string[]> {
+  const prev = map[category] ?? [];
+  if (prev.includes(answer)) return map;
+  const updated = { ...map, [category]: [...prev.slice(-(MAX_PER_CATEGORY - 1)), answer] };
+  try { localStorage.setItem(EXCLUSION_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
+  return updated;
+}
+
 const emptyGame: GameState = {
   phase: 'setup',
   puzzle: null,
@@ -37,7 +56,7 @@ export default function App() {
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
-  const recentAnswers = useRef<string[]>([]);
+  const exclusions = useRef<Record<string, string[]>>(loadExclusions());
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 
   useEffect(() => {
@@ -61,11 +80,11 @@ export default function App() {
       const { text, balance } = await proxyGenerateText(
         cfg.tier,
         [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, recentAnswers.current), temperature: 0.9 },
+        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? []), temperature: 0.9 },
       );
       applyBalance(balance);
       const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
-      recentAnswers.current = [...recentAnswers.current.slice(-29), puzzle.answer];
+      exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
       setGame({
         phase: 'playing',
         puzzle,
