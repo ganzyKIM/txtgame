@@ -39,7 +39,7 @@ export default function Window({
         <div className="menubar">
           <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
           <span className="menu-spacer" />
-          <span className="menu-info">크레딧 <b>{credits ?? '—'}</b></span>
+          <span className="menu-info" style={{cursor:'pointer'}} onClick={() => alert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
           <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
           <button className="menu-btn" onClick={onLogout}>로그아웃</button>
         </div>
