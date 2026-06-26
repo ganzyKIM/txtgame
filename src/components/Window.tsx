@@ -7,12 +7,14 @@ interface Props {
   onTransform: () => void;
   onLogout: () => void;
   onOpenStats: () => void;
+  onMinimize: () => void;
+  onClose: () => void;
   children: ReactNode;
 }
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, children,
+  onTransform, onLogout, onOpenStats, onMinimize, onClose, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
 
@@ -28,9 +30,8 @@ export default function Window({
         <div className="titlebar">
           <span className="title-text">초텐짱의 편차치99 ✞퀴즈대합전✞ <span className="blink">♥</span></span>
           <div className="title-btns">
-            <button className="tbtn" title="최소화">_</button>
-            <button className="tbtn" title="최대화">▢</button>
-            <button className="tbtn tbtn-x" title="닫기" onClick={onLogout}>✕</button>
+            <button className="tbtn" title="최소화" onClick={onMinimize}>_</button>
+            <button className="tbtn tbtn-x" title="닫기" onClick={onClose}>✕</button>
           </div>
         </div>
 

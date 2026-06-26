@@ -5,7 +5,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
    ════════════════════════════════════════════════════════════════════ */
 
 export type Form = 'choten' | 'ame';
-export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging';
+export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging' | 'close';
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -32,6 +32,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     idle:       '/char/choten_peace.png',
     loading:    '/char/choten_peace.png',
     judging:    '/char/choten_dere.png',
+    close:      '/char/choten_angry.png',
   },
   ame: {
     intro:      '/char/ame_default.png',
@@ -43,6 +44,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     idle:       '/char/ame_smoking.png',
     loading:    '/char/ame_smoking.png',
     judging:    '/char/ame_default.png',
+    close:      '/char/ame_yandere.png',
   },
 };
 
@@ -101,6 +103,11 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '뭘 출제할지 고민 중이야~ 잠시만♡',
       '천사쨩 열심히 생각하는 중! 기다려줘♡',
     ],
+    close: [
+      '안 돼~!! 내 허락 없인 절대 못 나가!♡',
+      '잠깐!! 우리 아직 덜 놀았잖아~!!♡',
+      '어딜 가려고~? 천사쨩이 허락해야 나갈 수 있어!♡',
+    ],
   },
   ame: {
     intro: [
@@ -155,6 +162,11 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '…아직이야. 조금만 더.',
       '힌트 배치하는 중이야… 곧.',
       '…서두르지 마. 제대로 만들어줄게.',
+    ],
+    close: [
+      '…어딜. 내 허락 없이는 못 나가.',
+      '나가고 싶으면 나한테 물어봐. 아직 안 돼.',
+      '…닫지 마. 우리 아직 안 끝났거든.',
     ],
   },
 };

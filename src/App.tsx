@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import LoginScreen from './auth/LoginScreen';
 import Window from './components/Window';
@@ -33,7 +33,12 @@ export default function App() {
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('pro');
   const [statsOpen, setStatsOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
+
+  useEffect(() => {
+    document.body.classList.toggle('is-minimized', minimized);
+  }, [minimized]);
 
   function push(line: string) {
     setLog((l) => [...l, line].slice(-50));
@@ -181,6 +186,21 @@ export default function App() {
     push('> 새 문제를 준비할게. 카테고리를 골라줘! ♡');
   }
 
+  function handleMinimize() {
+    setMinimized(true);
+    mascot.current?.banish();
+  }
+
+  function handleRestore() {
+    setMinimized(false);
+    mascot.current?.summon();
+  }
+
+  function handleClose() {
+    push('> 아직 더 놀아야 해~! 허락 없이는 나갈 수 없어! ♡');
+    mascot.current?.event('close');
+  }
+
   async function handleLogout() {
     await signOut();
   }
@@ -198,28 +218,37 @@ export default function App() {
 
   return (
     <>
-      <Window
-        credits={profile?.credits ?? null}
-        consoleLines={log}
-        statusText={statusText}
-        onTransform={() => mascot.current?.transform()}
-        onLogout={() => void handleLogout()}
-        onOpenStats={() => setStatsOpen(true)}
-      >
-        {game.phase === 'setup' ? (
-          <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
-        ) : (
-          <GamePanel
-            state={game}
-            judging={judging}
-            result={result}
-            onReveal={handleReveal}
-            onGuess={(t) => void handleGuess(t)}
-            onRestart={handleRestart}
-            onEliminate={handleEliminate}
-          />
-        )}
-      </Window>
+      {minimized ? (
+        <div className="desktop-icon" onClick={handleRestore}>
+          <img className="desktop-icon-img" src="/icon.png" alt="퀴즈대합전" draggable={false} />
+          <span className="desktop-icon-label">✞퀴즈대합전✞</span>
+        </div>
+      ) : (
+        <Window
+          credits={profile?.credits ?? null}
+          consoleLines={log}
+          statusText={statusText}
+          onTransform={() => mascot.current?.transform()}
+          onLogout={() => void handleLogout()}
+          onOpenStats={() => setStatsOpen(true)}
+          onMinimize={handleMinimize}
+          onClose={handleClose}
+        >
+          {game.phase === 'setup' ? (
+            <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
+          ) : (
+            <GamePanel
+              state={game}
+              judging={judging}
+              result={result}
+              onReveal={handleReveal}
+              onGuess={(t) => void handleGuess(t)}
+              onRestart={handleRestart}
+              onEliminate={handleEliminate}
+            />
+          )}
+        </Window>
+      )}
       <Mascot ref={mascot} />
       {statsOpen && user && (
         <StatsModal userId={user.id} onClose={() => setStatsOpen(false)} />
