@@ -22,7 +22,7 @@
 [hidden]{display:none !important;}
 html{height:100%;}
 body{
-  margin:0; height:100vh; overflow:hidden;
+  margin:0; height:100vh; height:100dvh; overflow:hidden;
   font-family:'Galmuri11','MS Gothic','Apple SD Gothic Neo',monospace;
   font-size:13px; color:var(--ink);
   background:
@@ -44,7 +44,7 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:800px;max-width:calc(100% - 48px);min-width:0;height:calc(100vh - 72px);display:flex;flex-direction:column;}
+.desktop{width:800px;max-width:calc(100% - 48px);min-width:0;height:calc(100vh - 72px);height:calc(100dvh - 72px);display:flex;flex-direction:column;}
 .window{
   flex:1; min-height:0; overflow:hidden; width:100%;
   background:var(--win-bg);
@@ -238,7 +238,7 @@ button{font-family:inherit;}
 /* ════════════════════════════════════════════════════════════════════
    로그인 화면
    ════════════════════════════════════════════════════════════════════ */
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%;}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;width:100%;padding:8px;}
 .login-card{
   width:380px;max-width:92vw;background:var(--win-bg);
   border:3px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
@@ -650,9 +650,9 @@ body.mode-ame .wc-timerbar-fill{background:repeating-linear-gradient(90deg,#d080
 @media(max-height:760px){.mascot-img{height:340px;}}
 @media(max-width:1280px){.mascot{right:6px;}}
 @media(max-width:820px){
-  /* 여백 확보 → 배경 이미지가 사방에서 보임 */
-  body{padding:20px 16px;}
-  .desktop{width:calc(100vw - 32px);max-width:none;height:calc(100dvh - 40px);}
+  /* 위·아래 좁은 고정 여백 + 창이 실제 보이는 높이를 꽉 채움 */
+  body{padding:8px;}
+  .desktop{width:100%;max-width:none;height:calc(100dvh - 16px);}
   .console-strip .console{height:72px;}
   .console-strip{max-height:90px;}
 
@@ -683,6 +683,19 @@ body.mode-ame .wc-timerbar-fill{background:repeating-linear-gradient(90deg,#d080
   .seg-btn{font-size:12px;}
   .panel-title{font-size:13px;}
   .guess-log{font-size:12px;}
+
+  /* iOS: 입력창 포커스 시 자동 확대(zoom) 방지 → 16px 이상 필요 */
+  .text-input{font-size:16px;}
+
+  /* 타이틀바: 긴 제목이 버튼을 밀어내지 않도록 잘림 처리 */
+  .titlebar{flex-wrap:nowrap;}
+  .title-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .title-btns{flex:none;}
+
+  /* 메뉴바: 버튼이 줄바꿈으로 깨지지 않게 한 줄 가로 스크롤 */
+  .menubar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
+  .menubar::-webkit-scrollbar{display:none;}
+  .menu-btn,.mascot-transform{flex:none;white-space:nowrap;}
 
   /* 마스코트: transform 대신 이미지 직접 축소 → 말풍선이 scale에 영향 안 받음 */
   .mascot{transform:none;right:4px;}
