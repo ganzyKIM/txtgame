@@ -435,11 +435,11 @@ button{font-family:inherit;}
 @media(max-height:760px){.mascot-img{height:340px;}}
 @media(max-width:1280px){.mascot{right:6px;}}
 @media(max-width:820px){
-  /* 패딩 축소 + 동적 뷰포트 높이(주소창 잘림 방지) */
-  body{padding:8px;}
-  .desktop{height:calc(100dvh - 16px);}
+  /* 여백 확보 → 배경 이미지가 사방에서 보임 */
+  body{padding:20px 16px;}
+  .desktop{height:calc(100dvh - 40px);}
 
-  /* body가 세로로 스크롤 — 내부 overflow 해제 */
+  /* body 세로 스크롤 — 내부 overflow 해제 */
   .body{flex-direction:column;overflow-y:auto;overflow-x:hidden;}
   .game-grid{flex-direction:column;overflow:visible;min-height:unset;}
   .game-left{overflow:visible;flex:none;}
@@ -467,8 +467,10 @@ button{font-family:inherit;}
   .panel-title{font-size:13px;}
   .guess-log{font-size:12px;}
 
-  /* 마스코트 축소 */
-  .mascot{transform:scale(.5);transform-origin:bottom right;}
+  /* 마스코트: transform 대신 이미지 직접 축소 → 말풍선이 scale에 영향 안 받음 */
+  .mascot{transform:none;right:4px;}
+  .mascot-img{height:200px;}
+  .mascot-bubble{font-size:14px;max-width:170px;padding:8px 11px;}
 }
 
 /* ════════════════════════════════════════════════════════════════════
