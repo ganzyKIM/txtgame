@@ -271,6 +271,8 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
           </div>
         )}
 
+        {busy && <div className="soup-busy-bar" />}
+
         {!finished && (
           <>
             <div className="soup-input-row">

@@ -451,6 +451,19 @@ button{font-family:inherit;}
 .soup-a.v-정답 .soup-verdict{background:linear-gradient(90deg,#ff44c8,#d619a6);}
 .soup-a.v-정답{border-color:var(--magenta);}
 
+/* 인라인 대기 로딩바 */
+.soup-busy-bar{
+  position:relative;width:100%;height:12px;overflow:hidden;margin-bottom:6px;
+  background:#1a0024;
+  border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);
+}
+.soup-busy-bar::after{
+  content:'';position:absolute;top:2px;bottom:2px;width:38%;
+  background:repeating-linear-gradient(90deg,#ff44c8 0 10px,#c8009a 10px 12px);
+  animation:soupWait 1.3s ease-in-out infinite;
+}
+@keyframes soupWait{0%{left:-38%}100%{left:140%}}
+
 .soup-input-row{display:flex;gap:6px;}
 .soup-input-row .text-input{flex:1;}
 .soup-input-row .btn{flex:none;white-space:nowrap;}
@@ -748,3 +761,5 @@ body.mode-ame .soup-result{background:#180c22;}
 body.mode-ame .soup-result-head{color:#7ab0d0;}
 body.mode-ame .soup-result.revealed .soup-result-head{color:#c23a6a;}
 body.mode-ame .soup-solution{background:#120810; color:#ecd8f8; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .soup-busy-bar{background:#08030f; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#d080b8 0 10px,#8a2060 10px 12px);}
