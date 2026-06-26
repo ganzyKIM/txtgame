@@ -18,6 +18,8 @@ export interface SoupTurn {
   text: string;
   /** GM 응답일 때의 판정 */
   verdict?: SoupVerdict;
+  /** 힌트 응답 여부 */
+  isHint?: boolean;
 }
 
 /** 다양성을 위한 분위기 시드 */
@@ -141,4 +143,45 @@ export function parseSoupGuess(raw: string): SoupGuessResult {
     correct: Boolean(obj.correct),
     comment: String(obj.comment ?? '').trim(),
   };
+}
+
+const HINT_LEVEL: Record<number, string> = {
+  1: '아주 살짝, 방향만 제시해라. 핵심 트릭은 절대 언급하지 마라. 유저가 아직 묻지 않은 측면을 슬쩍 건드리는 정도.',
+  2: '진상의 핵심 요소 중 하나를 간접적으로 암시해라. 직접 정답을 말하지는 말되, 1차 힌트보다는 훨씬 구체적으로.',
+  3: '거의 답을 가리킬 수 있을 만큼 직접적으로 알려줘라. 단, 완전한 문장으로 진상을 통째로 말하는 건 안 된다.',
+};
+
+/** 힌트 요청 프롬프트 (최대 3회, 점점 직접적으로) */
+export function buildSoupHintPrompt(
+  puzzle: SoupPuzzle,
+  hintNum: number,
+  prevQA: SoupTurn[],
+): string {
+  const qaLog = prevQA
+    .filter((t) => t.role === 'user' || (t.role === 'gm' && !t.isHint))
+    .map((t) => (t.role === 'user' ? `Q: ${t.text}` : `A: ${t.verdict} — ${t.text}`))
+    .join('\n');
+
+  return [
+    '너는 바다거북 수프 퀴즈의 진행자다. 유저가 막혀서 힌트를 요청했다.',
+    '',
+    `[문제] ${puzzle.scenario}`,
+    `[진상] ${puzzle.solution}`,
+    qaLog ? `[지금까지 Q&A]\n${qaLog}` : '[지금까지 Q&A] 없음',
+    '',
+    `[힌트 수준 — ${hintNum}번째 힌트] ${HINT_LEVEL[hintNum] ?? HINT_LEVEL[3]}`,
+    '',
+    '규칙:',
+    '• 진상을 직접 발설하거나 answer 키워드를 그대로 쓰지 마라.',
+    '• 지금까지 Q&A에서 이미 나온 정보를 반복하지 마라.',
+    '• 유저가 생각의 실마리를 잡을 수 있도록 짧고 핵심적인 한두 문장으로.',
+    '',
+    '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
+    '{"hint": string}',
+  ].join('\n');
+}
+
+export function parseSoupHint(raw: string): string {
+  const obj = extractJson(raw);
+  return String(obj.hint ?? '').trim();
 }

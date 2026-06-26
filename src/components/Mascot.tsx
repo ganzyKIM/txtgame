@@ -6,7 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 
 export type Form = 'choten' | 'ame';
 export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging' | 'close'
-  | 'soup_intro' | 'soup_yes' | 'soup_no' | 'soup_irrelevant' | 'soup_solve' | 'soup_reveal';
+  | 'soup_intro' | 'soup_yes' | 'soup_no' | 'soup_irrelevant' | 'soup_solve' | 'soup_reveal' | 'soup_hint';
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -40,6 +40,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     soup_irrelevant:'/char/choten_peace.png',
     soup_solve:     '/char/choten_dere.png',
     soup_reveal:    '/char/choten_angry.png',
+    soup_hint:      '/char/choten_peace.png',
   },
   ame: {
     intro:          '/char/ame_default.png',
@@ -58,6 +59,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     soup_irrelevant:'/char/ame_smoking.png',
     soup_solve:     '/char/ame_dere.png',
     soup_reveal:    '/char/ame_yandere.png',
+    soup_hint:      '/char/ame_smoking.png',
   },
 };
 
@@ -160,6 +162,13 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '으음~ 이번엔 어려웠나봐. 진상 공개!♡',
       '포기는 아쉽지만~ 납득이 가는 진상이야, 봐봐♡',
     ],
+    soup_hint: [
+      '알겠어~ 살짝만 알려줄게♡ 잘 들어봐!',
+      '힌트 공개! 이걸로 감 잡아봐♡',
+      '으음… 특별히 알려줄게! 천사쨩의 힌트야♡',
+      '힌트 줄게~ 이거 보고 다시 생각해봐!♡',
+      '여기서 힌트! 잘 활용해봐♡',
+    ],
   },
   ame: {
     intro: [
@@ -258,6 +267,13 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '아쉽네. …잘 들어.',
       '…진상이야. 납득이 가지?',
       '…포기하는 거야. 알려줄게.',
+    ],
+    soup_hint: [
+      '…힌트야. 잘 써.',
+      '어쩔 수 없네. …들어.',
+      '…살짝만 알려줄게.',
+      '힌트. …이걸로 생각해봐.',
+      '…도움이 됐으면 해.',
     ],
   },
 };

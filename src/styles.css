@@ -456,6 +456,26 @@ button{font-family:inherit;}
 .soup-input-row .btn{flex:none;white-space:nowrap;}
 .soup-action-row{display:flex;gap:6px;margin-top:6px;}
 .soup-action-row .btn{flex:1;}
+.soup-hint-btn:disabled{opacity:.4;}
+
+/* 힌트 카운터 (타이틀바 오른쪽) */
+.soup-hint-counter{font-size:10px;font-weight:normal;color:#ffe8f8;opacity:.9;}
+
+/* 힌트 말풍선 */
+.soup-hint-turn{
+  display:flex;align-items:baseline;gap:7px;font-size:12px;
+  background:linear-gradient(120deg,#fffbe6,#fff8d0);
+  padding:6px 10px;border:2px solid;
+  border-color:var(--bevel-lt) #c8a800 #c8a800 var(--bevel-lt);
+  box-shadow:1px 1px 0 #b09000;
+  align-self:stretch;
+}
+.soup-hint-badge{
+  font-size:10px;font-weight:bold;color:#7a5800;
+  background:#ffe066;padding:1px 6px;flex:none;white-space:nowrap;
+  border:1px solid #c8a800;
+}
+.soup-hint-text{color:#5a4000;line-height:1.6;}
 
 .soup-result{
   background:var(--win-bg);padding:10px 12px;margin-top:2px;animation:fadeIn .25s ease;
