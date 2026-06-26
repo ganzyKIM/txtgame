@@ -44,7 +44,7 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:100%;max-width:1040px;min-width:0;height:calc(100vh - 72px);display:flex;flex-direction:column;}
+.desktop{width:800px;max-width:calc(100% - 48px);min-width:0;height:calc(100vh - 72px);display:flex;flex-direction:column;}
 .window{
   flex:1; min-height:0; overflow:hidden; width:100%;
   background:var(--win-bg);
@@ -165,10 +165,10 @@ button{font-family:inherit;}
   border-top:2px solid var(--bevel-dk);
   overflow:hidden;
   transition:max-height .2s ease, opacity .2s ease;
-  max-height:120px;
+  max-height:170px;
 }
 .console-strip.is-hidden{max-height:0; opacity:0;}
-.console-strip .console{height:96px;}
+.console-strip .console{height:144px;}
 
 /* ── 모달 ── */
 .modal-overlay{
@@ -443,7 +443,9 @@ button{font-family:inherit;}
 @media(max-width:820px){
   /* 여백 확보 → 배경 이미지가 사방에서 보임 */
   body{padding:20px 16px;}
-  .desktop{height:calc(100dvh - 40px);}
+  .desktop{width:calc(100vw - 32px);max-width:none;height:calc(100dvh - 40px);}
+  .console-strip .console{height:72px;}
+  .console-strip{max-height:90px;}
 
   /* body 세로 스크롤 — 내부 overflow 해제 */
   .body{flex-direction:column;overflow-y:auto;overflow-x:hidden;}

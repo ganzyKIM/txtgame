@@ -2,14 +2,18 @@ import type { CategoryInfo, Difficulty, Puzzle } from './types';
 
 /** 프리셋 카테고리 (마지막 자유입력은 별도 처리) */
 export const CATEGORIES: CategoryInfo[] = [
-  { key: 'person', label: '인물', emoji: '👤', prompt: '실존 또는 역사 속 유명 인물' },
-  { key: 'movie', label: '영화·드라마', emoji: '🎬', prompt: '널리 알려진 영화나 드라마 작품' },
-  { key: 'thing', label: '사물·발명품', emoji: '💡', prompt: '일상의 사물이나 유명한 발명품' },
-  { key: 'food', label: '음식', emoji: '🍜', prompt: '전 세계의 음식이나 요리' },
-  { key: 'animal', label: '동물', emoji: '🐾', prompt: '실존하는 동물' },
-  { key: 'place', label: '장소·나라', emoji: '🗺️', prompt: '유명한 장소, 도시, 또는 나라' },
-  { key: 'history', label: '역사 사건', emoji: '📜', prompt: '역사적으로 중요한 사건' },
-  { key: 'chara', label: '애니/게임 캐릭터', emoji: '🎮', prompt: '유명 애니메이션·만화·게임 속 캐릭터' },
+  { key: 'person',  label: '인물',       emoji: '👤', prompt: '동서양 역사·현대를 아우르는 실존 유명 인물 (정치가·예술가·과학자·탐험가·운동선수 등 다양한 분야 · 한국/아시아 인물도 포함)' },
+  { key: 'movie',   label: '영화·드라마', emoji: '🎬', prompt: '한국·미국·일본·유럽 등 세계 각국의 영화나 드라마 작품 (고전~현대, 장르 무관)' },
+  { key: 'anime',   label: '애니·만화',   emoji: '🌸', prompt: '일본 애니메이션·만화 작품 또는 그 속 캐릭터 (클래식~최신, 장르 무관)' },
+  { key: 'game',    label: '게임·캐릭터', emoji: '🎮', prompt: '비디오 게임 작품 또는 게임 속 유명 캐릭터 (콘솔·PC·모바일 무관)' },
+  { key: 'music',   label: '음악·가수',   emoji: '🎵', prompt: '클래식·팝·락·K-POP·재즈·힙합 등 장르를 아울러 유명 음악가·밴드 또는 노래 제목' },
+  { key: 'food',    label: '음식·요리',   emoji: '🍜', prompt: '전 세계 각국의 음식, 요리, 식재료, 디저트, 음료 (아시아·유럽·중동·아메리카 포함)' },
+  { key: 'animal',  label: '동물',        emoji: '🐾', prompt: '육지·바다·하늘을 아우르는 실존 동물 (포유류·조류·어류·파충류·곤충·심해생물 포함)' },
+  { key: 'place',   label: '장소·건축',   emoji: '🗺️', prompt: '세계 각국의 유명 도시·나라·자연경관·역사적 건축물·랜드마크 (아시아·아프리카·남미도 포함)' },
+  { key: 'history', label: '역사 사건',   emoji: '📜', prompt: '고대부터 현대까지 세계사·한국사의 중요한 사건·전쟁·혁명·조약·발견' },
+  { key: 'science', label: '과학·발명',   emoji: '🔬', prompt: '과학적 발견, 유명 발명품, 우주·물리·생물·화학·의학 분야의 현상이나 이론 또는 과학자' },
+  { key: 'myth',    label: '신화·전설',   emoji: '🏛️', prompt: '그리스·로마·북유럽·한국·이집트·일본·중국 등 세계 각국의 신화 속 인물·사건·신·괴물' },
+  { key: 'sport',   label: '스포츠·선수', emoji: '⚽', prompt: '축구·야구·농구·테니스·수영·격투기 등 다양한 종목의 유명 선수, 팀, 대회, 역사적 경기' },
 ];
 
 export const DIFFICULTIES: { key: Difficulty; label: string; note: string }[] = [
@@ -36,7 +40,13 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     `[카테고리] ${categoryLabel}`,
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
-    `[다양성 시드] ${seed} — 이 숫자를 참고해 매번 예측 불가능하고 의외성 있는 정답을 선택하라. 가장 유명하고 자주 나올 법한 대표 답변(예: 인물→아이슈타인, 음식→피자, 동물→사자 등)은 피하고, 카테고리 안에서 색다른 선택을 해야 한다.`,
+    `[다양성 시드] ${seed}`,
+    '▸ 이 시드를 이용해 정답 선택의 폭을 최대한 넓혀라. 아래 지침을 반드시 따른다:',
+    '  • 지역 다양성: 한국·일본·중국·동남아·인도·중동·아프리카·유럽·남미·북미 중 고루 선택하라.',
+    '  • 시대 다양성: 고대·중세·근세·근현대·현대를 번갈아 가며 선택하라.',
+    '  • 분야 다양성: 카테고리 안에서도 세부 하위 분야를 다양하게 탐색하라.',
+    '  • 절대 피해야 할 "가장 뻔한" 답 예시 — 인물→아인슈타인·나폴레옹, 음식→피자·라면, 동물→사자·호랑이, 장소→파리·뉴욕, 역사→이차대전, 음악→비틀즈, 게임→마리오. 이들과 "비슷한 유명도"의 답도 피하라.',
+    '  • 같은 출제 세션에서 반복될 가능성이 높은 정답(너무 대표적인 아이콘)을 의도적으로 배제하고, 카테고리 안에서 보통 사람이 놓치기 쉬운 흥미로운 대상을 골라라.',
     '',
     '규칙:',
     '1. 정답(answer)은 구체적인 하나의 대상이어야 한다 (사람/작품/사물/장소 등의 고유한 이름).',
