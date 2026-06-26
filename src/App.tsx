@@ -232,7 +232,7 @@ export default function App() {
     <>
       {minimized ? (
         <div className="desktop-icon" onClick={handleRestore}>
-          <img className="desktop-icon-img" src="/icon.png" alt="퀴즈대합전" draggable={false} />
+          <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
           <span className="desktop-icon-label">✞퀴즈대합전✞</span>
         </div>
       ) : (
