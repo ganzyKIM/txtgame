@@ -5,6 +5,7 @@ import Window from './components/Window';
 import Mascot, { type MascotHandle } from './components/Mascot';
 import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
+import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle } from './game/puzzle';
 import { judgeGuess } from './game/judge';
@@ -35,6 +36,7 @@ export default function App() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
+  const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
   const recentAnswers = useRef<string[]>([]);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
 
@@ -220,7 +222,8 @@ export default function App() {
   if (!user) return <LoginScreen />;
 
   const statusText =
-    game.phase === 'setup' ? '준비됨 ♡'
+    mode === 'soup' ? '🐢 바다거북 수프'
+    : game.phase === 'setup' ? '준비됨 ♡'
     : game.phase === 'playing' ? `진행 중 · 힌트 ${game.revealedCount}/${game.puzzle?.maxHints}`
     : game.phase === 'won' ? '클리어! ♡'
     : '탈락…';
@@ -243,7 +246,15 @@ export default function App() {
           onMinimize={handleMinimize}
           onClose={handleClose}
         >
-          {game.phase === 'setup' ? (
+          {mode === 'soup' ? (
+            <SoupGame
+              tier={tier}
+              mascot={mascot}
+              push={push}
+              applyBalance={applyBalance}
+              onExit={() => setMode('quiz')}
+            />
+          ) : game.phase === 'setup' ? (
             busy ? (
               <div className="generating-full">
                 <div className="generating-wrap">
@@ -255,7 +266,11 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <StartScreen busy={busy} onStart={(cfg) => void handleStart(cfg)} />
+              <StartScreen
+                busy={busy}
+                onStart={(cfg) => void handleStart(cfg)}
+                onStartSoup={() => setMode('soup')}
+              />
             )
           ) : (
             <GamePanel

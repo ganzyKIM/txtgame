@@ -382,6 +382,91 @@ button{font-family:inherit;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ════════════════════════════════════════════════════════════════════
+   🐢 바다거북 수프 게임
+   ════════════════════════════════════════════════════════════════════ */
+/* 시작화면 런치 버튼 */
+.soup-launch{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  padding:9px 11px;color:var(--ink);
+  background:linear-gradient(120deg,#d6f5ea,#b6f5e4 60%,#a0ece0);
+  border:2px solid;border-color:var(--bevel-lt) #4ba88f #4ba88f var(--bevel-lt);
+  box-shadow:2px 2px 0 #2f7a64;
+}
+.soup-launch:hover{background:linear-gradient(120deg,#c2f0e0,#9eecd8 60%,#86e2d2);}
+.soup-launch:active{border-color:#4ba88f var(--bevel-lt) var(--bevel-lt) #4ba88f;transform:translate(1px,1px);box-shadow:1px 1px 0 #2f7a64;}
+.soup-launch:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4);}
+.soup-launch-emoji{font-size:26px;line-height:1;flex:none;animation:soupBob 2.2s ease-in-out infinite;}
+@keyframes soupBob{50%{transform:translateY(-3px) rotate(-6deg);}}
+.soup-launch-text{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.soup-launch-text b{font-size:13px;color:#1f7a64;}
+.soup-launch-text small{font-size:9px;color:#3d8a76;}
+
+/* 인트로(설명) 화면 */
+.soup-intro{flex:1;display:flex;align-items:center;justify-content:center;overflow-y:auto;}
+.soup-intro-card{
+  max-width:440px;background:var(--pink-0);padding:16px 18px;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+  box-shadow:3px 3px 0 var(--bevel-dk2);animation:fadeIn .25s ease;
+}
+.soup-title{margin:0 0 8px;font-size:18px;color:#1f7a64;text-align:center;}
+.soup-lead{font-size:12px;line-height:1.6;margin:0 0 10px;color:var(--ink);}
+.soup-lead b{color:var(--magenta-d);}
+.soup-rules{margin:0 0 10px;padding-left:18px;font-size:11px;line-height:1.7;color:var(--ink);}
+.soup-rules b{color:#1f7a64;}
+.soup-eg{
+  font-size:11px;line-height:1.6;color:var(--ink-soft);background:var(--pink-1);
+  padding:8px 10px;margin-bottom:12px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.soup-eg b{color:var(--magenta-d);}
+.soup-intro-btns{display:flex;gap:6px;}
+.soup-intro-btns .btn-primary{flex:1;width:auto;}
+.soup-intro-btns .btn{flex:none;}
+
+/* 진행 화면 */
+.soup-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.soup-scenario{
+  font-size:13px;line-height:1.7;color:var(--ink);background:#fff;
+  padding:10px 12px;margin-bottom:8px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.soup-log{
+  flex:1;min-height:0;overflow:hidden auto;display:flex;flex-direction:column;gap:6px;
+  padding:8px;margin-bottom:8px;background:var(--pink-0);
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.soup-empty{font-size:11px;color:var(--ink-soft);text-align:center;padding:12px 4px;}
+.soup-q{display:flex;gap:6px;font-size:12px;color:var(--ink);align-self:flex-end;
+  background:var(--lav-1);padding:5px 9px;max-width:88%;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);}
+.soup-q-mark{color:var(--magenta-d);font-weight:bold;flex:none;}
+.soup-a{display:flex;gap:6px;align-items:baseline;font-size:12px;align-self:flex-start;
+  background:#fff;padding:5px 9px;max-width:88%;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);}
+.soup-verdict{font-weight:bold;flex:none;padding:1px 6px;color:#fff;font-size:11px;}
+.soup-a-text{color:var(--ink);}
+.soup-a.v-예 .soup-verdict{background:#1f9a6e;}
+.soup-a.v-아니오 .soup-verdict{background:#c23a6a;}
+.soup-a.v-상관없음 .soup-verdict{background:#9b8aa8;}
+.soup-a.v-정답 .soup-verdict{background:linear-gradient(90deg,#ff44c8,#d619a6);}
+.soup-a.v-정답{border-color:var(--magenta);}
+
+.soup-input-row{display:flex;gap:6px;}
+.soup-input-row .text-input{flex:1;}
+.soup-input-row .btn{flex:none;white-space:nowrap;}
+.soup-action-row{display:flex;gap:6px;margin-top:6px;}
+.soup-action-row .btn{flex:1;}
+
+.soup-result{
+  background:var(--win-bg);padding:10px 12px;margin-top:2px;animation:fadeIn .25s ease;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+}
+.soup-result-head{font-size:15px;font-weight:bold;color:#1f7a64;text-align:center;margin-bottom:6px;}
+.soup-result.revealed .soup-result-head{color:#c23a6a;}
+.soup-solution{font-size:12px;line-height:1.7;color:var(--ink);background:#fff;padding:8px 10px;margin-bottom:10px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);}
+
+/* ════════════════════════════════════════════════════════════════════
    마스코트 (쵸텐 ⟷ 아메) — webp_editor에서 차용
    ════════════════════════════════════════════════════════════════════ */
 .mascot-summon{
