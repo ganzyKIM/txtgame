@@ -63,6 +63,34 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
   },
 };
 
+/** 터치(클릭) 시 대사별로 다른 이미지를 보여주기 위한 idle 전용 변형 */
+const IDLE_VARIANTS: Record<Form, { text: string; img: string }[]> = {
+  choten: [
+    { text: '뭐해뭐해?! 천사쨩이 여기 있잖아~♡',          img: '/char/choten_default.png' },
+    { text: '퀴즈 한 판 해봐! 천사쨩이 기다리고 있어♡',    img: '/char/choten_peace.png'   },
+    { text: '심심하면 문제 풀자구! 재밌는 거 있어♡',        img: '/char/choten_peace.png'   },
+    { text: 'P~ 빨리 시작해! 천사쨩이 낼게♡',              img: '/char/choten_angry.png'   },
+    { text: '천사쨩 여기 있어용~ 말 걸어줘서 기뻐♡',       img: '/char/choten_dere.png'    },
+    { text: '오늘도 잘 부탁해요~ 천사쨩이에요♡',           img: '/char/choten_default.png' },
+    { text: '오늘은 어떤 문제 풀지 기대돼!♡',              img: '/char/choten_dere.png'    },
+    { text: '천사쨩이랑 퀴즈왕 되어보자구♡',               img: '/char/choten_peace.png'   },
+    { text: '말 걸어줬다!! 천사쨩 기뻐서 날아갈 것 같아♡', img: '/char/choten_dere.png'    },
+    { text: '심심하지? 천사쨩이 있잖아~♡',                 img: '/char/choten_vape.png'    },
+  ],
+  ame: [
+    { text: '…뭐. 보고 싶었어?',                      img: '/char/ame_default.png'  },
+    { text: '퀴즈나 하자. 어차피 할 거잖아.',          img: '/char/ame_smoking.png'  },
+    { text: '…심심해? 같이 있어줄게.',                 img: '/char/ame_default.png'  },
+    { text: '빨리 문제 골라. 기다리는 거 별로 안 좋아.', img: '/char/ame_yandere.png' },
+    { text: '…나한테 말 거는 거야. 뭔데.',             img: '/char/ame_smoking.png'  },
+    { text: '하루종일 여기 있을 건데. …같이 해.',      img: '/char/ame_dere.png'     },
+    { text: '…별로 안 기다린 거야. 그냥 있었을 뿐.',   img: '/char/ame_dere.png'     },
+    { text: '…퀴즈, 아직 안 했잖아. 해.',              img: '/char/ame_yandere.png'  },
+    { text: '말 걸지 마— …아니, 말 걸어도 돼. 조금.', img: '/char/ame_drug.png'     },
+    { text: '…여기 있어. 언제든지.',                   img: '/char/ame_smoking.png'  },
+  ],
+};
+
 const LINES: Record<Form, Record<LineKind, string[]>> = {
   choten: {
     intro: [
@@ -450,7 +478,10 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
       root.classList.remove('dragging');
       try { img.releasePointerCapture(e.pointerId); } catch { /* noop */ }
       if (!moved && !root.classList.contains('transforming') && summonedRef.current) {
-        event('idle');
+        const variants = IDLE_VARIANTS[formRef.current];
+        const v = variants[Math.floor(Math.random() * variants.length)];
+        if (imgRef.current) imgRef.current.src = v.img;
+        say(v.text);
         bumpIdle();
       }
     };
