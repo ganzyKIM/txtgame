@@ -21,11 +21,17 @@ export interface JudgeResult {
 /**
  * 추측 판정. 먼저 로컬 정규화 매칭으로 명백한 정답/근접을 즉시 처리해
  * 크레딧을 아끼고, 애매하면 Gemini 의미 판정으로 폴백한다.
+ *
+ * 판정용 AI 호출은 출제(Pro)와 분리해 항상 빠른 모델('standard'=Flash)을 쓴다.
+ * 예/아니오성 의미 판정엔 Flash로 충분하고, 틀린 추측 시 대기 시간이 크게 줄어든다.
+ * (세 번째 인자 _tier는 기존 호출부 호환을 위해 남겨두되 사용하지 않는다.)
  */
+const JUDGE_TIER: TextTier = 'standard';
+
 export async function judgeGuess(
   puzzle: Puzzle,
   guess: string,
-  tier: TextTier = 'standard',
+  _tier: TextTier = 'standard',
 ): Promise<JudgeResult> {
   const g = normalize(guess);
   if (!g) return { correct: false, reason: '추측이 비어 있어.' };
@@ -39,10 +45,10 @@ export async function judgeGuess(
     }
   }
 
-  // 2) AI 의미 판정 폴백
+  // 2) AI 의미 판정 폴백 (빠른 모델 고정)
   try {
     const { text, balance } = await proxyGenerateText(
-      tier,
+      JUDGE_TIER,
       [{ role: 'user', text: buildJudgePrompt(puzzle.answer, guess) }],
       { temperature: 0 },
     );
