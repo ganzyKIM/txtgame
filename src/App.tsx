@@ -53,15 +53,24 @@ export default function App() {
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('pro');
   const [statsOpen, setStatsOpen] = useState(false);
-  const [minimized, setMinimized] = useState(true);
+  const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
+  const greeted = useRef(false);
 
   useEffect(() => {
     document.body.classList.toggle('is-minimized', minimized);
   }, [minimized]);
+
+  // 최초 로그인 후 마스코트 인사
+  useEffect(() => {
+    if (!authLoading && user && !greeted.current) {
+      greeted.current = true;
+      window.setTimeout(() => mascot.current?.event('idle'), 900);
+    }
+  }, [authLoading, user]);
 
   function push(line: string) {
     setLog((l) => [...l, line].slice(-50));
