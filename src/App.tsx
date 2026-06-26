@@ -53,7 +53,7 @@ export default function App() {
   const [judging, setJudging] = useState(false);
   const [tier, setTier] = useState<TextTier>('pro');
   const [statsOpen, setStatsOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(true);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
@@ -222,10 +222,6 @@ export default function App() {
     setMinimized(true);
   }
 
-  function handleRestore() {
-    setMinimized(false);
-  }
-
   function handleClose() {
     push('> 아직 더 놀아야 해~! 허락 없이는 나갈 수 없어! ♡');
     mascot.current?.event('close');
@@ -250,9 +246,15 @@ export default function App() {
   return (
     <>
       {minimized ? (
-        <div className="desktop-icon" onClick={handleRestore}>
-          <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
-          <span className="desktop-icon-label">✞퀴즈대합전✞</span>
+        <div className="desktop-icons">
+          <div className="desktop-icon" onClick={() => { setMode('quiz'); setMinimized(false); }}>
+            <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
+            <span className="desktop-icon-label">✞퀴즈대합전✞</span>
+          </div>
+          <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
+            <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
+            <span className="desktop-icon-label">🐢 바다거북수프 <small style={{fontSize:'10px',opacity:.8}}>(beta)</small></span>
+          </div>
         </div>
       ) : (
         <Window
@@ -289,7 +291,6 @@ export default function App() {
               <StartScreen
                 busy={busy}
                 onStart={(cfg) => void handleStart(cfg)}
-                onStartSoup={() => setMode('soup')}
               />
             )
           ) : (

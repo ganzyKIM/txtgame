@@ -14,12 +14,11 @@ export interface StartConfig {
 interface Props {
   busy: boolean;
   onStart: (cfg: StartConfig) => void;
-  onStartSoup: () => void;
 }
 
 const CUSTOM_KEY = '__custom__';
 
-export default function StartScreen({ busy, onStart, onStartSoup }: Props) {
+export default function StartScreen({ busy, onStart }: Props) {
   const [catKey, setCatKey] = useState<string>(CATEGORIES[0].key);
   const [customCat, setCustomCat] = useState('');
   const [theme, setTheme] = useState('');
@@ -76,13 +75,7 @@ export default function StartScreen({ busy, onStart, onStartSoup }: Props) {
             )}
           </div>
 
-          <button className="soup-launch" onClick={onStartSoup} disabled={busy}>
-            <span className="soup-launch-emoji">🐢</span>
-            <span className="soup-launch-text">
-              <b>바다거북 수프 게임 (beta)</b>
-              <small>예/아니오 질문으로 진상을 추리하는 수평사고 퀴즈!</small>
-            </span>
-          </button>
+
         </div>
 
         {/* 오른쪽: 세부 설정 + 시작 */}
