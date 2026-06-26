@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getStats, getRanking, type Stats, type Ranking } from '../save/cloudSave';
+import { getStats, getRanking, getSoupStats, type Stats, type Ranking, type SoupStats } from '../save/cloudSave';
 
 interface Props {
   userId: string;
@@ -53,12 +53,14 @@ function hensachiColor(v: number): string {
 export default function StatsModal({ userId, onClose }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [ranking, setRanking] = useState<Ranking | null>(null);
+  const [soupStats, setSoupStats] = useState<SoupStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getStats(userId), getRanking(userId)]).then(([s, r]) => {
+    Promise.all([getStats(userId), getRanking(userId), getSoupStats(userId)]).then(([s, r, ss]) => {
       setStats(s);
       setRanking(r);
+      setSoupStats(ss);
       setLoading(false);
     });
   }, [userId]);
@@ -152,6 +154,43 @@ export default function StatsModal({ userId, onClose }: Props) {
                       전체 {ranking.totalPlayers}명 중 {ranking.beaten}명보다 높은 점수
                     </div>
                   </>
+                )}
+              </div>
+
+              {/* 🐢 수프 전적 */}
+              <div className="modal-section">
+                <div className="modal-section-title">▌🐢 바다거북 수프 전적</div>
+                {soupStats && soupStats.plays > 0 ? (
+                  <div className="stats-grid">
+                    <div className="stat-cell">
+                      <div className="stat-label">총 플레이</div>
+                      <div className="stat-value">{soupStats.plays}<small> 회</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">진상 해결</div>
+                      <div className="stat-value">{soupStats.solved}<small> 회</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">해결률</div>
+                      <div className="stat-value">{soupStats.solveRate}<small> %</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">평균 질문수</div>
+                      <div className="stat-value">{soupStats.avgQuestions}<small> 개</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">평균 힌트수</div>
+                      <div className="stat-value">{soupStats.avgHints}<small> 개</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">힌트 없이 해결</div>
+                      <div className="stat-value">{soupStats.noHintSolves}<small> 회</small></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rank-sub" style={{ padding: '10px 0' }}>
+                    아직 수프 기록이 없어. 🐢 한번 도전해봐!
+                  </div>
                 )}
               </div>
 

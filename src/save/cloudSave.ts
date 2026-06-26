@@ -54,6 +54,65 @@ export async function getStats(userId: string): Promise<Stats> {
   }
 }
 
+export interface SoupResultInput {
+  title: string;
+  solved: boolean;
+  hintsUsed: number;
+  questionsAsked: number;
+}
+
+export async function saveSoupResult(userId: string, r: SoupResultInput): Promise<void> {
+  try {
+    await supabase.from('soup_results').insert({
+      user_id: userId,
+      title: r.title,
+      solved: r.solved,
+      hints_used: r.hintsUsed,
+      questions_asked: r.questionsAsked,
+    });
+  } catch {
+    /* 저장 실패는 무시 */
+  }
+}
+
+export interface SoupStats {
+  plays: number;
+  solved: number;
+  solveRate: number;
+  avgQuestions: number;
+  avgHints: number;
+  noHintSolves: number;
+}
+
+export async function getSoupStats(userId: string): Promise<SoupStats> {
+  const empty: SoupStats = { plays: 0, solved: 0, solveRate: 0, avgQuestions: 0, avgHints: 0, noHintSolves: 0 };
+  try {
+    const { data, error } = await supabase
+      .from('soup_results')
+      .select('solved, hints_used, questions_asked')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error || !data) return empty;
+
+    const plays = data.length;
+    const solvedRows = data.filter((d) => d.solved);
+    const solved = solvedRows.length;
+    const solveRate = plays > 0 ? Math.round((solved / plays) * 100) : 0;
+    const avgQuestions = plays > 0
+      ? Math.round(data.reduce((s, d) => s + (d.questions_asked ?? 0), 0) / plays)
+      : 0;
+    const avgHints = solved > 0
+      ? Math.round((solvedRows.reduce((s, d) => s + (d.hints_used ?? 0), 0) / solved) * 10) / 10
+      : 0;
+    const noHintSolves = solvedRows.filter((d) => (d.hints_used ?? 0) === 0).length;
+
+    return { plays, solved, solveRate, avgQuestions, avgHints, noHintSolves };
+  } catch {
+    return empty;
+  }
+}
+
 export interface Ranking {
   totalPlayers: number;
   beaten: number;

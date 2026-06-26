@@ -249,6 +249,7 @@ export default function App() {
           {mode === 'soup' ? (
             <SoupGame
               tier={tier}
+              userId={user.id}
               mascot={mascot}
               push={push}
               applyBalance={applyBalance}

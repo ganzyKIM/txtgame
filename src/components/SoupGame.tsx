@@ -7,6 +7,7 @@ import {
   buildSoupHintPrompt, parseSoupHint,
   type SoupPuzzle, type SoupTurn,
 } from '../game/soup';
+import { saveSoupResult } from '../save/cloudSave';
 import type { MascotHandle } from './Mascot';
 import type { TextTier } from '../types';
 
@@ -16,13 +17,14 @@ type Phase = 'intro' | 'loading' | 'playing' | 'solved' | 'revealed';
 
 interface Props {
   tier: TextTier;
+  userId?: string;
   mascot: RefObject<MascotHandle | null>;
   push: (line: string) => void;
   applyBalance: (n: number) => void;
   onExit: () => void;
 }
 
-export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: Props) {
+export default function SoupGame({ tier, userId, mascot, push, applyBalance, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>('intro');
   const [puzzle, setPuzzle] = useState<SoupPuzzle | null>(null);
   const [turns, setTurns] = useState<SoupTurn[]>([]);
@@ -93,6 +95,10 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
         setPhase('solved');
         push('> ⭕ 진상을 꿰뚫었어! 클리어!');
         mascot.current?.event('soup_solve');
+        if (userId && puzzle) void saveSoupResult(userId, {
+          title: puzzle.title, solved: true, hintsUsed,
+          questionsAsked: turns.filter((t) => t.role === 'user').length + 1,
+        });
       } else if (verdict === '예') {
         mascot.current?.event('soup_yes');
       } else if (verdict === '아니오') {
@@ -157,6 +163,10 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
         setPhase('solved');
         push('> ⭕ 정답! 진상을 완벽하게 추리했어!');
         mascot.current?.event('soup_solve');
+        if (userId && puzzle) void saveSoupResult(userId, {
+          title: puzzle.title, solved: true, hintsUsed,
+          questionsAsked: turns.filter((t) => t.role === 'user').length + 1,
+        });
       } else {
         push('> ❌ 아직 핵심이 비껴갔어. 더 질문해봐!');
         mascot.current?.event('soup_no');
@@ -174,6 +184,10 @@ export default function SoupGame({ tier, mascot, push, applyBalance, onExit }: P
     setPhase('revealed');
     push('> 🏳️ 진상을 공개했어.');
     mascot.current?.event('soup_reveal');
+    if (userId) void saveSoupResult(userId, {
+      title: puzzle.title, solved: false, hintsUsed,
+      questionsAsked: turns.filter((t) => t.role === 'user').length,
+    });
   }
 
   // ── 인트로(설명) 화면 ──────────────────────────────────────────
