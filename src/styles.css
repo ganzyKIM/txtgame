@@ -44,9 +44,9 @@ button{font-family:inherit;}
          box-shadow:inset 1px 1px 0 var(--bevel-dk); }
 
 /* ── 윈도우 프레임 ── */
-.desktop{width:100%;max-width:1040px;height:calc(100vh - 72px);display:flex;flex-direction:column;}
+.desktop{width:100%;max-width:1040px;min-width:0;height:calc(100vh - 72px);display:flex;flex-direction:column;}
 .window{
-  flex:1; min-height:0; overflow:hidden;
+  flex:1; min-height:0; overflow:hidden; width:100%;
   background:var(--win-bg);
   border:3px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
   box-shadow:0 0 0 1px var(--magenta-d), 6px 6px 0 rgba(150,40,120,.35), 0 0 40px rgba(255,80,200,.5);
@@ -282,7 +282,7 @@ button{font-family:inherit;}
    ════════════════════════════════════════════════════════════════════ */
 .game-grid{display:flex;gap:10px;flex:1;min-height:0;overflow:hidden;}
 .game-left{flex:1.2;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;}
-.game-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;}
+.game-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;overflow-x:hidden;}
 
 /* 진행 막대 */
 .gauge{height:16px;background:#fff;border:2px solid;
