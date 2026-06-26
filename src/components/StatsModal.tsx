@@ -10,6 +10,46 @@ const RANK_COLOR: Record<string, string> = {
   S: '#d619a6', A: '#7b34c1', B: '#1a7a64', C: '#a06030',
 };
 
+/** Acklam의 역정규분포 근사 (probit) */
+function probit(p: number): number {
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+              1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+              6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+              -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+              3.754408661907416e+00];
+  const pLow = 0.02425, pHigh = 1 - pLow;
+  if (p < pLow) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+           ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p <= pHigh) {
+    const q = p - 0.5, r = q * q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+           (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    const q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+              ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+function toHensachi(beaten: number, totalPlayers: number): number {
+  if (totalPlayers < 2) return 50;
+  const p = Math.max(0.005, Math.min(0.995, beaten / totalPlayers));
+  return Math.round(50 + 10 * probit(p));
+}
+
+function hensachiColor(v: number): string {
+  if (v >= 70) return '#d619a6';
+  if (v >= 60) return '#7b34c1';
+  if (v >= 50) return '#1a7a64';
+  if (v >= 40) return '#a06030';
+  return '#888';
+}
+
 export default function StatsModal({ userId, onClose }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [ranking, setRanking] = useState<Ranking | null>(null);
@@ -22,6 +62,10 @@ export default function StatsModal({ userId, onClose }: Props) {
       setLoading(false);
     });
   }, [userId]);
+
+  const hensachi = ranking && ranking.totalPlayers > 1
+    ? toHensachi(ranking.beaten, ranking.totalPlayers)
+    : null;
 
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -80,12 +124,19 @@ export default function StatsModal({ userId, onClose }: Props) {
                   </div>
                 ) : (
                   <>
-                    <div className="rank-top" style={{ color: RANK_COLOR[stats?.bestRank ?? ''] ?? 'var(--magenta-d)' }}>
-                      상위 {ranking.topPercent}%
+                    {/* 편차치 메인 표시 */}
+                    <div className="hensachi-wrap">
+                      <div className="hensachi-label">편차치</div>
+                      <div
+                        className="hensachi-value"
+                        style={{ color: hensachiColor(hensachi ?? 50) }}
+                      >
+                        {hensachi ?? 50}
+                      </div>
+                      <div className="hensachi-sub">상위 {ranking.topPercent}%</div>
                     </div>
-                    <div className="rank-sub">
-                      전체 {ranking.totalPlayers}명 중 {ranking.beaten}명보다 높은 점수
-                    </div>
+
+                    {/* 진행 바 */}
                     <div className="rank-bar-wrap">
                       <div className="rank-bar-bg">
                         <div
@@ -96,6 +147,9 @@ export default function StatsModal({ userId, onClose }: Props) {
                           상위 {ranking.topPercent}% · 최고점 {ranking.myBestScore}점
                         </div>
                       </div>
+                    </div>
+                    <div className="rank-sub" style={{ marginTop: 6 }}>
+                      전체 {ranking.totalPlayers}명 중 {ranking.beaten}명보다 높은 점수
                     </div>
                   </>
                 )}

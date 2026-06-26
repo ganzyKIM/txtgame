@@ -222,6 +222,12 @@ button{font-family:inherit;}
 .rank-bar-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--ink); text-shadow:0 0 4px #fff;}
 .rank-top{font-size:28px; font-weight:bold; color:var(--magenta-d); text-align:center; margin:4px 0;}
 .rank-sub{font-size:11px; color:var(--ink-soft); text-align:center;}
+
+/* 편차치 */
+.hensachi-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;}
+.hensachi-label{font-size:11px;color:var(--ink-soft);letter-spacing:2px;}
+.hensachi-value{font-size:56px;font-weight:bold;line-height:1;letter-spacing:-1px;}
+.hensachi-sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 .modal-spinner{text-align:center; padding:20px; color:var(--ink-soft); font-size:12px;}
 
 /* ── 상태바 ── */
