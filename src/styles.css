@@ -181,10 +181,12 @@ button{font-family:inherit;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 .modal{
   width:480px; max-width:92vw;
+  max-height:90dvh; display:flex; flex-direction:column;
   background:var(--win-bg);
   border:3px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
   box-shadow:6px 6px 0 rgba(150,40,120,.45), 0 0 40px rgba(255,80,200,.5);
 }
+.modal-body{overflow-y:auto;}
 .modal-titlebar{
   display:flex; align-items:center; justify-content:space-between;
   padding:4px 6px;
@@ -198,7 +200,7 @@ button{font-family:inherit;}
   border:2px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
 }
 .modal-close:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);}
-.modal-body{padding:14px; display:flex; flex-direction:column; gap:12px;}
+.modal-body{padding:14px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; min-height:0;}
 .modal-section{
   background:var(--pink-1);
   border:2px solid; border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
