@@ -23,7 +23,7 @@ export default function StartScreen({ busy, onStart }: Props) {
   const [customCat, setCustomCat] = useState('');
   const [theme, setTheme] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [tier, setTier] = useState<TextTier>('pro');
+  const [tier, setTier] = useState<TextTier>('quiz_gen');
 
   const isCustom = catKey === CUSTOM_KEY;
   const categoryLabel = isCustom

@@ -13,10 +13,10 @@ import type { TextTier } from '../types';
 
 const MAX_HINTS = 3;
 
-// 출제(brew)는 창작·논리 일관성이 필요해 고품질 tier를 쓰지만,
+// 출제(brew)는 창작·논리 일관성이 필요해 고품질 tier(quiz_gen)를 쓰지만,
 // 질문 응답/힌트/정답 판정은 "주어진 진상을 읽고 판단"만 하므로
-// 빠르고 싼 모델(Flash='standard')로 충분하다 → 멀티턴 토큰 대폭 절감.
-const SOUP_JUDGE_TIER: TextTier = 'standard';
+// 빠르고 싼 티어(quiz_judge)로 충분하다 → 멀티턴 토큰 대폭 절감.
+const SOUP_JUDGE_TIER: TextTier = 'quiz_judge';
 
 type Phase = 'intro' | 'loading' | 'playing' | 'solved' | 'revealed';
 

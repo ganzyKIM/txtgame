@@ -61,7 +61,7 @@ export default function App() {
   const [result, setResult] = useState<GameResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [judging, setJudging] = useState(false);
-  const [tier, setTier] = useState<TextTier>('pro');
+  const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
