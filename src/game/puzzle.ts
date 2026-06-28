@@ -50,29 +50,8 @@ const CHOSEONG_HINTS: [string, string][] = [
   ['ㅎ', '하·허·호·후·흐·히 등'],
 ];
 
-/** 매 출제마다 샘플링을 흩뜨리기 위한 다양성 축 (소프트 가이드) */
+/** 매 출제마다 샘플링을 흩뜨리기 위한 다양성 축 */
 const DIVERSITY_AXES = [
-  '누구나 알지만 이 카테고리에서 자주 안 나오는 의외의 선택',
-  '비서구권(아시아·아프리카·중동·중남미) 쪽',
-  '비교적 최근·현대적인 것',
-  '고전적이고 오래된 것',
-  '교과서 1순위가 아닌, 살짝 마이너하지만 흥미로운 것',
-  '서양 고전·근대 쪽',
-  '대중문화에서 자주 다뤄진 것',
-  '전문가·마니아가 좋아할 깊이 있는 것',
-];
-
-/**
- * 사실 정확도가 중요한 "지식 카테고리". 여기서는 의외성·마이너 압력을 빼고
- * (그 압력이 작은 모델을 모르는 영역으로 떠밀어 가공의 답을 짓게 만든다)
- * "충분히 검증·기록된 것" 안에서만 시드/지역/시대로 다양성을 확보한다.
- */
-const FACT_STRICT_LABELS = new Set([
-  '역사 사건', '과학·발명', '인물', '장소·건축', '신화·전설', '스포츠·선수', '오타쿠',
-]);
-
-/** 지식 카테고리 전용 다양성 축 — 마이너·전문가-깊이 축을 제외해 모호한 영역으로 빠지지 않게 한다 */
-const FACT_STRICT_AXES = [
   '누구나 알지만 이 카테고리에서 자주 안 나오는 의외의 선택',
   '비서구권(아시아·아프리카·중동·중남미) 쪽',
   '비교적 최근·현대적인 것',
@@ -87,13 +66,8 @@ const FACT_STRICT_AXES = [
  */
 export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = ''): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
-  const factStrict = FACT_STRICT_LABELS.has(categoryLabel);
-  const axisPool = factStrict ? FACT_STRICT_AXES : DIVERSITY_AXES;
-  const axis = axisPool[Math.floor(Math.random() * axisPool.length)];
+  const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
-  const diversityBullet = factStrict
-    ? '  • 정확성이 최우선이다. 유명세를 피하려고 모호한 대상을 고르지 마라 — "위키백과·교과서에 독립 항목으로 실릴 만큼" 분명히 기록된 실존 대상 안에서 다양성을 확보해라. 실존 여부가 조금이라도 의심되면 고르지 마라.'
-    : '  • 매번 똑같은 정답만 반복하지 말고 충분히 알려진 실존 대상들 중에서 폭넓게 골라라.';
 
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
@@ -116,7 +90,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '[다양성 지침] 카테고리 전체에서 고르게 샘플링해라.',
     '  • 지역(아시아·유럽·아메리카·아프리카 등)과 시대(고대~현대)를 골고루 넘나들어라.',
     '  • 동일 인물·작품·장소가 반복되지 않도록 폭넓게 선택해라.',
-    diversityBullet,
+    '  • 정확성이 최우선이다. 유명세를 피하려고 모호한 대상을 고르지 마라 — "위키백과·교과서에 독립 항목으로 실릴 만큼" 분명히 기록된 실존 대상 안에서 다양성을 확보해라. 실존 여부가 조금이라도 의심되면 고르지 마라.',
     '',
     '[출제 규칙]',
     '1. 정답은 실제로 존재하는 대상의 이름이어야 한다. 가상·허구·지어낸 대상은 금지.',
