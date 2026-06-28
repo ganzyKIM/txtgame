@@ -10,9 +10,10 @@ import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle } from './game/puzzle';
 import { judgeGuess } from './game/judge';
 import { computeScore } from './game/scoring';
-import { saveResult } from './save/cloudSave';
+import { saveResult, saveRun } from './save/cloudSave';
 import StatsModal from './components/StatsModal';
-import type { GameResult, GameState, Puzzle } from './game/types';
+import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
+import { CENTER_QUESTIONS } from './game/types';
 import type { TextTier } from './types';
 
 // ── 카테고리별 정답 이력 (localStorage 영속화) ──────────────────────
@@ -66,6 +67,10 @@ export default function App() {
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
+  // 센터시험(10문제 루틴)에서 완료한 문제들의 점수 (length = 완료 문제 수)
+  const [runScores, setRunScores] = useState<number[]>([]);
+  // 현재 판의 출제 모드 (마지막 시작 설정에서 파생)
+  const examMode: ExamMode = lastConfig?.examMode ?? 'mock';
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
   // 미리 만들어둔 문제(키: cfgKey) — 즉시 출제용
   const prefetchCache = useRef<Map<string, Puzzle>>(new Map());
@@ -128,6 +133,8 @@ export default function App() {
   // 다음 문제를 미리 만든다. 한 문제만 보고 나가면 프리페치를 아예 안 해 크레딧 낭비를 막는다.
   function maybePrefetch() {
     if (prefetchArmed.current) return;
+    // 센터시험 마지막 문제(10번째)에선 다음 문제가 없으므로 프리페치하지 않음 (크레딧 낭비 방지)
+    if (examMode === 'center' && runScores.length >= CENTER_QUESTIONS - 1) return;
     prefetchArmed.current = true;
     if (lastCfgRef.current) prefetchNext(lastCfgRef.current);
   }
@@ -212,6 +219,30 @@ export default function App() {
     });
   }
 
+  // ── 한 문제 종료 시 기록 ──────────────────────────────────────────
+  // 센터시험: 점수를 런에 누적(저장은 10문제 완주 시 1회). 탈락/포기는 0점.
+  // 모의시험: 기존대로 문제별로 quiz_results에 저장.
+  function recordQuestionEnd(r: GameResult) {
+    if (examMode === 'center') {
+      const next = [...runScores, r.won ? r.score : 0];
+      setRunScores(next);
+      if (next.length >= CENTER_QUESTIONS && user) {
+        const total = next.reduce((a, b) => a + b, 0);
+        void saveRun(user.id, { totalScore: total, questions: next.length, category: r.category });
+        push(`> 🎯 센터시험 종료! 총점 ${total}점 (${CENTER_QUESTIONS}문제)`);
+      }
+    } else if (user) {
+      void saveResult(user.id, r);
+    }
+  }
+
+  // 센터시험: 다음 문제로 (런 점수 유지). 모의시험에선 쓰지 않음.
+  function handleNextQuestion() {
+    if (!lastConfig || busy) return;
+    setResult(null);
+    void handleStart(lastConfig);
+  }
+
   // ── 추리 제출 ─────────────────────────────────────────────────────
   async function handleGuess(text: string) {
     if (!game.puzzle || game.phase !== 'playing') return;
@@ -242,7 +273,7 @@ export default function App() {
         setResult(r);
         push(`> ⭕ 정답! 등급 ${r.rank} · ${r.score}점`);
         mascot.current?.event('win');
-        if (user) void saveResult(user.id, r);
+        recordQuestionEnd(r);
         return;
       }
 
@@ -268,7 +299,7 @@ export default function App() {
         setResult(r);
         push(`> ❌ 탈락… 정답은 "${game.puzzle.answer}"`);
         mascot.current?.event('eliminated');
-        if (user) void saveResult(user.id, r);
+        recordQuestionEnd(r);
       } else {
         setGame((g) => ({
           ...g,
@@ -298,19 +329,21 @@ export default function App() {
     setResult(r);
     push(`> ⚠ 포기… 정답은 "${game.puzzle.answer}"`);
     mascot.current?.event('eliminated');
-    if (user) void saveResult(user.id, r);
+    recordQuestionEnd(r);
   }
 
   function handleRestart() {
     setGame(emptyGame);
     setResult(null);
+    setRunScores([]); // 진행 중이던 센터시험 런 폐기 (중간 이탈 = 기록 안 함)
     push('> 새 문제를 준비할게. 카테고리를 골라줘! ♡');
   }
 
   function handleRestartSame() {
     if (!lastConfig || busy) return;
-    // setup 화면으로 돌아가지 않고 GamePanel 안에서 바로 재출제
+    // setup 화면으로 돌아가지 않고 바로 재시작 (센터: 새 런 / 모의: 한번 더)
     setResult(null);
+    setRunScores([]);
     void handleStart(lastConfig);
   }
 
@@ -387,7 +420,7 @@ export default function App() {
             ) : (
               <StartScreen
                 busy={busy}
-                onStart={(cfg) => void handleStart(cfg)}
+                onStart={(cfg) => { setRunScores([]); void handleStart(cfg); }}
               />
             )
           ) : (
@@ -396,11 +429,14 @@ export default function App() {
               judging={judging}
               result={result}
               generating={busy}
+              examMode={examMode}
+              runScores={runScores}
               onReveal={handleReveal}
               onGuess={(t) => void handleGuess(t)}
               onRestart={handleRestart}
               onRestartSame={lastConfig ? handleRestartSame : undefined}
               onEliminate={handleEliminate}
+              onNext={handleNextQuestion}
             />
           )}
         </Window>

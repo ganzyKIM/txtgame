@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CATEGORIES, DIFFICULTIES } from '../game/puzzle';
-import type { Difficulty } from '../game/types';
+import type { Difficulty, ExamMode } from '../game/types';
+import { CENTER_QUESTIONS } from '../game/types';
 import { TEXT_TIERS } from '../config/models';
 import type { TextTier } from '../types';
 
@@ -11,6 +12,8 @@ export interface StartConfig {
   theme: string;
   difficulty: Difficulty;
   tier: TextTier;
+  /** center: 10문제 센터시험(총점) / mock: 무제한 모의시험 */
+  examMode: ExamMode;
 }
 
 interface Props {
@@ -37,9 +40,9 @@ export default function StartScreen({ busy, onStart }: Props) {
 
   const canStart = !busy && (!isCustom || customCat.trim().length > 0);
 
-  function start() {
+  function start(examMode: ExamMode) {
     if (!canStart) return;
-    onStart({ categoryLabel, categoryPrompt, theme: theme.trim(), difficulty, tier });
+    onStart({ categoryLabel, categoryPrompt, theme: theme.trim(), difficulty, tier, examMode });
   }
 
   return (
@@ -92,7 +95,7 @@ export default function StartScreen({ busy, onStart }: Props) {
               placeholder="비워두면 천사쨩이 알아서 골라줘!"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') start('center'); }}
             />
           </div>
 
@@ -130,9 +133,18 @@ export default function StartScreen({ busy, onStart }: Props) {
             </div>
           )}
 
-          <button className="btn btn-primary" onClick={start} disabled={!canStart}>
-            {busy ? '천사쨩이 문제 내는 중… ✦' : '✞ 퀴즈 스타-토 ✞'}
-          </button>
+          <div className="start-modes">
+            <button className="btn btn-primary" onClick={() => start('center')} disabled={!canStart}>
+              {busy ? '천사쨩이 문제 내는 중… ✦' : `🎯 센터시험 (${CENTER_QUESTIONS}문제 총점)`}
+            </button>
+            <button className="btn btn-lav start-mock-btn" onClick={() => start('mock')} disabled={!canStart}>
+              📝 모의시험 (자유 연습)
+            </button>
+          </div>
+          <small className="note">
+            🎯 센터시험: {CENTER_QUESTIONS}문제를 연속으로 풀어 <b>총점·편차치</b>로 기록 (중간에 나가면 기록 안 됨).
+            📝 모의시험: 한 문제씩 자유롭게, 기록은 개별 전적에만.
+          </small>
         </div>
 
       </div>

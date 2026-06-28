@@ -54,6 +54,52 @@ export async function getStats(userId: string): Promise<Stats> {
   }
 }
 
+// ── 센터시험(10문제 루틴) 총점 기록 ──────────────────────────────────
+export interface RunInput {
+  totalScore: number;
+  questions: number;
+  category: string;
+}
+
+export async function saveRun(userId: string, r: RunInput): Promise<void> {
+  try {
+    await supabase.from('quiz_runs').insert({
+      user_id: userId,
+      total_score: r.totalScore,
+      questions: r.questions,
+      category: r.category,
+    });
+  } catch {
+    /* 저장 실패는 무시 */
+  }
+}
+
+export interface RunStats {
+  runs: number;
+  bestTotal: number;
+  avgTotal: number;
+}
+
+export async function getRunStats(userId: string): Promise<RunStats> {
+  const empty: RunStats = { runs: 0, bestTotal: 0, avgTotal: 0 };
+  try {
+    const { data, error } = await supabase
+      .from('quiz_runs')
+      .select('total_score')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error || !data) return empty;
+    const runs = data.length;
+    if (runs === 0) return empty;
+    const bestTotal = data.reduce((m, d) => Math.max(m, d.total_score ?? 0), 0);
+    const avgTotal = Math.round(data.reduce((s, d) => s + (d.total_score ?? 0), 0) / runs);
+    return { runs, bestTotal, avgTotal };
+  } catch {
+    return empty;
+  }
+}
+
 export interface SoupResultInput {
   title: string;
   solved: boolean;

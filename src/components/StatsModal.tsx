@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getStats, getRanking, getSoupStats, type Stats, type Ranking, type SoupStats } from '../save/cloudSave';
+import { getStats, getRanking, getSoupStats, getRunStats, type Stats, type Ranking, type SoupStats, type RunStats } from '../save/cloudSave';
 
 interface Props {
   userId: string;
@@ -54,13 +54,15 @@ export default function StatsModal({ userId, onClose }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [ranking, setRanking] = useState<Ranking | null>(null);
   const [soupStats, setSoupStats] = useState<SoupStats | null>(null);
+  const [runStats, setRunStats] = useState<RunStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getStats(userId), getRanking(userId), getSoupStats(userId)]).then(([s, r, ss]) => {
+    Promise.all([getStats(userId), getRanking(userId), getSoupStats(userId), getRunStats(userId)]).then(([s, r, ss, rs]) => {
       setStats(s);
       setRanking(r);
       setSoupStats(ss);
+      setRunStats(rs);
       setLoading(false);
     });
   }, [userId]);
@@ -82,9 +84,34 @@ export default function StatsModal({ userId, onClose }: Props) {
             <div className="modal-spinner">불러오는 중… ♡</div>
           ) : (
             <>
-              {/* 개인 전적 */}
+              {/* 🎯 센터시험 전적 (10문제 총점) */}
               <div className="modal-section">
-                <div className="modal-section-title">▌나의 전적</div>
+                <div className="modal-section-title">▌🎯 센터시험 전적 (10문제 총점)</div>
+                {runStats && runStats.runs > 0 ? (
+                  <div className="stats-grid">
+                    <div className="stat-cell">
+                      <div className="stat-label">응시 횟수</div>
+                      <div className="stat-value">{runStats.runs}<small> 회</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">최고 총점</div>
+                      <div className="stat-value">{runStats.bestTotal}<small> 점</small></div>
+                    </div>
+                    <div className="stat-cell">
+                      <div className="stat-label">평균 총점</div>
+                      <div className="stat-value">{runStats.avgTotal}<small> 점</small></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rank-sub" style={{ padding: '10px 0' }}>
+                    아직 센터시험 기록이 없어. 🎯 10문제에 도전해봐!
+                  </div>
+                )}
+              </div>
+
+              {/* 📝 모의시험(개별 문제) 전적 */}
+              <div className="modal-section">
+                <div className="modal-section-title">▌📝 모의시험 전적 (개별 문제)</div>
                 <div className="stats-grid">
                   <div className="stat-cell">
                     <div className="stat-label">총 플레이</div>

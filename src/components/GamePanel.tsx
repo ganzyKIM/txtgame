@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import type { GameState, GameResult } from '../game/types';
-import { computeScore } from '../game/scoring';
+import type { GameState, GameResult, ExamMode } from '../game/types';
+import { CENTER_QUESTIONS } from '../game/types';
+import { computeScore, runGrade } from '../game/scoring';
 
 interface Props {
   state: GameState;
   judging: boolean;
   result: GameResult | null;
   generating?: boolean;
+  examMode: ExamMode;
+  runScores: number[];
   onReveal: () => void;
   onGuess: (text: string) => void;
   onRestart: () => void;
   onRestartSame?: () => void;
   onEliminate: () => void;
+  onNext: () => void;
 }
 
-export default function GamePanel({ state, judging, result, generating, onReveal, onGuess, onRestart, onRestartSame, onEliminate }: Props) {
+export default function GamePanel({ state, judging, result, generating, examMode, runScores, onReveal, onGuess, onRestart, onRestartSame, onEliminate, onNext }: Props) {
   const [guess, setGuess] = useState('');
   const puzzle = state.puzzle;
   if (!puzzle) return null;
@@ -24,6 +28,13 @@ export default function GamePanel({ state, judging, result, generating, onReveal
   const canReveal = state.phase === 'playing' && state.revealedCount < puzzle.maxHints && !judging;
   const live = computeScore(state.revealedCount, puzzle.maxHints, state.wrongGuesses);
   const finished = state.phase === 'won' || state.phase === 'lost';
+
+  // 센터시험 진행 상태
+  const isCenter = examMode === 'center';
+  const done = runScores.length;                    // 완료한 문제 수
+  const runTotal = runScores.reduce((a, b) => a + b, 0);
+  const qNum = state.phase === 'playing' ? done + 1 : done; // 현재 문제 번호
+  const isRunDone = isCenter && finished && done >= CENTER_QUESTIONS;
 
   function submit() {
     const g = guess.trim();
@@ -40,6 +51,12 @@ export default function GamePanel({ state, judging, result, generating, onReveal
           <div className="panel-title">
             ◆ 힌트 <span className="mini" style={{ color: '#fff' }}>{puzzle.category}</span>
           </div>
+
+          {isCenter && (
+            <div className="center-progress">
+              🎯 센터시험 <b>{Math.min(qNum, CENTER_QUESTIONS)}/{CENTER_QUESTIONS}</b> · 누적 <b>{runTotal}</b>점
+            </div>
+          )}
 
           <div className="gauge" title="공개한 힌트 / 탈락 임계값">
             <div
@@ -116,23 +133,67 @@ export default function GamePanel({ state, judging, result, generating, onReveal
           )}
 
           {finished && result && !generating && (
-            <div className={`result-card ${result.won ? '' : 'lost'}`}>
-              <div className="result-rank">{result.won ? result.rank : '탈락'}</div>
-              <div className="result-answer">
-                정답은 <b>{result.answer}</b> 이었어!
+            isCenter ? (
+              isRunDone ? (
+                /* ── 센터시험 런 종료 요약 ── */
+                (() => {
+                  const rg = runGrade(runTotal, CENTER_QUESTIONS);
+                  return (
+                    <div className="result-card">
+                      <div className="result-rank">{rg.rank}</div>
+                      <div className="result-answer">
+                        센터시험 종료! 총점 <b>{runTotal}</b> <small>/ {CENTER_QUESTIONS * 1000}</small>
+                      </div>
+                      <div className="result-meta">평균 {rg.avg}점 · 종합 등급 {rg.rank}</div>
+                      <div className="run-breakdown">
+                        {runScores.map((s, i) => (
+                          <span className="run-cell" key={i}>{i + 1}<b>{s}</b></span>
+                        ))}
+                      </div>
+                      <div className="restart-btns">
+                        {onRestartSame && (
+                          <button className="btn btn-primary" onClick={onRestartSame}>↺ 다시 센터시험</button>
+                        )}
+                        <button className="btn" onClick={onRestart}>↩ 처음으로</button>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                /* ── 센터시험 한 문제 결과 → 다음 문제 ── */
+                <div className={`result-card ${result.won ? '' : 'lost'}`}>
+                  <div className="result-rank">{result.won ? result.rank : '탈락'}</div>
+                  <div className="result-answer">정답은 <b>{result.answer}</b> 이었어!</div>
+                  <div className="result-meta">
+                    {result.won ? `이 문제 ${result.score}점` : '이 문제 0점…'} · 누적 {runTotal}점
+                  </div>
+                  <div className="restart-btns">
+                    <button className="btn btn-primary" onClick={onNext}>
+                      다음 문제 → <small>({done}/{CENTER_QUESTIONS} 완료)</small>
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* ── 모의시험 (기존) ── */
+              <div className={`result-card ${result.won ? '' : 'lost'}`}>
+                <div className="result-rank">{result.won ? result.rank : '탈락'}</div>
+                <div className="result-answer">
+                  정답은 <b>{result.answer}</b> 이었어!
+                </div>
+                <div className="result-meta">
+                  {result.won
+                    ? `힌트 ${result.hintsUsed}개 사용 · ${result.score}점`
+                    : `힌트 ${result.hintsUsed}개를 다 썼지만 못 맞혔어…`}
+                </div>
+                <div className="restart-btns">
+                  {onRestartSame && (
+                    <button className="btn btn-primary" onClick={onRestartSame}>↺ 한번 더!</button>
+                  )}
+                  <button className="btn" onClick={onRestart}>↩ 다른 주제</button>
+                </div>
               </div>
-              <div className="result-meta">
-                {result.won
-                  ? `힌트 ${result.hintsUsed}개 사용 · ${result.score}점`
-                  : `힌트 ${result.hintsUsed}개를 다 썼지만 못 맞혔어…`}
-              </div>
-              <div className="restart-btns">
-                {onRestartSame && (
-                  <button className="btn btn-primary" onClick={onRestartSame}>↺ 한번 더!</button>
-                )}
-                <button className="btn" onClick={onRestart}>↩ 다른 주제</button>
-              </div>
-            </div>
+            )
           )}
         </section>
       </div>

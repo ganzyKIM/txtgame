@@ -280,6 +280,27 @@ button{font-family:inherit;}
 .start-settings{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;scrollbar-width:none;}
 .start-settings::-webkit-scrollbar{display:none;}
 .start-settings .btn-primary{margin-top:auto;}
+
+/* 시작화면 — 모드 버튼(센터/모의) */
+.start-modes{display:flex;flex-direction:column;gap:6px;margin-top:auto;}
+.start-modes .btn-primary{margin-top:0;width:100%;}
+.start-mock-btn{width:100%;padding:9px;font-size:13px;}
+
+/* 센터시험 진행 표시 (게임 패널 상단) */
+.center-progress{
+  font-size:11px;color:var(--magenta-d);background:var(--pink-1);
+  padding:3px 8px;margin-bottom:2px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.center-progress b{color:var(--ink);}
+
+/* 센터시험 런 요약 — 문제별 점수 분해 */
+.run-breakdown{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:6px 0 10px;}
+.run-cell{
+  font-size:10px;color:var(--ink-soft);background:var(--pink-0);padding:2px 5px;
+  border:1px solid var(--pink-3);
+}
+.run-cell b{color:var(--magenta-d);margin-left:3px;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;overflow:hidden;align-content:start;}
 .cat-btn{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;

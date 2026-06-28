@@ -1,5 +1,11 @@
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
+/** 출제 모드 — center: 10문제 센터시험(총점), mock: 무제한 모의시험(1문제씩) */
+export type ExamMode = 'center' | 'mock';
+
+/** 센터시험 한 런의 문제 수 */
+export const CENTER_QUESTIONS = 10;
+
 export interface CategoryInfo {
   /** 내부 키 */
   key: string;

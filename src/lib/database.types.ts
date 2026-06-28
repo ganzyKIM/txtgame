@@ -75,6 +75,26 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['soup_results']['Insert']>;
         Relationships: [];
       };
+      quiz_runs: {
+        Row: {
+          id: string;
+          user_id: string;
+          total_score: number;
+          questions: number;
+          category: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          total_score: number;
+          questions?: number;
+          category?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['quiz_runs']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -29,3 +29,14 @@ export function computeScore(
 
   return { score, rank };
 }
+
+/** 센터시험 한 런(여러 문제)의 총점 → 평균 기반 종합 등급 */
+export function runGrade(total: number, questions: number): { rank: Score['rank']; avg: number } {
+  const avg = questions > 0 ? Math.round(total / questions) : 0;
+  let rank: Score['rank'];
+  if (avg >= 850) rank = 'S';
+  else if (avg >= 650) rank = 'A';
+  else if (avg >= 400) rank = 'B';
+  else rank = 'C';
+  return { rank, avg };
+}
