@@ -144,12 +144,12 @@ export default function StatsModal({ userId, onClose }: Props) {
 
               {/* 글로벌 랭킹 */}
               <div className="modal-section">
-                <div className="modal-section-title">▌글로벌 랭킹</div>
+                <div className="modal-section-title">▌🎯 센터시험 편차치 랭킹</div>
                 {ranking === null || ranking.totalPlayers === 0 ? (
                   <div className="rank-sub" style={{ padding: '12px 0' }}>
                     {ranking === null
-                      ? '랭킹 데이터를 불러올 수 없어요. (SQL 마이그레이션 005 필요)'
-                      : '아직 전 세계 데이터가 없어요. 첫 도전자가 되어봐!'}
+                      ? '랭킹 데이터를 불러올 수 없어요. (SQL 마이그레이션 008·009 필요)'
+                      : '아직 센터시험 데이터가 없어요. 🎯 첫 도전자가 되어봐!'}
                   </div>
                 ) : (
                   <>
@@ -173,7 +173,7 @@ export default function StatsModal({ userId, onClose }: Props) {
                           style={{ width: `${100 - ranking.topPercent}%` }}
                         />
                         <div className="rank-bar-label">
-                          상위 {ranking.topPercent}% · 최고점 {ranking.myBestScore}점
+                          상위 {ranking.topPercent}% · 센터 최고총점 {ranking.myBestScore}점
                         </div>
                       </div>
                     </div>

@@ -168,21 +168,20 @@ export interface Ranking {
 
 export async function getRanking(userId: string): Promise<Ranking | null> {
   try {
-    // 내 최고점
+    // 내 센터시험 최고 총점 (편차치 랭킹은 센터시험 기준)
     const { data: myData } = await supabase
-      .from('quiz_results')
-      .select('score')
+      .from('quiz_runs')
+      .select('total_score')
       .eq('user_id', userId)
-      .eq('won', true)
-      .order('score', { ascending: false })
+      .order('total_score', { ascending: false })
       .limit(1);
 
-    const myBestScore = myData?.[0]?.score ?? 0;
+    const myBestScore = myData?.[0]?.total_score ?? 0;
 
     // SECURITY DEFINER RPC로 전체 순위 조회 (RLS 우회)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rankData } = await (supabase as any)
-      .rpc('quiz_ranking', { p_score: myBestScore }) as { data: { total_players: number; beaten: number } | null };
+      .rpc('quiz_run_ranking', { p_score: myBestScore }) as { data: { total_players: number; beaten: number } | null };
 
     if (!rankData) return null;
 
