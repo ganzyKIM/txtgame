@@ -63,12 +63,33 @@ const DIVERSITY_AXES = [
 ];
 
 /**
+ * 사실 정확도가 중요한 "지식 카테고리". 여기서는 의외성·마이너 압력을 빼고
+ * (그 압력이 작은 모델을 모르는 영역으로 떠밀어 가공의 답을 짓게 만든다)
+ * "충분히 검증·기록된 것" 안에서만 시드/지역/시대로 다양성을 확보한다.
+ */
+const FACT_STRICT_LABELS = new Set([
+  '역사 사건', '과학·발명', '인물', '장소·건축', '신화·전설', '스포츠·선수',
+]);
+
+/** 지식 카테고리 전용 다양성 축 — 마이너·전문가-깊이 축을 제외해 모호한 영역으로 빠지지 않게 한다 */
+const FACT_STRICT_AXES = [
+  '누구나 알지만 이 카테고리에서 자주 안 나오는 의외의 선택',
+  '비서구권(아시아·아프리카·중동·중남미) 쪽',
+  '비교적 최근·현대적인 것',
+  '고전적이고 오래된 것',
+  '서양 고전·근대 쪽',
+  '대중문화에서 자주 다뤄진 것',
+];
+
+/**
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
 export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = ''): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
-  const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
+  const factStrict = FACT_STRICT_LABELS.has(categoryLabel);
+  const axisPool = factStrict ? FACT_STRICT_AXES : DIVERSITY_AXES;
+  const axis = axisPool[Math.floor(Math.random() * axisPool.length)];
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
@@ -79,7 +100,9 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     categoryDetail ? `[카테고리 상세 범위] ${categoryDetail}` : '',
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
-    `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 반드시 달라져야 한다. 절대 직전과 같은 부류의 "가장 유명한 정답"으로 기계적으로 수렴하지 마라.`,
+    factStrict
+      ? `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 달라져야 한다. 단 정확성이 최우선이므로, 변화를 주려고 잘 모르는 대상을 새로 지어내지 말고 "네가 확실히 아는 실존 대상들" 중에서 시드에 따라 다른 것을 골라라.`
+      : `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 반드시 달라져야 한다. 절대 직전과 같은 부류의 "가장 유명한 정답"으로 기계적으로 수렴하지 마라.`,
     `[초성 강제 (실존성 다음 우선순위)] 이번 정답의 한글 표기 첫 글자는 가능하면 초성 '${cho}' 소리(${choEg})로 시작하게 골라라. 단 이는 위의 실존·사실성 원칙 아래에 있다 — '${cho}' 초성으로 시작하는 "실제로 존재하는" 정답이 떠오를 때만 적용하고, 그런 실존 정답이 없으면 초성을 자유롭게 바꿔서라도 반드시 실존하는 정답을 골라라. 절대 초성을 맞추려고 없는 대상을 지어내지 마라.`,
     `[이번 다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라. (카테고리와 부자연스러우면 무시하고, 대신 평소 잘 고르지 않던 신선한 정답을 골라라.)`,
     recentAnswers.length > 0
@@ -93,7 +116,9 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '  • 지역(아시아·유럽·아메리카·아프리카 등)과 시대(고대~현대)를 골고루 넘나들어라.',
     '  • 동일 인물·작품·장소가 반복되지 않도록 폭넓게 선택해라.',
     '  • 금지 목록이 특정 시대나 지역에 편중돼 있다면, 그 반대편 영역에서 정답을 골라라.',
-    '  • "가장 유명한 한두 개"가 머릿속에 먼저 떠오르면, 그건 일부러 피하고 세 번째·네 번째 후보를 골라라.',
+    factStrict
+      ? '  • 정확성이 최우선이다 — 유명세를 피하려고 모호하거나 잘 모르는 대상을 고르지 마라. "위키백과·교과서에 독립된 항목으로 실릴 만큼" 분명히 기록된 대상 안에서, 가장 진부한 1순위만 아니면 충분하다. 실존 여부가 0.1%라도 의심되면 고르지 마라.'
+      : '  • "가장 유명한 한두 개"가 머릿속에 먼저 떠오르면, 그건 일부러 피하고 세 번째·네 번째 후보를 골라라.',
     '',
     '규칙:',
     '1. 정답(answer)은 현실에 실제로 존재하는, 구체적인 하나의 대상이어야 한다 (실존 인물/실제 작품/실재 사물/실재 장소·사건 등의 고유한 이름). 가상·창작·지어낸 대상은 절대 금지.',
