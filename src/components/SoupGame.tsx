@@ -13,6 +13,11 @@ import type { TextTier } from '../types';
 
 const MAX_HINTS = 3;
 
+// 출제(brew)는 창작·논리 일관성이 필요해 고품질 tier를 쓰지만,
+// 질문 응답/힌트/정답 판정은 "주어진 진상을 읽고 판단"만 하므로
+// 빠르고 싼 모델(Flash='standard')로 충분하다 → 멀티턴 토큰 대폭 절감.
+const SOUP_JUDGE_TIER: TextTier = 'standard';
+
 type Phase = 'intro' | 'loading' | 'playing' | 'solved' | 'revealed';
 
 interface Props {
@@ -83,7 +88,7 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
     mascot.current?.event('judging');
     try {
       const { text, balance } = await proxyGenerateText(
-        tier,
+        SOUP_JUDGE_TIER,
         [{ role: 'user', text: buildSoupAnswerPrompt(puzzle, q) }],
         { temperature: 0 },
       );
@@ -123,7 +128,7 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
     mascot.current?.event('soup_hint');
     try {
       const { text, balance } = await proxyGenerateText(
-        tier,
+        SOUP_JUDGE_TIER,
         [{ role: 'user', text: buildSoupHintPrompt(puzzle, nextHintNum, turns) }],
         { temperature: 0.4 },
       );
@@ -151,7 +156,7 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
     mascot.current?.event('judging');
     try {
       const { text, balance } = await proxyGenerateText(
-        tier,
+        SOUP_JUDGE_TIER,
         [{ role: 'user', text: buildSoupGuessPrompt(puzzle, g) }],
         { temperature: 0 },
       );

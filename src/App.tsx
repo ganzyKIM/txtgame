@@ -17,7 +17,9 @@ import type { TextTier } from './types';
 
 // ── 카테고리별 정답 이력 (localStorage 영속화) ──────────────────────
 const EXCLUSION_KEY = 'txtgame_exclusions_v1';
-const MAX_PER_CATEGORY = 40;
+// 출제 프롬프트에 매번 주입되는 "최근 정답(중복 금지)" 목록 상한.
+// 너무 크면 입력 토큰이 그만큼 늘어 비용↑ → 반복 방지에 충분한 선에서 축소.
+const MAX_PER_CATEGORY = 15;
 
 function loadExclusions(): Record<string, string[]> {
   try {
@@ -69,6 +71,10 @@ export default function App() {
   const prefetchCache = useRef<Map<string, Puzzle>>(new Map());
   // 백그라운드 생성 진행 중인 프리페치 (중복 생성 방지 + 요청 시 await 대상)
   const prefetchInFlight = useRef<Map<string, Promise<Puzzle>>>(new Map());
+  // 현재 판의 설정 (프리페치 트리거가 최신 설정을 참조하도록 ref로 보관)
+  const lastCfgRef = useRef<StartConfig | null>(null);
+  // 이번 판에서 프리페치를 이미 시작했는지 (유저가 "이어서 할 의사"를 보인 뒤 1회만)
+  const prefetchArmed = useRef(false);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
   const greeted = useRef(false);
 
@@ -104,6 +110,8 @@ export default function App() {
 
   // 준비된 문제로 즉시 플레이 화면 전환
   function startWithPuzzle(puzzle: Puzzle, cfg: StartConfig) {
+    lastCfgRef.current = cfg;
+    prefetchArmed.current = false; // 새 판 → 프리페치 트리거 재무장
     setGame({
       phase: 'playing',
       puzzle,
@@ -114,6 +122,14 @@ export default function App() {
     });
     push(`> 출제 완료! 힌트 ${puzzle.hints.length}개 · 탈락 임계값 ${puzzle.maxHints} · 첫 힌트 공개`);
     mascot.current?.event('intro');
+  }
+
+  // 유저가 "이어서 할 의사"를 보인 시점(첫 추가 힌트 공개 또는 첫 추측)에 1회만
+  // 다음 문제를 미리 만든다. 한 문제만 보고 나가면 프리페치를 아예 안 해 크레딧 낭비를 막는다.
+  function maybePrefetch() {
+    if (prefetchArmed.current) return;
+    prefetchArmed.current = true;
+    if (lastCfgRef.current) prefetchNext(lastCfgRef.current);
   }
 
   // ── 다음 문제 백그라운드 미리 생성 ────────────────────────────────
@@ -152,7 +168,7 @@ export default function App() {
       prefetchCache.current.delete(key);
       push(`> ⚡ 미리 준비된 문제로 바로 출제! [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
       startWithPuzzle(ready, cfg);
-      prefetchNext(cfg); // 그 다음 문제도 또 미리 준비
+      // 다음 문제 프리페치는 유저가 이어서 풀 의사를 보일 때(maybePrefetch) 시작
       return;
     }
 
@@ -172,7 +188,7 @@ export default function App() {
       }
       prefetchCache.current.delete(key); // 방금 소비한 항목 정리
       startWithPuzzle(puzzle, cfg);
-      prefetchNext(cfg);
+      // 다음 문제 프리페치는 maybePrefetch(첫 힌트 공개/첫 추측)에서 시작
     } catch (e) {
       push(`! 출제 실패: ${(e as Error).message}`);
       mascot.current?.say('으… 출제에 실패했어. 다시 해줄래?');
@@ -185,6 +201,7 @@ export default function App() {
 
   // ── 힌트 공개 ─────────────────────────────────────────────────────
   function handleReveal() {
+    maybePrefetch(); // 힌트를 더 연다 = 이어서 풀 의사 → 다음 문제 미리 준비 시작
     setGame((g) => {
       if (g.phase !== 'playing' || !g.puzzle) return g;
       if (g.revealedCount >= g.puzzle.maxHints) return g;
@@ -198,6 +215,7 @@ export default function App() {
   // ── 추리 제출 ─────────────────────────────────────────────────────
   async function handleGuess(text: string) {
     if (!game.puzzle || game.phase !== 'playing') return;
+    maybePrefetch(); // 추측 시도 = 이어서 풀 의사 → 다음 문제 미리 준비 시작
     setJudging(true);
     push(`> 추측: "${text}"`);
     mascot.current?.event('judging');
