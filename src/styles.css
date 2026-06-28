@@ -90,10 +90,10 @@ button{font-family:inherit;}
 .menu-btn:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);transform:translateY(1px);}
 
 /* ── 본문 ── */
-#pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;}
-.body{flex:1; display:flex;gap:10px;padding:10px; min-height:0; overflow:hidden;}
+#pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; background:var(--win-bg);}
+.body{flex:1; display:flex;gap:10px;padding:10px; min-height:0; overflow:hidden; background:var(--win-bg);}
 .panel{
-  background:var(--pink-0);
+  background:var(--pink-1);
   border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
   padding:8px;
 }
@@ -331,10 +331,10 @@ button{font-family:inherit;}
   font-size:10px;color:var(--ink);text-shadow:0 0 3px #fff;}
 
 /* 힌트 리스트 */
-.hint-list{display:flex;flex-direction:column;gap:6px;overflow:hidden auto;flex:1;min-height:0;}
+.hint-list{display:flex;flex-direction:column;gap:6px;overflow:hidden auto;flex:1;min-height:0;background:var(--pink-0);padding:4px;border:2px inset var(--bevel-dk2);}
 .hint-item{
   display:flex;gap:8px;padding:8px;font-size:12px;line-height:1.5;
-  background:var(--pink-1);
+  background:var(--pink-2);
   border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
   animation:hintPop .28s cubic-bezier(.34,1.56,.64,1);
 }
@@ -348,7 +348,7 @@ button{font-family:inherit;}
 
 /* 추측 로그 */
 .guess-log{display:flex;flex-direction:column;gap:3px;font-size:11px;}
-.guess-line{padding:3px 6px;background:var(--pink-0);border-left:3px solid var(--ink-soft);}
+.guess-line{padding:3px 6px;background:var(--pink-1);border-left:3px solid var(--ink-soft);}
 .guess-line.wrong{border-left-color:#d94a8a;color:var(--ink-soft);}
 
 /* 결과 카드 */
@@ -825,7 +825,10 @@ body.mode-ame{
     url('/back/back_ame.webp') center/cover no-repeat fixed;
 }
 body.mode-ame .window{background:#180c22; box-shadow:0 0 0 1px #4a1538, 6px 6px 0 rgba(30,10,50,.7), 0 0 40px rgba(100,20,80,.4);}
-body.mode-ame .panel{background:#160d1e;}
+body.mode-ame #pane{background:#180c22;}
+body.mode-ame .body{background:#180c22;}
+body.mode-ame .panel{background:#1e1228;}
+body.mode-ame .hint-list{background:#160d1e; border-color:#3a1a50;}
 body.mode-ame .ctl-group{background:#1e1228;}
 body.mode-ame .menubar{background:#160d20;}
 body.mode-ame .statusbar{background:#160d20; color:#9070a8;}
@@ -851,9 +854,9 @@ body.mode-ame .stat-cell{background:#160d1e;}
 body.mode-ame .rank-bar-bg{background:#120810;}
 body.mode-ame .modal-section-title{color:#d080b8; border-bottom-color:#2e1a38;}
 body.mode-ame .gauge{background:#120810;}
-body.mode-ame .hint-item{background:#1e1228; color:#ecd8f8;}
+body.mode-ame .hint-item{background:#251630; color:#ecd8f8;}
 body.mode-ame .menu-info{color:#d080b8;} body.mode-ame .menu-info b{color:#ecd8f8;}
-body.mode-ame .guess-line{background:#160d1e;}
+body.mode-ame .guess-line{background:#1e1228;}
 body.mode-ame .login-card{background:#180c22;}
 body.mode-ame .login-google-btn{background:linear-gradient(#1e1228, #251630); color:#ecd8f8;}
 body.mode-ame .result-card{background:#0f1820; border-color:var(--bevel-lt) #182535 #182535 var(--bevel-lt);}
