@@ -231,9 +231,18 @@ button{font-family:inherit;}
 .modal-spinner{text-align:center; padding:20px; color:var(--ink-soft); font-size:12px;}
 
 /* ── 상태바 ── */
-.statusbar{display:flex;justify-content:space-between;
+.statusbar{display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding:3px 8px;font-size:10px;color:var(--ink-soft);
   background:var(--pink-1);border-top:2px solid var(--bevel-lt);}
+.statusbar-left{display:flex;align-items:center;gap:8px;min-width:0;}
+.statusbar-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.statusbar-right{white-space:nowrap;flex:none;}
+/* 로그아웃 — 좌하단에 작고 눈에 덜 띄게 두어 오클릭 방지 */
+.statusbar-logout{
+  font-family:inherit;font-size:10px;line-height:1;color:var(--ink-soft);cursor:pointer;flex:none;
+  background:transparent;border:none;padding:1px 4px;text-decoration:underline;text-underline-offset:2px;
+}
+.statusbar-logout:hover{color:var(--magenta-d);}
 
 /* ════════════════════════════════════════════════════════════════════
    로그인 화면

@@ -9,12 +9,14 @@ interface Props {
   onOpenStats: () => void;
   onMinimize: () => void;
   onClose: () => void;
+  /** 제공되면 메뉴바에 "처음으로"(카테고리 선택 복귀) 버튼 노출 */
+  onHome?: () => void;
   children: ReactNode;
 }
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onMinimize, onClose, children,
+  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
 
@@ -38,10 +40,12 @@ export default function Window({
         {/* 메뉴바 */}
         <div className="menubar">
           <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
+          {onHome && (
+            <button className="menu-btn" onClick={onHome} title="퀴즈를 그만두고 카테고리 선택으로">🏠 처음으로</button>
+          )}
           <span className="menu-spacer" />
           <span className="menu-info" style={{cursor:'pointer'}} onClick={() => alert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
           <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
-          <button className="menu-btn" onClick={onLogout}>로그아웃</button>
         </div>
 
         {/* 본문 */}
@@ -54,8 +58,11 @@ export default function Window({
 
         {/* 상태바 */}
         <div className="statusbar">
-          <span>{statusText}</span>
-          <span>Gemini · Supabase · ✞퀴즈대합전✞</span>
+          <span className="statusbar-left">
+            <button className="statusbar-logout" onClick={onLogout} title="로그아웃">로그아웃</button>
+            <span className="statusbar-status">{statusText}</span>
+          </span>
+          <span className="statusbar-right">Gemini · Supabase · ✞퀴즈대합전✞</span>
         </div>
       </div>
     </div>

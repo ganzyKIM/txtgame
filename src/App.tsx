@@ -362,6 +362,7 @@ export default function App() {
           onOpenStats={() => setStatsOpen(true)}
           onMinimize={handleMinimize}
           onClose={handleClose}
+          onHome={mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart : undefined}
         >
           {mode === 'soup' ? (
             <SoupGame
