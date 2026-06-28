@@ -100,7 +100,7 @@ export default function App() {
     const { text, balance } = await proxyGenerateText(
       cfg.tier,
       [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? []), temperature: 0.9 },
+      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? [], cfg.categoryPrompt), temperature: 0.9 },
     );
     applyBalance(balance);
     const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);

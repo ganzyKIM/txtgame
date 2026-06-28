@@ -14,6 +14,7 @@ export const CATEGORIES: CategoryInfo[] = [
   { key: 'science', label: '과학·발명',   emoji: '🔬', prompt: '과학적 발견, 유명 발명품, 우주·물리·생물·화학·의학 분야의 현상이나 이론 또는 과학자' },
   { key: 'myth',    label: '신화·전설',   emoji: '🏛️', prompt: '그리스·로마·북유럽·한국·이집트·일본·중국 등 세계 각국의 신화 속 인물·사건·신·괴물' },
   { key: 'sport',   label: '스포츠·선수', emoji: '⚽', prompt: '축구·야구·농구·테니스·수영·격투기 등 다양한 종목의 유명 선수, 팀, 대회, 역사적 경기' },
+  { key: 'otaku',   label: '오타쿠',      emoji: '🎴', prompt: '오타쿠 서브컬처 전반 — 애니메이션·만화·라이트노벨·미소녀게임/콘솔게임의 유명 작품과 캐릭터, 성우, VTuber, 애니·게임 주제곡, 2차원 및 오타쿠계 아이돌, 동인·코미케·피규어·프라모델 등 굿즈 문화, 아키하바라, 대표적 오타쿠 용어·밈까지 일본 중심 오타쿠 문화를 폭넓게 아우른다. 작품·캐릭터·인물·현상을 특정 분야에 치우치지 말고 골고루 출제한다.' },
 ];
 
 export const DIFFICULTIES: { key: Difficulty; label: string; note: string }[] = [
@@ -65,7 +66,7 @@ const DIVERSITY_AXES = [
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = []): string {
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = ''): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
@@ -73,6 +74,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
     `[카테고리] ${categoryLabel}`,
+    categoryDetail ? `[카테고리 상세 범위] ${categoryDetail}` : '',
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
     `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
     `[랜덤 시드] ${seed} — 이 시드는 매 출제마다 다르다. 시드가 다르면 정답도 반드시 달라져야 한다. 절대 직전과 같은 부류의 "가장 유명한 정답"으로 기계적으로 수렴하지 마라.`,
