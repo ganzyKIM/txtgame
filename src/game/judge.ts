@@ -36,11 +36,16 @@ export async function judgeGuess(
   const g = normalize(guess);
   if (!g) return { correct: false, reason: '추측이 비어 있어.' };
 
-  // 1) 로컬 즉시 매칭
+  // 1) 로컬 즉시 매칭 — 오탐(false positive) 방지를 위해 보수적으로.
+  //    완전 일치이거나, 한쪽이 다른 쪽을 통째로 포함하면서 "짧은 쪽이 충분히 길고(≥4)
+  //    길이 비율도 높을(≥0.67) 때"만 정답으로 본다. (예: "반란" 같은 짧은 공통어 통과 차단)
+  //    그 외 애매한 경우는 아래 AI 의미 판정으로 넘긴다.
   const pool = [puzzle.answer, ...puzzle.acceptable].map(normalize);
   for (const p of pool) {
     if (!p) continue;
-    if (g === p || (p.length >= 2 && (g.includes(p) || p.includes(g)))) {
+    if (g === p) return { correct: true, reason: '정확해!' };
+    const [short, long] = g.length <= p.length ? [g, p] : [p, g];
+    if (long.includes(short) && short.length >= 4 && short.length / long.length >= 0.67) {
       return { correct: true, reason: '정확해!' };
     }
   }
