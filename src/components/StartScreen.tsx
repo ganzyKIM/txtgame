@@ -9,6 +9,8 @@ export interface StartConfig {
   categoryLabel: string;
   /** 프리셋 카테고리의 상세 출제 범위 (자유 입력이면 빈 문자열) */
   categoryPrompt: string;
+  /** 프리셋 카테고리의 배경 테마 (자유 입력이면 undefined → back 유지) */
+  categoryBg?: 'garden' | 'kitchen' | 'lib';
   theme: string;
   difficulty: Difficulty;
   tier: TextTier;
@@ -37,12 +39,15 @@ export default function StartScreen({ busy, onStart }: Props) {
   const categoryPrompt = isCustom
     ? ''
     : CATEGORIES.find((c) => c.key === catKey)?.prompt ?? '';
+  const categoryBg = isCustom
+    ? undefined
+    : CATEGORIES.find((c) => c.key === catKey)?.bg;
 
   const canStart = !busy && (!isCustom || customCat.trim().length > 0);
 
   function start(examMode: ExamMode) {
     if (!canStart) return;
-    onStart({ categoryLabel, categoryPrompt, theme: theme.trim(), difficulty, tier, examMode });
+    onStart({ categoryLabel, categoryPrompt, categoryBg, theme: theme.trim(), difficulty, tier, examMode });
   }
 
   return (

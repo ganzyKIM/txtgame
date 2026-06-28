@@ -733,6 +733,44 @@ body.mode-ame .wc-timerbar-fill{background:repeating-linear-gradient(90deg,#d080
   .mascot-bubble{font-size:14px;max-width:170px;padding:8px 11px;}
 }
 
+/* ── 카테고리 배경 (퀴즈 진행 중에만 body.bg-* 클래스가 붙음) ── */
+body.bg-garden{
+  background:
+    linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),
+    url('/back/garden_choten.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.bg-kitchen{
+  background:
+    linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),
+    url('/back/kitchen_choten.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.bg-lib{
+  background:
+    linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),
+    url('/back/lib_choten.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.mode-ame.bg-garden{
+  background:
+    linear-gradient(rgba(20,5,30,.5),rgba(20,5,30,.5)),
+    url('/back/garden_ame.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.mode-ame.bg-kitchen{
+  background:
+    linear-gradient(rgba(20,5,30,.5),rgba(20,5,30,.5)),
+    url('/back/kitchen_ame.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.mode-ame.bg-lib{
+  background:
+    linear-gradient(rgba(20,5,30,.5),rgba(20,5,30,.5)),
+    url('/back/lib_ame.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+
 /* ════════════════════════════════════════════════════════════════════
    아메 다크 모드 (body.mode-ame)
    ════════════════════════════════════════════════════════════════════ */

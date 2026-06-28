@@ -87,6 +87,15 @@ export default function App() {
     document.body.classList.toggle('is-minimized', minimized);
   }, [minimized]);
 
+  // 카테고리 배경 클래스 — 퀴즈 진행 중일 때만 활성화, 수프/첫화면/로그인은 back 유지
+  useEffect(() => {
+    const BG_CLASSES = ['bg-garden', 'bg-kitchen', 'bg-lib'] as const;
+    BG_CLASSES.forEach((c) => document.body.classList.remove(c));
+    if (mode === 'quiz' && game.phase !== 'setup' && lastConfig?.categoryBg) {
+      document.body.classList.add(`bg-${lastConfig.categoryBg}`);
+    }
+  }, [mode, game.phase, lastConfig?.categoryBg]);
+
   // 최초 로그인 후 마스코트 인사
   useEffect(() => {
     if (!authLoading && user && !greeted.current) {

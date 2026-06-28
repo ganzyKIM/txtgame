@@ -15,6 +15,8 @@ export interface CategoryInfo {
   emoji: string;
   /** 출제 프롬프트에 들어가는 설명 */
   prompt: string;
+  /** 배경 이미지 테마 (없으면 기본 back 사용) */
+  bg?: 'garden' | 'kitchen' | 'lib';
 }
 
 /** Gemini가 비밀리에 생성하는 한 문제 */
