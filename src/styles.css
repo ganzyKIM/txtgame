@@ -49,6 +49,19 @@ body{
 }
 button{font-family:inherit;}
 
+/* ── Mac: 시스템 폰트로 교체 (픽셀 폰트 깨짐 방지) ── */
+html.is-mac body,
+html.is-mac button,
+html.is-mac input,
+html.is-mac textarea{
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Hiragino Kaku Gothic ProN",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+html.is-mac .console{
+  font-family:"SF Mono","Menlo","Apple SD Gothic Neo",monospace;
+  -webkit-font-smoothing:antialiased;
+}
+
 /* ── 베벨 ── */
 .raised{ border:2px solid; border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
          box-shadow:inset -1px -1px 0 var(--bevel-dk), inset 1px 1px 0 #ffe9fa; }
