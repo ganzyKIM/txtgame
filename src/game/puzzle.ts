@@ -83,7 +83,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     `[다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라.`,
     recentAnswers.length > 0
       ? [
-          `[금지 정답 ${recentAnswers.length}개] 아래는 이미 출제된 정답이다. 문자열이 달라도 실제로 같은 대상(예: "미쿠"와 "하츠네 미쿠", "BTS"와 "방탄소년단")이면 절대 선택하지 마라:`,
+          `[금지 정답 ${recentAnswers.length}개] 이미 출제된 정답 — 동일하거나 표기만 다른 같은 대상은 절대 선택하지 마라:`,
           recentAnswers.map(a => `  • ${a}`).join('\n'),
         ].join('\n')
       : '',
@@ -111,7 +111,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '   ⑥ 사실에 근거한 한두 문장으로 깔끔하게. 틀린 사실(환각) 절대 금지.',
     '   ⑦ 정답 이름(또는 그 일부·외국어 표기)을 힌트에 직접 노출하지 마라.',
     '5. maxHints: 적절한 실력자라면 그 안에 맞혀야 하는 힌트 수 상한. 난이도 지침을 따르되 hints 개수를 넘지 않게.',
-    '6. acceptable: 정답으로 인정할 표기 변형을 최대한 넉넉하게 넣어라. 풀네임·영문·약칭·별명·한자·띄어쓰기 변형 등 플레이어가 쓸 법한 모든 형태를 포함해라. (예: answer가 "하츠네 미쿠"라면 acceptable에 "미쿠", "Hatsune Miku", "初音ミク" 등도 포함)',
+    '6. acceptable: 정답으로 인정할 표기 변형(한글/영어/약칭/띄어쓰기 등) 3~6개.',
     '',
     '[출력 전 필수 자가검증 — 아래 3가지를 모두 통과해야만 JSON을 출력할 수 있다]',
     '  ✔ 체크 1. 한국어 위키백과(ko.wikipedia.org)에 이 정답의 독립 항목이 실제로 존재하는가? → 없으면 정답을 바꿔라.',
