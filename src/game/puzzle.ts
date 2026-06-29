@@ -112,6 +112,12 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '5. maxHints: 적절한 실력자라면 그 안에 맞혀야 하는 힌트 수 상한. 난이도 지침을 따르되 hints 개수를 넘지 않게.',
     '6. acceptable: 정답으로 인정할 표기 변형(한글/영어/약칭/띄어쓰기 등) 3~6개.',
     '',
+    '[출력 전 필수 자가검증 — 아래 3가지를 모두 통과해야만 JSON을 출력할 수 있다]',
+    '  ✔ 체크 1. 한국어 위키백과(ko.wikipedia.org)에 이 정답의 독립 항목이 실제로 존재하는가? → 없으면 정답을 바꿔라.',
+    '  ✔ 체크 2. 대한민국 일반 성인 10명에게 이 이름을 말했을 때, 7명 이상이 "알아" 또는 "들어봤어"라고 할 만큼 대중적인가? → 아니면 정답을 바꿔라.',
+    '  ✔ 체크 3. 이 정답이 금지 목록(recentAnswers)에 없는가? → 있으면 정답을 바꿔라.',
+    '위 3가지를 모두 통과한 뒤에만 JSON을 출력해라.',
+    '',
     '출력은 아래 형식의 순수 JSON 하나만. 코드펜스(```)나 설명 문장 금지:',
     '{"answer": string, "hints": string[], "maxHints": number, "acceptable": string[]}',
   ].join('\n');
