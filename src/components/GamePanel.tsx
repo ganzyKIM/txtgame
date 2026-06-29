@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GameState, GameResult, ExamMode } from '../game/types';
 import { CENTER_QUESTIONS } from '../game/types';
 import { computeScore, runGrade } from '../game/scoring';
@@ -20,7 +20,13 @@ interface Props {
 
 export default function GamePanel({ state, judging, result, generating, examMode, runScores, onReveal, onGuess, onRestart, onRestartSame, onEliminate, onNext }: Props) {
   const [guess, setGuess] = useState('');
+  const hintListRef = useRef<HTMLDivElement>(null);
   const puzzle = state.puzzle;
+
+  useEffect(() => {
+    const el = hintListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [state.revealedCount]);
   if (!puzzle) return null;
 
   const revealed = puzzle.hints.slice(0, state.revealedCount);
@@ -68,7 +74,7 @@ export default function GamePanel({ state, judging, result, generating, examMode
             </div>
           </div>
 
-          <div className="hint-list">
+          <div className="hint-list" ref={hintListRef}>
             {revealed.length === 0 && <div className="hint-empty">아직 공개된 힌트가 없어…</div>}
             {revealed.map((h, i) => (
               <div className="hint-item" key={i}>
