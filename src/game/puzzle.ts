@@ -115,7 +115,11 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     `[다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라.`,
     recentAnswers.length > 0
       ? [
-          `[금지 정답 ${recentAnswers.length}개] 이미 출제된 정답 — 동일하거나 표기만 다른 같은 대상은 절대 선택하지 마라:`,
+          `[금지 정답 ${recentAnswers.length}개] 이미 출제된 정답 — 아래 중 어느 하나라도 해당하면 절대 선택 금지:`,
+          '  ① 목록과 동일한 대상',
+          '  ② 목록 항목과 표기만 다른 같은 대상 (한글/영문/약칭 차이 등)',
+          '  ③ 목록 항목의 다른 매체·버전·시즌 (예: "은하철도 999"가 목록에 있으면 "은하철도 999(영화)", "은하철도 999(만화)"도 전부 금지)',
+          '  ④ 목록 항목을 포함하는 상위 시리즈, 또는 목록 항목의 스핀오프·리메이크·속편',
           recentAnswers.map(a => `  • ${a}`).join('\n'),
         ].join('\n')
       : '',
