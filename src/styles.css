@@ -376,8 +376,11 @@ html.is-mac .console{
 
 /* 추측 로그 */
 .guess-log{display:flex;flex-direction:column;gap:3px;font-size:12px;}
-.guess-line{padding:3px 6px;background:var(--pink-1);border-left:3px solid var(--ink-soft);}
+.guess-line{padding:3px 6px;background:var(--pink-1);border-left:3px solid var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:6px;}
 .guess-line.wrong{border-left-color:#d94a8a;color:var(--ink-soft);}
+.btn-appeal{font-size:10px;padding:2px 6px;flex:none;background:linear-gradient(#fff0e8,#ffe0c8);border-color:var(--bevel-lt) #c06030 #c06030 var(--bevel-lt);color:#804020;}
+.btn-appeal:hover{background:linear-gradient(#ffe0c8,#ffc8a0);}
+body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a0b0;border-color:#6a3040 #1a0510 #1a0510 #6a3040;}
 
 /* 결과 카드 */
 .result-card{background:var(--mint);padding:14px;text-align:center;

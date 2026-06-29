@@ -1,6 +1,6 @@
 import { proxyGenerateText } from '../api/proxy';
 import type { TextTier } from '../types';
-import { buildJudgePrompt, parseJudge } from './puzzle';
+import { buildJudgePrompt, buildAppealPrompt, parseJudge } from './puzzle';
 import type { Puzzle } from './types';
 
 /** 비교용 정규화: 공백/문장부호/대소문자 제거, 흔한 조사 꼬리 제거 */
@@ -60,7 +60,29 @@ export async function judgeGuess(
     const parsed = parseJudge(text);
     return { ...parsed, balance };
   } catch {
-    // 판정 호출 실패 시: 로컬 기준으로 오답 처리(게임 진행 보장)
     return { correct: false, reason: '음… 그건 아닌 것 같아.' };
+  }
+}
+
+/**
+ * 이의제기 판정.
+ * 저장된 정답 대신 공개된 힌트를 기준으로 유저 추측의 타당성을 판정한다.
+ * 출제 AI 환각으로 정답이 잘못된 경우를 구제하기 위한 별도 경로.
+ */
+export async function appealGuess(
+  puzzle: Puzzle,
+  guess: string,
+  revealedHints: string[],
+): Promise<JudgeResult> {
+  try {
+    const { text, balance } = await proxyGenerateText(
+      JUDGE_TIER,
+      [{ role: 'user', text: buildAppealPrompt(revealedHints, puzzle.answer, guess) }],
+      { temperature: 0 },
+    );
+    const parsed = parseJudge(text);
+    return { ...parsed, balance };
+  } catch {
+    return { correct: false, reason: '이의제기 판정에 실패했어.' };
   }
 }

@@ -185,6 +185,33 @@ export function parsePuzzle(
   return { answer, category: categoryLabel, theme, hints, maxHints, acceptable };
 }
 
+/**
+ * 이의제기 판정 프롬프트.
+ * 저장된 정답을 참고용으로만 제공하고, 오직 힌트 내용만으로 유저 추측을 판정한다.
+ * 출제 AI가 환각 정답을 냈을 때를 대비해 힌트가 진실의 기준이 된다.
+ */
+export function buildAppealPrompt(revealedHints: string[], storedAnswer: string, guess: string): string {
+  return [
+    '너는 추리 퀴즈의 이의제기 심판관이다.',
+    '출제된 정답이 틀렸을 가능성이 있으므로, 저장된 정답에 구애받지 말고 아래 힌트들만을 기준으로 유저의 추측이 맞는지 판정하라.',
+    '',
+    '[공개된 힌트]',
+    revealedHints.map((h, i) => `${i + 1}. ${h}`).join('\n'),
+    '',
+    `[저장된 정답] ${storedAnswer}  ← 참고용. 이것이 틀렸을 수 있으니 이 값에 끌려가지 마라.`,
+    `[유저 추측] ${guess}`,
+    '',
+    '판정 기준:',
+    '  ✔ 힌트들이 유저 추측을 더 잘 가리키면 → correct: true (이의제기 인용)',
+    '  ✗ 힌트들이 저장된 정답을 더 잘 가리키면 → correct: false (기각)',
+    '  ✗ 힌트들이 둘 다 가리키지 않으면 → correct: false (기각)',
+    'reason에는 어떤 근거로 판단했는지 한 문장으로 설명하라. 정답을 직접 노출하지 마라.',
+    '',
+    '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
+    '{"correct": boolean, "reason": string}',
+  ].join('\n');
+}
+
 /** 의미 판정용 프롬프트 (로컬 매칭 실패 시 폴백) */
 export function buildJudgePrompt(answer: string, guess: string): string {
   return [

@@ -6,19 +6,21 @@ import { computeScore, runGrade } from '../game/scoring';
 interface Props {
   state: GameState;
   judging: boolean;
+  appealing: boolean;
   result: GameResult | null;
   generating?: boolean;
   examMode: ExamMode;
   runScores: number[];
   onReveal: () => void;
   onGuess: (text: string) => void;
+  onAppeal: (guessText: string) => void;
   onRestart: () => void;
   onRestartSame?: () => void;
   onEliminate: () => void;
   onNext: () => void;
 }
 
-export default function GamePanel({ state, judging, result, generating, examMode, runScores, onReveal, onGuess, onRestart, onRestartSame, onEliminate, onNext }: Props) {
+export default function GamePanel({ state, judging, appealing, result, generating, examMode, runScores, onReveal, onGuess, onAppeal, onRestart, onRestartSame, onEliminate, onNext }: Props) {
   const [guess, setGuess] = useState('');
   const hintListRef = useRef<HTMLDivElement>(null);
   const puzzle = state.puzzle;
@@ -122,7 +124,17 @@ export default function GamePanel({ state, judging, result, generating, examMode
             <div className="guess-log">
               {state.guesses.map((g, i) => (
                 <div className={`guess-line ${g.correct ? '' : 'wrong'}`} key={i}>
-                  {g.correct ? '⭕ ' : '❌ '}{g.text}{g.reason ? ` — ${g.reason}` : ''}
+                  <span>{g.correct ? '⭕ ' : '❌ '}{g.text}{g.reason ? ` — ${g.reason}` : ''}</span>
+                  {!g.correct && !finished && (
+                    <button
+                      className="btn btn-xs btn-appeal"
+                      onClick={() => onAppeal(g.text)}
+                      disabled={appealing || judging}
+                      title="이 추측으로 이의제기"
+                    >
+                      {appealing ? '…' : '⚖ 이의제기'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

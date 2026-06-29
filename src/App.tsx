@@ -8,7 +8,7 @@ import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle } from './game/puzzle';
-import { judgeGuess } from './game/judge';
+import { judgeGuess, appealGuess } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import StatsModal from './components/StatsModal';
@@ -62,6 +62,7 @@ export default function App() {
   const [result, setResult] = useState<GameResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [judging, setJudging] = useState(false);
+  const [appealing, setAppealing] = useState(false);
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -323,6 +324,41 @@ export default function App() {
     }
   }
 
+  async function handleAppeal(guessText: string) {
+    if (!game.puzzle || game.phase !== 'playing') return;
+    setAppealing(true);
+    push(`> ⚖ 이의제기: "${guessText}"`);
+    mascot.current?.event('judging');
+    try {
+      const revealedHints = game.puzzle.hints.slice(0, game.revealedCount);
+      const res = await appealGuess(game.puzzle, guessText, revealedHints);
+      if (typeof res.balance === 'number') applyBalance(res.balance);
+
+      if (res.correct) {
+        const score = computeScore(game.revealedCount, game.puzzle.maxHints, game.wrongGuesses);
+        const r: GameResult = {
+          category: game.puzzle.category,
+          theme: game.puzzle.theme,
+          answer: guessText,
+          hintsUsed: game.revealedCount,
+          won: true,
+          score: score.score,
+          rank: score.rank,
+        };
+        setGame((g) => ({ ...g, phase: 'won', guesses: [...g.guesses, { text: `${guessText} (이의제기 인용)`, correct: true, reason: res.reason }] }));
+        setResult(r);
+        push(`> ✅ 이의제기 인용! "${guessText}" 정답으로 인정됨`);
+        mascot.current?.event('win');
+        if (user) void saveResult(user.id, r);
+      } else {
+        push(`> ⚖ 이의제기 기각 — ${res.reason}`);
+        mascot.current?.event('wrong');
+      }
+    } finally {
+      setAppealing(false);
+    }
+  }
+
   function handleEliminate() {
     if (!game.puzzle || game.phase !== 'playing') return;
     const r: GameResult = {
@@ -445,6 +481,8 @@ export default function App() {
               onRestart={handleRestart}
               onRestartSame={lastConfig ? handleRestartSame : undefined}
               onEliminate={handleEliminate}
+              onAppeal={(t) => void handleAppeal(t)}
+              appealing={appealing}
               onNext={handleNextQuestion}
             />
           )}
