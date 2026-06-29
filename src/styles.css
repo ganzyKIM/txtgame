@@ -6,8 +6,23 @@
 @font-face{
   font-family:'Galmuri11';
   src:url('/fonts/Galmuri11.woff2') format('woff2'),
-      url('/fonts/Galmuri11.otf')   format('opentype'),
       url('/fonts/Galmuri11.ttf')   format('truetype');
+  font-display:swap;
+  font-weight:normal;
+  font-style:normal;
+}
+@font-face{
+  font-family:'Galmuri11';
+  src:url('/fonts/Galmuri11-Bold.woff2') format('woff2'),
+      url('/fonts/Galmuri11-Bold.ttf')   format('truetype');
+  font-display:swap;
+  font-weight:bold;
+  font-style:normal;
+}
+@font-face{
+  font-family:'GalmuriMono11';
+  src:url('/fonts/GalmuriMono11.woff2') format('woff2'),
+      url('/fonts/GalmuriMono11.ttf')   format('truetype');
   font-display:swap;
   font-weight:normal;
   font-style:normal;
@@ -159,7 +174,7 @@ button{font-family:inherit;}
 /* ── 콘솔 (플로팅 창에서 사용) ── */
 .console{
   margin:0;padding:8px;overflow:auto;
-  background:#2a0a28;color:#ff9be8;font-family:'Galmuri11',monospace;font-size:14px;line-height:1.6;
+  background:#2a0a28;color:#ff9be8;font-family:'GalmuriMono11',monospace;font-size:14px;line-height:1.6;
   white-space:pre-wrap;word-break:break-all;text-shadow:0 0 4px rgba(255,100,210,.5);
 }
 .console::-webkit-scrollbar{width:12px;}
