@@ -19,8 +19,9 @@ import type { TextTier } from './types';
 // ── 카테고리별 정답 이력 (localStorage 영속화) ──────────────────────
 const EXCLUSION_KEY = 'txtgame_exclusions_v1';
 // 출제 프롬프트에 매번 주입되는 "최근 정답(중복 금지)" 목록 상한.
-// 너무 크면 입력 토큰이 그만큼 늘어 비용↑ → 반복 방지에 충분한 선에서 축소.
-const MAX_PER_CATEGORY = 15;
+// 너무 크면 입력 토큰이 그만큼 늘어 비용↑ → 반복 방지에 충분한 선에서 조절.
+// 다양성 체감을 위해 더 길게 기억(괄호 제거 베이스명까지 누적되므로 실효 기억은 더 큼).
+const MAX_PER_CATEGORY = 25;
 
 function loadExclusions(): Record<string, string[]> {
   try {
