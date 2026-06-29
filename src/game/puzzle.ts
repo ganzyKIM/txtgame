@@ -103,6 +103,18 @@ function pick<T>(pool: T[]): T {
 const OTAKU_CATEGORY_KEYS = new Set(['otaku', 'anime', 'game']);
 
 /**
+ * 카테고리 키별 상시 금지 정답.
+ * "AI가 학습 편향으로 특정 카테고리의 첫 후보로 계속 뽑는 대상"을 여기에 박아둔다.
+ * 제외 목록(플레이 이력)과 달리 이 목록은 세션·기기·카테고리 전환과 무관하게 항상 적용된다.
+ */
+const ALWAYS_EXCLUDE: Record<string, string[]> = {
+  // 관련 오타쿠계 카테고리 전부에 적용 — AI가 "클래식 SF 애니" 답으로 과도하게 집착하는 대상
+  otaku: ['은하철도 999', '은하철도 999(영화)', '은하철도 999(만화)'],
+  anime: ['은하철도 999', '은하철도 999(영화)', '은하철도 999(만화)'],
+  game:  [],
+};
+
+/**
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  * 규칙은 중복 없이 단일 출처로 정리한다 — 같은 지침을 여러 곳에 반복하면
@@ -126,12 +138,14 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     biasLines.push(`· 초성 가이드: 가능하면 정답 첫 초성을 '${cho}'(${choEg})로 맞춰라. 맞는 실존 정답이 없으면 자유. 초성을 위해 없는 대상을 지어내지 마라.`);
   }
 
-  // ── 금지 정답 (제외 목록) ──
-  const exclusionLines = recentAnswers.length > 0
+  // ── 금지 정답: 상시 금지 + 플레이 이력 ──
+  const alwaysBanned = ALWAYS_EXCLUDE[categoryKey] ?? [];
+  const allBanned = [...new Set([...alwaysBanned, ...recentAnswers])];
+  const exclusionLines = allBanned.length > 0
     ? [
-        `· [금지 정답 ${recentAnswers.length}개] 아래 중 하나라도 해당하면 선택 금지:`,
+        `· [금지 정답 ${allBanned.length}개] 아래 중 하나라도 해당하면 선택 금지:`,
         '    ① 동일 대상  ② 표기만 다른 같은 대상(한글/영문/약칭)  ③ 같은 대상의 다른 매체·버전·시즌(예: "은하철도 999"가 있으면 "은하철도 999(영화)"도 금지)  ④ 상위 시리즈/스핀오프/리메이크/속편',
-        recentAnswers.map(a => `      • ${a}`).join('\n'),
+        allBanned.map(a => `      • ${a}`).join('\n'),
       ]
     : [];
 

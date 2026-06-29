@@ -7,7 +7,7 @@ import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
-import { buildSetupPrompt, parsePuzzle } from './game/puzzle';
+import { buildSetupPrompt, parsePuzzle, CATEGORIES } from './game/puzzle';
 import { judgeGuess, appealGuess } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
@@ -120,10 +120,19 @@ export default function App() {
   // ── 한 문제 생성 (직접 출제·프리페치 공용) ────────────────────────
   // 프록시 호출 → 크레딧 차감 반영 → 파싱 → 정답을 카테고리 제외목록에 누적.
   async function generatePuzzle(cfg: StartConfig): Promise<Puzzle> {
+    // 오타쿠 관련 카테고리(otaku/anime/game)는 제외 목록을 공유 — 카테고리 전환해도 중복 방지
+    const OTAKU_KEYS = ['otaku', 'anime', 'game'];
+    const relatedLabels: string[] = OTAKU_KEYS.includes(cfg.categoryKey ?? '')
+      ? CATEGORIES.filter(c => OTAKU_KEYS.includes(c.key)).map(c => c.label)
+      : [cfg.categoryLabel];
+    const mergedExclusions = [...new Set(
+      relatedLabels.flatMap(label => exclusions.current[label] ?? [])
+    )];
+
     const { text, balance } = await proxyGenerateText(
       cfg.tier,
       [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, exclusions.current[cfg.categoryLabel] ?? [], cfg.categoryPrompt, cfg.categoryKey), temperature: 0.9 },
+      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, mergedExclusions, cfg.categoryPrompt, cfg.categoryKey), temperature: 0.9 },
     );
     applyBalance(balance);
     const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
