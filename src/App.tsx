@@ -29,10 +29,17 @@ function loadExclusions(): Record<string, string[]> {
   } catch { return {}; }
 }
 
+/** 괄호·버전 접미사를 제거한 기본 이름 추출 (예: "은하철도 999(영화)" → "은하철도 999") */
+function baseName(answer: string): string {
+  return answer.replace(/\s*[(（【\[][^)）】\]]*[)）】\]]\s*$/, '').trim();
+}
+
 function addExclusion(map: Record<string, string[]>, category: string, answer: string): Record<string, string[]> {
   const prev = map[category] ?? [];
-  if (prev.includes(answer)) return map;
-  const updated = { ...map, [category]: [...prev.slice(-(MAX_PER_CATEGORY - 1)), answer] };
+  // 정답 원본 + 기본 이름(괄호 제거) 둘 다 등록해서 시리즈 변형 중복 차단
+  const toAdd = [...new Set([answer, baseName(answer)])].filter(a => a && !prev.includes(a));
+  if (toAdd.length === 0) return map;
+  const updated = { ...map, [category]: [...prev.slice(-(MAX_PER_CATEGORY - toAdd.length)), ...toAdd] };
   try { localStorage.setItem(EXCLUSION_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
   return updated;
 }
@@ -325,7 +332,7 @@ export default function App() {
   }
 
   async function handleAppeal(guessText: string) {
-    if (!game.puzzle || game.phase !== 'playing') return;
+    if (!game.puzzle || (game.phase !== 'playing' && game.phase !== 'lost')) return;
     setAppealing(true);
     push(`> ⚖ 이의제기: "${guessText}"`);
     mascot.current?.event('judging');

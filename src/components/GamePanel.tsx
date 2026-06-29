@@ -125,7 +125,7 @@ export default function GamePanel({ state, judging, appealing, result, generatin
               {state.guesses.map((g, i) => (
                 <div className={`guess-line ${g.correct ? '' : 'wrong'}`} key={i}>
                   <span>{g.correct ? '⭕ ' : '❌ '}{g.text}{g.reason ? ` — ${g.reason}` : ''}</span>
-                  {!g.correct && !finished && (
+                  {!g.correct && (
                     <button
                       className="btn btn-xs btn-appeal"
                       onClick={() => onAppeal(g.text)}
