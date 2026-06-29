@@ -83,7 +83,7 @@ export default function GamePanel({ state, judging, result, generating, examMode
               ? <button className="btn btn-lav" onClick={onReveal} disabled={!canReveal}>
                   🔓 힌트 열기 (남은 {remaining}개 — 열수록 점수 ↓)
                 </button>
-              : <button className="btn" style={{ background: 'linear-gradient(#ffd0e8,#ffb0d8)', borderColor: 'var(--bevel-lt) #c03070 #c03070 var(--bevel-lt)' }} onClick={onEliminate} disabled={judging}>
+              : <button className="btn btn-warn" onClick={onEliminate} disabled={judging}>
                   ⚠ 포기하고 정답 보기
                 </button>
           )}

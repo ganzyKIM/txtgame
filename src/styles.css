@@ -115,6 +115,7 @@ button{font-family:inherit;}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4);}
 .btn-xs{padding:3px 7px;font-size:10px;}
 .btn-lav{background:linear-gradient(var(--lav-1),var(--lav-2));}
+.btn-warn{background:linear-gradient(#ffd0e8,#ffb0d8);border-color:var(--bevel-lt) #c03070 #c03070 var(--bevel-lt);}
 .btn-primary{
   width:100%;padding:11px;font-size:14px;font-weight:bold;color:#fff;
   text-shadow:1px 1px 0 var(--magenta-d);
@@ -848,6 +849,7 @@ body.mode-ame .tbtn-x{background:#4a1535;}
 body.mode-ame .panel-title{background:linear-gradient(90deg, #3a0d28, #2a1035); text-shadow:1px 1px 0 #08030c;}
 body.mode-ame .btn-primary{background:linear-gradient(#5a1a40, #30081e);}
 body.mode-ame .btn-lav{background:linear-gradient(var(--lav-1), var(--lav-2));}
+body.mode-ame .btn-warn{background:linear-gradient(#3a0d1e,#4a1528);color:#f0a0c0;border-color:#6a2040 #1a0510 #1a0510 #6a2040;}
 body.mode-ame .console{background:#08030f; color:#9a7ab0; text-shadow:0 0 4px rgba(150,80,180,.4);}
 body.mode-ame .console-strip{border-top-color:#060209;}
 body.mode-ame .modal{background:#180c22;}
