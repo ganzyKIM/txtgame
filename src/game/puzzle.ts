@@ -29,6 +29,13 @@ const DIFFICULTY_GUIDE: Record<Difficulty, string> = {
   hard: '정답은 마니아도 헷갈릴 만큼 까다로운 것으로 고르고, 힌트는 더 함축적으로, maxHints는 3~5 사이로 빡빡하게 잡아라.',
 };
 
+/** 팬/마니아 대상 카테고리는 난이도 기준을 한 단계 올려야 함 */
+const OTAKU_DIFFICULTY_GUIDE: Record<Difficulty, string> = {
+  easy:   '플레이어는 이미 오타쿠/팬이다. 쉬움이라도 "원피스·나루토·드래곤볼" 급의 국민 작품이 아니면 쉽지 않다. 팬이라면 누구나 바로 아는 대표작·대표 캐릭터로 고르고, maxHints는 5~7.',
+  normal: '팬 사이에서 유명하지만 일반인은 모를 수도 있는 작품·캐릭터·성우·노래 등 세컨드티어급으로 골라라. "유명하긴 한데 바로 떠오르진 않는" 수준. maxHints는 4~6.',
+  hard:   '코어 팬·마니아도 힌트 없이는 쉽게 못 맞힐 만큼 구체적이거나 세분화된 정답을 골라라. 마이너 캐릭터, 비주류 작품, 특정 에피소드·설정·용어도 가능. 단 위키백과 항목은 있어야 한다. 힌트는 함축적으로, maxHints는 3~4.',
+};
+
 /**
  * 매 출제마다 정답의 첫 글자(초성)를 강제로 지정해 답안 공간을 확정적으로 분산.
  * 모델이 '가장 유명한 소수 정답'으로 수렴하는 걸 코드 레벨에서 차단한다.
@@ -64,10 +71,15 @@ const DIVERSITY_AXES = [
  * 출제용 system instruction.
  * Gemini가 정답·힌트·탈락임계값을 엄격한 JSON으로 비밀리에 만들게 한다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = ''): string {
+const OTAKU_CATEGORY_KEYS = new Set(['otaku', 'anime', 'game']);
+
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = ''): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const axis = DIVERSITY_AXES[Math.floor(Math.random() * DIVERSITY_AXES.length)];
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
+  const diffGuide = OTAKU_CATEGORY_KEYS.has(categoryKey)
+    ? OTAKU_DIFFICULTY_GUIDE[difficulty]
+    : DIFFICULTY_GUIDE[difficulty];
 
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
@@ -77,7 +89,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     `[카테고리] ${categoryLabel}`,
     categoryDetail ? `[카테고리 상세 범위] ${categoryDetail}` : '',
     theme ? `[주제·컨셉] ${theme}` : '[주제·컨셉] (지정 없음 — 카테고리 안에서 자유롭게 흥미로운 정답을 골라라)',
-    `[난이도 지침] ${DIFFICULTY_GUIDE[difficulty]}`,
+    `[난이도 지침] ${diffGuide}`,
     `[랜덤 시드] ${seed} — 매 출제마다 다른 시드로 다양한 정답을 골라라.`,
     `[초성 가이드] 가능하면 정답 한글 표기의 첫 초성을 '${cho}'(${choEg})로 맞춰라. 맞는 실존 정답이 없으면 초성은 자유롭게 바꿔라. 초성을 위해 없는 대상을 지어내는 것은 금지.`,
     `[다양성 축] 이번엔 "${axis}" 쪽을 우선 고려해라.`,

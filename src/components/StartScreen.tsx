@@ -6,6 +6,7 @@ import { TEXT_TIERS } from '../config/models';
 import type { TextTier } from '../types';
 
 export interface StartConfig {
+  categoryKey: string;
   categoryLabel: string;
   /** 프리셋 카테고리의 상세 출제 범위 (자유 입력이면 빈 문자열) */
   categoryPrompt: string;
@@ -47,7 +48,7 @@ export default function StartScreen({ busy, onStart }: Props) {
 
   function start(examMode: ExamMode) {
     if (!canStart) return;
-    onStart({ categoryLabel, categoryPrompt, categoryBg, theme: theme.trim(), difficulty, tier, examMode });
+    onStart({ categoryKey: isCustom ? '' : catKey, categoryLabel, categoryPrompt, categoryBg, theme: theme.trim(), difficulty, tier, examMode });
   }
 
   return (
