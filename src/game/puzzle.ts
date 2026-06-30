@@ -115,7 +115,7 @@ const ALWAYS_EXCLUDE: Record<string, string[]> = {};
  * 규칙은 중복 없이 단일 출처로 정리한다 — 같은 지침을 여러 곳에 반복하면
  * 모델이 우선순위를 헷갈리고 토큰만 늘어난다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = ''): string {
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = '', diffCalib = ''): string {
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
   const diffGuide = OTAKU_CATEGORY_KEYS.has(categoryKey)
@@ -158,6 +158,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     `· 주제·컨셉: ${theme || '지정 없음 (카테고리 안에서 자유롭게 흥미로운 정답을)'}`,
     `· 난이도: ${diffGuide}`,
     ...biasLines,
+    diffCalib ? `· ${diffCalib}` : '',
     ...exclusionLines,
     `· 랜덤 시드 ${seed} — 매 출제마다 다른 정답을 골라라.`,
     '',
@@ -344,4 +345,85 @@ export function buildVerifyPrompt(puzzle: Puzzle): string {
 export function parseVerify(raw: string): { ok: boolean; problem: string } {
   const obj = extractJson(raw) as Record<string, unknown>;
   return { ok: Boolean(obj.ok), problem: String(obj.problem ?? '').trim() };
+}
+
+/**
+ * Stage 3: 힌트 린터 — 코드 레벨 결정론적 품질 검사.
+ * AI 호출 없이 즉시 실행. 발견된 문제 목록 반환(빈 배열 = 통과).
+ * ① 스포일러: 힌트에 정답 이름 포함
+ * ② 중복: 완전히 같은 힌트
+ * 카테고리 노출은 소프트 경고만(false positive 방지)
+ */
+export function lintHints(puzzle: Puzzle, categoryLabel: string): string[] {
+  function nk(s: string): string {
+    return s.toLowerCase().replace(/[\s·~!@#$%^&*()_+\-=[\]{};:'",.<>/?\\|`'""（）【】]/g, '').trim();
+  }
+  const issues: string[] = [];
+  const ansKey  = nk(puzzle.answer);
+  const baseKey = nk(baseName(puzzle.answer));
+  const catKey  = nk(categoryLabel);
+  // 정답 구성 토큰 (3자 이상만 — 짧은 단어 오탐 방지)
+  const ansTokens = puzzle.answer.split(/[\s·]/).map(nk).filter(t => t.length >= 3);
+
+  const seenHints = new Set<string>();
+  puzzle.hints.forEach((hint, i) => {
+    const hk = nk(hint);
+
+    // ① 스포일러
+    if (ansKey.length >= 2 && hk.includes(ansKey)) {
+      issues.push(`힌트 ${i + 1}: 정답 이름 직접 노출`);
+    } else if (baseKey.length >= 2 && baseKey !== ansKey && hk.includes(baseKey)) {
+      issues.push(`힌트 ${i + 1}: 정답 기본명 노출`);
+    } else if (ansTokens.some(t => t.length >= 4 && hk.includes(t))) {
+      issues.push(`힌트 ${i + 1}: 정답 토큰 노출 가능성`);
+    }
+
+    // ② 카테고리 이름 (첫 2개 힌트만, 명백한 경우만)
+    if (i < 2 && catKey.length >= 3 && hk.includes(catKey)) {
+      issues.push(`힌트 ${i + 1}: 카테고리명 직접 노출`);
+    }
+
+    // ③ 중복 힌트
+    if (seenHints.has(hk)) issues.push(`힌트 ${i + 1}: 중복 힌트`);
+    seenHints.add(hk);
+  });
+
+  return issues;
+}
+
+/**
+ * Stage 2(재사용 경로): 정답이 확정된 상태에서 힌트만 새로 생성하는 프롬프트.
+ * AI에게 정답을 고르는 역할을 맡기지 않으므로 정답 환각이 원천적으로 불가하다.
+ */
+export function buildHintOnlyPrompt(answer: string, categoryLabel: string, difficulty: Difficulty, categoryDetail = ''): string {
+  const diffGuide = DIFFICULTY_GUIDE[difficulty];
+  return [
+    `너는 추리 퀴즈 출제자다. 정답은 이미 "${answer}"로 확정돼 있다. 이 정답에 대한 힌트만 새로 만들어라.`,
+    '',
+    `[카테고리] ${categoryLabel}${categoryDetail ? ` — ${categoryDetail}` : ''}`,
+    `[정답] ${answer}  ← 이 값은 변경 불가. 힌트를 만들기 위한 참고 전용.`,
+    `[난이도] ${diffGuide}`,
+    '',
+    '[힌트 작성 규칙]',
+    '· 6~8개. 모호→구체 순(앞 1~2개 범주 수준, 마지막 1~2개 결정적).',
+    '· 존댓말 평서문(~입니다/~습니다). 반말·감탄형 금지.',
+    `· 카테고리("${categoryLabel}") 노출 금지. 정답 이름(또는 그 일부) 힌트에 직접 노출 금지.`,
+    '· 각 힌트는 이전에 없던 새 사실 하나를 추가. 틀린 사실 절대 금지.',
+    '',
+    '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
+    '{"hints": string[], "maxHints": number, "acceptable": string[]}',
+  ].join('\n');
+}
+
+/** 힌트 전용 응답 파싱 — answer는 호출부에서 제공 */
+export function parseHintOnly(raw: string, answer: string, categoryLabel: string, theme: string, existingAcceptable: string[]): Puzzle {
+  const obj = extractJson(raw) as Record<string, unknown>;
+  const hints = Array.isArray(obj.hints) ? obj.hints.map(h => String(h).trim()).filter(Boolean) : [];
+  const newAcceptable = Array.isArray(obj.acceptable) ? obj.acceptable.map(a => String(a).trim()).filter(Boolean) : [];
+  const acceptable = [...new Set([answer, ...existingAcceptable, ...newAcceptable])];
+  let maxHints = Number(obj.maxHints);
+  if (!Number.isFinite(maxHints) || maxHints < 1) maxHints = Math.max(3, Math.ceil(hints.length * 0.6));
+  maxHints = Math.max(2, Math.min(maxHints, hints.length));
+  if (hints.length < 2) throw new Error('힌트가 부족합니다.');
+  return { answer, category: categoryLabel, theme, hints, maxHints, acceptable };
 }

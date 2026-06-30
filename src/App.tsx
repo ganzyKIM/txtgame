@@ -7,7 +7,9 @@ import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
-import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent } from './game/puzzle';
+import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly } from './game/puzzle';
+import { checkWikipedia } from './game/wiki';
+import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
@@ -76,6 +78,7 @@ export default function App() {
   // 현재 판의 출제 모드 (마지막 시작 설정에서 파생)
   const examMode: ExamMode = lastConfig?.examMode ?? 'mock';
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
+  const answerBank = useRef<AnswerBank>(loadBank());
   // 미리 만들어둔 문제(키: cfgKey) — 즉시 출제용
   const prefetchCache = useRef<Map<string, Puzzle>>(new Map());
   // 백그라운드 생성 진행 중인 프리페치 (중복 생성 방지 + 요청 시 await 대상)
@@ -113,43 +116,86 @@ export default function App() {
   }
 
   // ── 한 문제 생성 (직접 출제·프리페치 공용) ────────────────────────
-  // 프록시 호출 → 크레딧 차감 반영 → 파싱 → (중복이면 재출제) → 정답을 제외목록에 누적.
+  // 4단계 품질 파이프라인:
+  //  ① Wikipedia 실존 검증 (결정론적, 무료)
+  //  ② 정답 풀 하이브리드 — trusted 정답 재사용 시 힌트만 생성 (정답 환각 원천 제거)
+  //  ③ 힌트 린터 (코드, 무료) — 스포일러·중복 결정론적 차단
+  //  + 중복 차단, 2차 AI 검증
+  //  ④ 난이도 실측 보정 — 풀 통계로 프롬프트 피드백
   async function generatePuzzle(cfg: StartConfig): Promise<Puzzle> {
-    // 오타쿠 관련 카테고리(otaku/anime/game)는 제외 목록을 공유 — 카테고리 전환해도 중복 방지
     const OTAKU_KEYS = ['otaku', 'anime', 'game'];
     const relatedLabels: string[] = OTAKU_KEYS.includes(cfg.categoryKey ?? '')
       ? CATEGORIES.filter(c => OTAKU_KEYS.includes(c.key)).map(c => c.label)
       : [cfg.categoryLabel];
-    const baseExclusions = [...new Set(
-      relatedLabels.flatMap(label => exclusions.current[label] ?? [])
-    )];
+    const baseExclusions = [...new Set(relatedLabels.flatMap(label => exclusions.current[label] ?? []))];
 
-    // 출제 후 두 관문을 통과해야 채택. 못 통과하면 그 정답을 금지에 넣고 재출제(최대 3회).
-    //  (1) 중복 차단: 프롬프트 소프트 가드를 뚫은 변형 중복을 코드에서 확정 차단(센터시험 절대 반복 금지)
-    //  (2) 2차 검증: 분리된 싼 모델이 환각·힌트 불일치·스포일러를 점검
+    // ④ 난이도 실측 보정 신호
+    const diffCalib = getDifficultyCalibration(answerBank.current, cfg.categoryKey ?? '', cfg.difficulty);
+
     const MAX_RETRY = 3;
     const extraBanned: string[] = [];
     let puzzle!: Puzzle;
+
     for (let attempt = 0; ; attempt++) {
       const banned = [...baseExclusions, ...extraBanned];
-      const { text, balance } = await proxyGenerateText(
-        cfg.tier,
-        [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey), temperature: 0.8 },
-      );
-      applyBalance(balance);
-      const cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+      let cand: Puzzle;
+      let fromBank = false;
 
-      // 마지막 시도는 무조건 채택해 루프 종료를 보장(과도한 호출·무한루프 방지)
+      // ② 정답 풀 재사용 (trusted): 첫 시도 한정, 60% 확률
+      const bankEntry = attempt === 0 && Math.random() < 0.6
+        ? pickFromBank(answerBank.current, cfg.categoryKey ?? '', banned, cfg.difficulty)
+        : null;
+
+      if (bankEntry) {
+        // 힌트만 새로 생성 — 정답은 이미 검증됨, 환각 불가
+        const { text, balance } = await proxyGenerateText(
+          cfg.tier,
+          [{ role: 'user', text: `정답 "${bankEntry.answer}"에 대한 힌트를 만들어줘.` }],
+          { system: buildHintOnlyPrompt(bankEntry.answer, cfg.categoryLabel, cfg.difficulty, cfg.categoryPrompt), temperature: 0.9 },
+        );
+        applyBalance(balance);
+        cand = parseHintOnly(text, bankEntry.answer, cfg.categoryLabel, cfg.theme, bankEntry.acceptable);
+        fromBank = true;
+      } else {
+        // 새 정답 생성
+        const { text, balance } = await proxyGenerateText(
+          cfg.tier,
+          [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
+          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib), temperature: 0.8 },
+        );
+        applyBalance(balance);
+        cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+      }
+
+      // 마지막 시도는 무조건 채택 (무한루프·과도한 호출 방지)
       if (attempt >= MAX_RETRY) { puzzle = cand; break; }
 
-      // (1) 중복
+      // 중복 차단
       if (collidesWithRecent(cand, banned)) {
         extraBanned.push(cand.answer, baseName(cand.answer));
         push(`> ↻ 중복 정답("${cand.answer}") 감지 — 다시 출제`);
         continue;
       }
-      // (2) 2차 검증 (싼 모델)
+
+      // ③ 힌트 린터 (결정론적, 무료)
+      const lintIssues = lintHints(cand, cfg.categoryLabel);
+      if (lintIssues.length > 0) {
+        extraBanned.push(cand.answer, baseName(cand.answer));
+        push(`> ↻ 힌트 품질 문제(${lintIssues[0]}) — 다시 출제`);
+        continue;
+      }
+
+      // ① Wikipedia 실존 검증 (풀 재사용 경로는 이미 검증됨, 건너뜀)
+      if (!fromBank) {
+        const wikiOk = await checkWikipedia(cand.answer);
+        if (!wikiOk) {
+          extraBanned.push(cand.answer, baseName(cand.answer));
+          push(`> ↻ 위키백과 미확인("${cand.answer}") — 다시 출제`);
+          continue;
+        }
+      }
+
+      // 2차 AI 검증 (싼 모델)
       const v = await verifyPuzzle(cand);
       if (typeof v.balance === 'number') applyBalance(v.balance);
       if (!v.ok) {
@@ -161,6 +207,17 @@ export default function App() {
       puzzle = cand;
       break;
     }
+
+    // 정답 풀에 편입 (candidate로 시작, plays 쌓이면 trusted 승격)
+    answerBank.current = addToBank(answerBank.current, {
+      answer: puzzle.answer,
+      categoryKey: cfg.categoryKey ?? '',
+      categoryLabel: cfg.categoryLabel,
+      acceptable: puzzle.acceptable,
+      wikiVerified: true,
+      difficultyLabeled: cfg.difficulty,
+    });
+
     exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
     return puzzle;
   }
@@ -326,6 +383,8 @@ export default function App() {
         push(`> ⭕ 정답! 등급 ${r.rank} · ${r.score}점`);
         mascot.current?.event('win');
         recordQuestionEnd(r);
+        // ④ 정답 풀 통계 반영
+        answerBank.current = updateBankStats(answerBank.current, normAnswerKey(game.puzzle.answer), { won: true, hintsUsed: game.revealedCount });
         return;
       }
 
@@ -352,6 +411,8 @@ export default function App() {
         push(`> ❌ 탈락… 정답은 "${game.puzzle.answer}"`);
         mascot.current?.event('eliminated');
         recordQuestionEnd(r);
+        // ④ 정답 풀 통계 반영
+        answerBank.current = updateBankStats(answerBank.current, normAnswerKey(game.puzzle.answer), { won: false, hintsUsed: game.revealedCount });
       } else {
         setGame((g) => ({
           ...g,
@@ -392,6 +453,8 @@ export default function App() {
         push(`> ✅ 이의제기 인용! "${guessText}" 정답으로 인정됨`);
         mascot.current?.event('win');
         if (user) void saveResult(user.id, r);
+        // 이의제기 인용 = 저장된 정답이 환각이었을 가능성 → 정답 풀 신뢰도 감소
+        if (game.puzzle) answerBank.current = recordAppealUpheld(answerBank.current, normAnswerKey(game.puzzle.answer));
       } else {
         push(`> ⚖ 이의제기 기각 — ${res.reason}`);
         mascot.current?.event('wrong');
