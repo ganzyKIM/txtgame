@@ -296,6 +296,11 @@ html.is-mac .console{
 .login-google-btn:disabled{opacity:.6;cursor:wait;}
 .google-icon{width:18px;height:18px;flex:none;}
 .login-notice{font-size:10px;color:var(--ink-soft);margin-top:16px;}
+.inapp-warn{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;}
+.inapp-warn-msg{font-size:12px;color:var(--ink);text-align:center;line-height:1.7;padding:10px;background:var(--pink-1);border:1px solid var(--bevel-dk);border-radius:3px;margin-bottom:4px;}
+.inapp-warn-msg strong{color:var(--magenta-d);}
+.inapp-copy-btn{width:100%;padding:8px;font-size:12px;color:var(--ink-soft);cursor:pointer;background:transparent;border:1px solid var(--bevel-dk2);border-radius:2px;}
+.inapp-copy-btn:active{opacity:.7;}
 
 /* ════════════════════════════════════════════════════════════════════
    시작 화면 (출제 설정)
