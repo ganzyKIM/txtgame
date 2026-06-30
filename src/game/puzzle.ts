@@ -138,8 +138,8 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
   const allBanned = [...new Set([...alwaysBanned, ...recentAnswers])];
   const exclusionLines = allBanned.length > 0
     ? [
-        `· [금지 정답 ${allBanned.length}개] 아래 중 하나라도 해당하면 선택 금지:`,
-        '    ① 동일 대상  ② 표기만 다른 같은 대상(한글/영문/약칭)  ③ 같은 대상의 다른 매체·버전·시즌(예: "은하철도 999"가 있으면 "은하철도 999(영화)"도 금지)  ④ 상위 시리즈/스핀오프/리메이크/속편',
+        `· [금지 정답 ${allBanned.length}개 — 절대 반복 금지] 아래 목록과 같은 대상은 표현을 어떻게 바꿔도 출제 금지. 하나라도 해당하면 즉시 다른 정답으로:`,
+        '    ① 동일 대상  ② 표기만 다른 같은 대상(한글/영문/약칭/띄어쓰기)  ③ 같은 대상의 다른 매체·버전·시즌(예: "은하철도 999"가 있으면 "은하철도 999(영화)"도 금지)  ④ 상위 시리즈/스핀오프/리메이크/속편',
         allBanned.map(a => `      • ${a}`).join('\n'),
       ]
     : [];
@@ -227,6 +227,36 @@ export function parsePuzzle(
   return { answer, category: categoryLabel, theme, hints, maxHints, acceptable };
 }
 
+/** 괄호·버전 접미사를 제거한 기본 이름 (예: "은하철도 999(영화)" → "은하철도 999") */
+export function baseName(answer: string): string {
+  return answer.replace(/\s*[(（【[][^)）】\]]*[)）】\]]\s*$/, '').trim();
+}
+
+/** 정답 비교용 정규화: 공백·문장부호·대소문자 제거 */
+function normKey(s: string): string {
+  return s.toLowerCase().replace(/[\s·~!@#$%^&*()_+\-=[\]{};:'",.<>/?\\|`’“”（）【】]/g, '').trim();
+}
+
+/**
+ * 새로 생성된 퍼즐의 정답이 최근 정답 목록과 "사실상 같은 대상"으로 충돌하는지.
+ * 정답·괄호제거형·acceptable 변형을 모두 정규화해 대조하므로,
+ * 표기만 살짝 바꾼 중복(영화판/만화판/약칭/띄어쓰기 차이 등)까지 잡아낸다.
+ * 프롬프트의 소프트 가드를 뚫고 나온 중복을 코드 레벨에서 확정적으로 차단하는 용도.
+ */
+export function collidesWithRecent(puzzle: Puzzle, recent: string[]): boolean {
+  const recentKeys = new Set<string>();
+  for (const r of recent) {
+    const k = normKey(r); if (k) recentKeys.add(k);
+    const b = normKey(baseName(r)); if (b) recentKeys.add(b);
+  }
+  if (recentKeys.size === 0) return false;
+  const forms = [puzzle.answer, baseName(puzzle.answer), ...puzzle.acceptable];
+  return forms.some((f) => {
+    const k = normKey(f);
+    return k.length > 0 && recentKeys.has(k);
+  });
+}
+
 /**
  * 이의제기 판정 프롬프트.
  * 저장된 정답을 참고용으로만 제공하고, 오직 힌트 내용만으로 유저 추측을 판정한다.
@@ -257,16 +287,21 @@ export function buildAppealPrompt(revealedHints: string[], storedAnswer: string,
 /** 의미 판정용 프롬프트 (로컬 매칭 실패 시 폴백) */
 export function buildJudgePrompt(answer: string, guess: string): string {
   return [
-    '너는 추리 퀴즈의 정답 판정관이다. 유저의 추측이 [정답]과 "정확히 같은 대상"을 가리킬 때만 정답으로 인정하라.',
-    '정답 인정 = 같은 대상의 표기 차이일 때뿐: 띄어쓰기/대소문자/한영 표기/약칭/별명/동일 인물·작품·사건의 다른 이름.',
-    '오답 = 서로 다른 구체적 대상일 때. 같은 분야·종류·시대·주제에 속하거나 성격이 비슷해도, 다른 사건·인물·작품·장소면 무조건 오답이다.',
-    '특히 "비슷한 종류의 다른 것"을 절대 정답으로 인정하지 마라 (예: 서로 다른 두 반란/전쟁/도시/작품/인물은 오답).',
-    '확신이 서지 않으면 오답으로 판정하라.',
+    '너는 추리 퀴즈의 정답 판정관이다. 유저의 추측이 [정답]과 "같은 대상"을 가리키면 정답으로 인정하라.',
     '',
     `[정답] ${answer}`,
     `[유저 추측] ${guess}`,
     '',
-    '먼저 유저의 추측이 무엇을 가리키는지 스스로 파악한 뒤, 그것이 [정답]과 동일한 대상인지만 따져라.',
+    '【정답 인정】 — 같은 대상을 가리키기만 하면 표기가 달라도 인정(유저에게 유도리를 준다):',
+    '  • 띄어쓰기/대소문자/한영 표기 차이, 약칭·별명·통칭',
+    '  • 정답이 풀네임인데 유저가 그 일부(이름만/성만/핵심어만)를 댔고, 그것이 명백히 [정답]을 가리킬 때 (예: 정답 "하츠네 미쿠" ← 추측 "미쿠")',
+    '  • 동일 인물·작품·사건의 다른 이름',
+    '【오답】:',
+    '  • 서로 다른 구체적 대상. 같은 분야·종류·시대·주제거나 성격이 비슷해도, 다른 사건·인물·작품·장소면 오답.',
+    '  • "비슷한 종류의 다른 것"은 절대 인정 금지 (예: 서로 다른 두 반란/전쟁/도시/작품은 오답).',
+    '  • 유저 추측이 너무 짧거나 흔해서 [정답] 말고 다른 대상도 가리킬 수 있으면 오답.',
+    '',
+    '먼저 유저 추측이 무엇을 가리키는지 파악한 뒤 [정답]과 동일 대상인지만 따져라. 애매하면 오답.',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"correct": boolean, "reason": string}  // reason은 한국어 한 문장, 정답을 직접 노출하지 말 것',
   ].join('\n');

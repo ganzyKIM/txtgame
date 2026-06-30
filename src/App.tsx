@@ -7,7 +7,7 @@ import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
-import { buildSetupPrompt, parsePuzzle, CATEGORIES } from './game/puzzle';
+import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent } from './game/puzzle';
 import { judgeGuess, appealGuess } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
@@ -28,11 +28,6 @@ function loadExclusions(): Record<string, string[]> {
     const raw = localStorage.getItem(EXCLUSION_KEY);
     return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
   } catch { return {}; }
-}
-
-/** 괄호·버전 접미사를 제거한 기본 이름 추출 (예: "은하철도 999(영화)" → "은하철도 999") */
-function baseName(answer: string): string {
-  return answer.replace(/\s*[(（【\[][^)）】\]]*[)）】\]]\s*$/, '').trim();
 }
 
 function addExclusion(map: Record<string, string[]>, category: string, answer: string): Record<string, string[]> {
@@ -118,24 +113,35 @@ export default function App() {
   }
 
   // ── 한 문제 생성 (직접 출제·프리페치 공용) ────────────────────────
-  // 프록시 호출 → 크레딧 차감 반영 → 파싱 → 정답을 카테고리 제외목록에 누적.
+  // 프록시 호출 → 크레딧 차감 반영 → 파싱 → (중복이면 재출제) → 정답을 제외목록에 누적.
   async function generatePuzzle(cfg: StartConfig): Promise<Puzzle> {
     // 오타쿠 관련 카테고리(otaku/anime/game)는 제외 목록을 공유 — 카테고리 전환해도 중복 방지
     const OTAKU_KEYS = ['otaku', 'anime', 'game'];
     const relatedLabels: string[] = OTAKU_KEYS.includes(cfg.categoryKey ?? '')
       ? CATEGORIES.filter(c => OTAKU_KEYS.includes(c.key)).map(c => c.label)
       : [cfg.categoryLabel];
-    const mergedExclusions = [...new Set(
+    const baseExclusions = [...new Set(
       relatedLabels.flatMap(label => exclusions.current[label] ?? [])
     )];
 
-    const { text, balance } = await proxyGenerateText(
-      cfg.tier,
-      [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-      { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, mergedExclusions, cfg.categoryPrompt, cfg.categoryKey), temperature: 0.9 },
-    );
-    applyBalance(balance);
-    const puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+    // 프롬프트 소프트 가드를 뚫고 나온 중복은 코드에서 확정 차단한다.
+    // 충돌 시 그 정답을 금지 목록에 추가해 재출제(최대 3회). 센터시험 "절대 반복 금지" 보장.
+    const MAX_RETRY = 3;
+    const extraBanned: string[] = [];
+    let puzzle!: Puzzle;
+    for (let attempt = 0; ; attempt++) {
+      const banned = [...baseExclusions, ...extraBanned];
+      const { text, balance } = await proxyGenerateText(
+        cfg.tier,
+        [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
+        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey), temperature: 0.8 },
+      );
+      applyBalance(balance);
+      puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+      if (attempt >= MAX_RETRY || !collidesWithRecent(puzzle, banned)) break;
+      extraBanned.push(puzzle.answer, baseName(puzzle.answer));
+      push(`> ↻ 중복 정답("${puzzle.answer}") 감지 — 다시 출제`);
+    }
     exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
     return puzzle;
   }
