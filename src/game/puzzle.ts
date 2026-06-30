@@ -314,3 +314,34 @@ export function parseJudge(raw: string): { correct: boolean; reason: string } {
     reason: String(obj.reason ?? '').trim(),
   };
 }
+
+/**
+ * 출제 결과 2차 검증 프롬프트 (싼 모델 전용).
+ * 출제 모델과 분리된 "두 번째 눈"으로 환각·힌트 불일치·스포일러를 잡는다.
+ * 검증관은 정답을 알고 검사하므로(플레이어와 달리) 각 힌트가 정답을 정확히 묘사하는지
+ * 사실 검증이 가능하다 — "힌트와 맞지 않는 정답"을 출제 단계에서 걸러내는 핵심 장치.
+ */
+export function buildVerifyPrompt(puzzle: Puzzle): string {
+  return [
+    '너는 추리 퀴즈 검수관이다. 아래 [정답]과 [힌트]를 검사해, 이 문제를 그대로 출제해도 되는지 판정하라.',
+    '',
+    `[정답] ${puzzle.answer}`,
+    '[힌트]',
+    puzzle.hints.map((h, i) => `${i + 1}. ${h}`).join('\n'),
+    '',
+    '다음 중 하나라도 걸리면 ok=false (불합격):',
+    '  ① 실존성: [정답]이 실제로 존재하지 않거나, 지어낸·검증 불가능한 대상이다. (위키백과에 실릴 만큼 분명히 실존하는 유명 대상이 아니면 불합격)',
+    '  ② 힌트 불일치: 힌트 중 [정답]에 대한 사실이 아니거나, [정답]과 무관하거나, 다른 대상을 묘사하는 것이 하나라도 있다.',
+    '  ③ 스포일러: 힌트에 [정답]의 이름(또는 명백한 일부·외국어 표기)이 직접 노출돼 있다.',
+    '셋 다 문제없으면 ok=true.',
+    '',
+    '엄격하게 보되, 사소한 표현 차이만으로 불합격시키지는 마라. 핵심은 "환각·엉터리 정답"과 "정답과 안 맞는 힌트" 두 가지를 걸러내는 것이다.',
+    '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
+    '{"ok": boolean, "problem": string}  // problem은 불합격 사유 한국어 한 문장(합격이면 빈 문자열)',
+  ].join('\n');
+}
+
+export function parseVerify(raw: string): { ok: boolean; problem: string } {
+  const obj = extractJson(raw) as Record<string, unknown>;
+  return { ok: Boolean(obj.ok), problem: String(obj.problem ?? '').trim() };
+}

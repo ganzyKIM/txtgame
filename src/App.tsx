@@ -8,7 +8,7 @@ import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent } from './game/puzzle';
-import { judgeGuess, appealGuess } from './game/judge';
+import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import StatsModal from './components/StatsModal';
@@ -124,8 +124,9 @@ export default function App() {
       relatedLabels.flatMap(label => exclusions.current[label] ?? [])
     )];
 
-    // 프롬프트 소프트 가드를 뚫고 나온 중복은 코드에서 확정 차단한다.
-    // 충돌 시 그 정답을 금지 목록에 추가해 재출제(최대 3회). 센터시험 "절대 반복 금지" 보장.
+    // 출제 후 두 관문을 통과해야 채택. 못 통과하면 그 정답을 금지에 넣고 재출제(최대 3회).
+    //  (1) 중복 차단: 프롬프트 소프트 가드를 뚫은 변형 중복을 코드에서 확정 차단(센터시험 절대 반복 금지)
+    //  (2) 2차 검증: 분리된 싼 모델이 환각·힌트 불일치·스포일러를 점검
     const MAX_RETRY = 3;
     const extraBanned: string[] = [];
     let puzzle!: Puzzle;
@@ -137,10 +138,28 @@ export default function App() {
         { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey), temperature: 0.8 },
       );
       applyBalance(balance);
-      puzzle = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
-      if (attempt >= MAX_RETRY || !collidesWithRecent(puzzle, banned)) break;
-      extraBanned.push(puzzle.answer, baseName(puzzle.answer));
-      push(`> ↻ 중복 정답("${puzzle.answer}") 감지 — 다시 출제`);
+      const cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
+
+      // 마지막 시도는 무조건 채택해 루프 종료를 보장(과도한 호출·무한루프 방지)
+      if (attempt >= MAX_RETRY) { puzzle = cand; break; }
+
+      // (1) 중복
+      if (collidesWithRecent(cand, banned)) {
+        extraBanned.push(cand.answer, baseName(cand.answer));
+        push(`> ↻ 중복 정답("${cand.answer}") 감지 — 다시 출제`);
+        continue;
+      }
+      // (2) 2차 검증 (싼 모델)
+      const v = await verifyPuzzle(cand);
+      if (typeof v.balance === 'number') applyBalance(v.balance);
+      if (!v.ok) {
+        extraBanned.push(cand.answer, baseName(cand.answer));
+        push(`> ↻ 검증 탈락(${v.problem || '품질 미달'}) — 다시 출제`);
+        continue;
+      }
+
+      puzzle = cand;
+      break;
     }
     exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
     return puzzle;

@@ -1,6 +1,6 @@
 import { proxyGenerateText } from '../api/proxy';
 import type { TextTier } from '../types';
-import { buildJudgePrompt, buildAppealPrompt, parseJudge } from './puzzle';
+import { buildJudgePrompt, buildAppealPrompt, parseJudge, buildVerifyPrompt, parseVerify } from './puzzle';
 import type { Puzzle } from './types';
 
 /** 비교용 정규화: 공백/문장부호/대소문자 제거, 흔한 조사 꼬리 제거 */
@@ -84,5 +84,30 @@ export async function appealGuess(
     return { ...parsed, balance };
   } catch {
     return { correct: false, reason: '이의제기 판정에 실패했어.' };
+  }
+}
+
+export interface VerifyResult {
+  ok: boolean;
+  problem: string;
+  balance?: number;
+}
+
+/**
+ * 출제 결과 2차 검증 (싼 모델 전용).
+ * 출제 모델과 분리된 두 번째 눈으로 환각·힌트 불일치·스포일러를 잡는다.
+ * 검증 호출 자체가 실패하면 fail-open(ok=true) — 검증 때문에 출제가 막히면 안 된다.
+ */
+export async function verifyPuzzle(puzzle: Puzzle): Promise<VerifyResult> {
+  try {
+    const { text, balance } = await proxyGenerateText(
+      JUDGE_TIER,
+      [{ role: 'user', text: buildVerifyPrompt(puzzle) }],
+      { temperature: 0 },
+    );
+    const parsed = parseVerify(text);
+    return { ...parsed, balance };
+  } catch {
+    return { ok: true, problem: '' };
   }
 }
