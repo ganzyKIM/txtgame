@@ -7,6 +7,17 @@
 -- Supabase Dashboard → SQL Editor 에 붙여넣고 Run.
 -- ============================================================
 
+-- quiz_generations에 answer_key 컬럼 추가 (그룹핑·조회용 정규화 키)
+-- normAnswerKey와 동일 규칙: 소문자 + 한글/영문/숫자 이외 제거
+alter table public.quiz_generations
+  add column if not exists answer_key text
+    generated always as (
+      lower(regexp_replace(answer, '[^가-힣a-z0-9]', '', 'g'))
+    ) stored;
+
+create index if not exists quiz_generations_answer_key_idx
+  on public.quiz_generations(category_key, answer_key);
+
 -- ============================================================
 -- RPC ④: 탈락 후보 기록 (Level 1)
 --   retry loop에서 버려지는 후보를 rejected=true로 quiz_generations에 저장.
@@ -59,10 +70,10 @@ as $$
   with rejected_agg as (
     select
       answer_key,
-      (array_agg(answer order by created_at desc))[1] as answer,
+      (array_agg(g.answer order by g.created_at desc))[1] as answer,
       count(*) as rc,
-      (array_agg(reject_reason order by created_at desc))[1] as top_reason
-    from public.quiz_generations
+      (array_agg(reject_reason order by g.created_at desc))[1] as top_reason
+    from public.quiz_generations g
     where category_key = p_category_key
       and rejected = true
       and reject_stage in ('wiki', 'verify', 'lint')
