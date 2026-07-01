@@ -7,8 +7,13 @@
 -- Supabase Dashboard → SQL Editor 에 붙여넣고 Run.
 -- ============================================================
 
--- quiz_generations에 answer_key 컬럼 추가 (그룹핑·조회용 정규화 키)
--- normAnswerKey와 동일 규칙: 소문자 + 한글/영문/숫자 이외 제거
+-- 010 실행 시 누락된 실패 기록 컬럼 추가
+alter table public.quiz_generations
+  add column if not exists rejected      boolean not null default false,
+  add column if not exists reject_stage  text    not null default '',
+  add column if not exists reject_reason text    not null default '';
+
+-- quiz_generations에 answer_key generated column 추가
 alter table public.quiz_generations
   add column if not exists answer_key text
     generated always as (
@@ -72,11 +77,11 @@ as $$
       answer_key,
       (array_agg(g.answer order by g.created_at desc))[1] as answer,
       count(*) as rc,
-      (array_agg(reject_reason order by g.created_at desc))[1] as top_reason
+      (array_agg(g.reject_reason order by g.created_at desc))[1] as top_reason
     from public.quiz_generations g
-    where category_key = p_category_key
-      and rejected = true
-      and reject_stage in ('wiki', 'verify', 'lint')
+    where g.category_key = p_category_key
+      and g.rejected = true
+      and g.reject_stage in ('wiki', 'verify', 'lint')
     group by answer_key
     having count(*) >= p_min_rejects
   ),
