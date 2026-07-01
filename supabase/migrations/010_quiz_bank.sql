@@ -51,11 +51,14 @@ create table if not exists public.quiz_bank (
   id                 uuid primary key default gen_random_uuid(),
   answer_key         text not null,   -- 정규화 키 (클라 normAnswerKey와 동일 규칙)
   category_key       text not null,
-  -- 콘텐츠 (최신 생성본을 유지)
+  -- 콘텐츠
   answer             text not null,
   category_label     text not null default '',
   acceptable         text[] not null default '{}',
-  hints              text[] not null default '{}',
+  -- 힌트는 최신 1세트가 아니라 생성할 때마다 누적.
+  -- 재사용 시 랜덤 선택 → 같은 정답도 매번 다른 힌트 경험.
+  -- 구조: [["힌트1","힌트2",...], ["힌트1","힌트2",...], ...]
+  hint_sets          jsonb not null default '[]',
   max_hints          integer not null default 0,
   difficulty_labeled text not null default 'normal',
   difficulty_actual  text,
@@ -113,17 +116,22 @@ security definer
 set search_path = public
 as $$
 declare
-  v_bank_id uuid;
-  v_status  text;
+  v_bank_id  uuid;
+  v_status   text;
+  -- 힌트 세트 최대 누적 수 — 이 이상은 오래된 것부터 밀어낸다
+  MAX_HINT_SETS constant int := 10;
 begin
-  -- 뱅크 upsert: banned는 건드리지 않고, 최신 콘텐츠로 갱신하며 gen_count 증가
+  -- 뱅크 upsert: banned는 건드리지 않고, 힌트 세트를 누적하며 gen_count 증가.
+  -- hint_sets: 새 세트를 맨 앞에 추가하고 MAX_HINT_SETS 초과분은 뒤에서 잘라냄.
   insert into public.quiz_bank as b (
-    answer_key, category_key, answer, category_label, acceptable, hints,
-    max_hints, difficulty_labeled, wiki_verified, gen_count, created_by
+    answer_key, category_key, answer, category_label, acceptable,
+    hint_sets, max_hints, difficulty_labeled, wiki_verified, gen_count, created_by
   )
   values (
-    p_answer_key, p_category_key, p_answer, p_category_label, coalesce(p_acceptable,'{}'),
-    coalesce(p_hints,'{}'), p_max_hints, p_difficulty_labeled, p_wiki_verified, 1, auth.uid()
+    p_answer_key, p_category_key, p_answer, p_category_label,
+    coalesce(p_acceptable,'{}'),
+    jsonb_build_array(to_jsonb(coalesce(p_hints,'{}'))),
+    p_max_hints, p_difficulty_labeled, p_wiki_verified, 1, auth.uid()
   )
   on conflict (answer_key, category_key) do update set
     answer             = excluded.answer,
@@ -132,7 +140,13 @@ begin
     acceptable         = (
       select array(select distinct unnest(b.acceptable || excluded.acceptable))
     ),
-    hints              = excluded.hints,
+    -- 새 힌트 세트를 맨 앞에 prepend, MAX_HINT_SETS 초과분은 뒤에서 제거
+    hint_sets          = (
+      select jsonb_path_query_array(
+        excluded.hint_sets || b.hint_sets,
+        ('$[0 to ' || (MAX_HINT_SETS - 1) || ']')::jsonpath
+      )
+    ),
     max_hints          = excluded.max_hints,
     difficulty_labeled = excluded.difficulty_labeled,
     wiki_verified      = b.wiki_verified or excluded.wiki_verified,
