@@ -13,7 +13,7 @@ import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank,
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
-import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal } from './save/quizBank';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
 import { CENTER_QUESTIONS } from './game/types';
@@ -80,6 +80,8 @@ export default function App() {
   const examMode: ExamMode = lastConfig?.examMode ?? 'mock';
   const exclusions = useRef<Record<string, string[]>>(loadExclusions());
   const answerBank = useRef<AnswerBank>(loadBank());
+  // Level 2~3: 카테고리별 실패 데이터 캐시 (첫 generatePuzzle 호출 시 백그라운드 로드)
+  const failureCache = useRef<Map<string, { chronic: string[]; patterns: string[] }>>(new Map());
   // 미리 만들어둔 문제(키: cfgKey) — 즉시 출제용
   const prefetchCache = useRef<Map<string, Puzzle>>(new Map());
   // 백그라운드 생성 진행 중인 프리페치 (중복 생성 방지 + 요청 시 await 대상)
@@ -128,10 +130,23 @@ export default function App() {
     const relatedLabels: string[] = OTAKU_KEYS.includes(cfg.categoryKey ?? '')
       ? CATEGORIES.filter(c => OTAKU_KEYS.includes(c.key)).map(c => c.label)
       : [cfg.categoryLabel];
-    const baseExclusions = [...new Set(relatedLabels.flatMap(label => exclusions.current[label] ?? []))];
-
     // ④ 난이도 실측 보정 신호
     const diffCalib = getDifficultyCalibration(answerBank.current, cfg.categoryKey ?? '', cfg.difficulty);
+
+    // Level 2~3: 실패 캐시 — 없으면 백그라운드 fetch 후 다음 호출부터 반영
+    const catKey = cfg.categoryKey ?? '';
+    if (!failureCache.current.has(catKey)) {
+      void Promise.all([getChronicFailures(catKey), getFailurePatterns(catKey)])
+        .then(([chronic, patterns]) => failureCache.current.set(catKey, { chronic, patterns }));
+    }
+    const failureData = failureCache.current.get(catKey);
+    const chronicFailures = failureData?.chronic ?? [];
+    const failurePatterns = failureData?.patterns ?? [];
+
+    const baseExclusions = [...new Set([
+      ...relatedLabels.flatMap(label => exclusions.current[label] ?? []),
+      ...chronicFailures,  // Level 2: 만성 실패 정답 자동 차단
+    ])];
 
     const MAX_RETRY = 3;
     const extraBanned: string[] = [];
@@ -169,7 +184,7 @@ export default function App() {
         const { text, balance } = await proxyGenerateText(
           cfg.tier,
           [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib, candAxes), temperature: 0.8 },
+          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib, candAxes, failurePatterns), temperature: 0.8 },
         );
         applyBalance(balance);
         cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
@@ -197,6 +212,7 @@ export default function App() {
       if (lintIssues.length > 0) {
         extraBanned.push(cand.answer, baseName(cand.answer));
         push(`> ↻ 힌트 품질 문제(${lintIssues[0]}) — 다시 출제`);
+        void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'lint', rejectReason: lintIssues[0] });
         continue;
       }
 
@@ -207,6 +223,7 @@ export default function App() {
         if (!wikiOk) {
           extraBanned.push(cand.answer, baseName(cand.answer));
           push(`> ↻ 위키백과 미확인("${cand.answer}") — 다시 출제`);
+          void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'wiki', rejectReason: '위키백과 한국어/영어판 문서 없음' });
           continue;
         }
       }
@@ -217,6 +234,9 @@ export default function App() {
       if (!v.ok) {
         extraBanned.push(cand.answer, baseName(cand.answer));
         push(`> ↻ 검증 탈락(${v.problem || '품질 미달'}) — 다시 출제`);
+        void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'verify', rejectReason: v.problem || '품질 미달' });
+        // 실패 패턴 캐시 무효화 — 다음 generatePuzzle에서 새 패턴 반영
+        failureCache.current.delete(catKey);
         continue;
       }
 

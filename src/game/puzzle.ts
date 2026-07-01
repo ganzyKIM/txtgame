@@ -124,7 +124,7 @@ const ALWAYS_EXCLUDE: Record<string, string[]> = {};
  * 규칙은 중복 없이 단일 출처로 정리한다 — 같은 지침을 여러 곳에 반복하면
  * 모델이 우선순위를 헷갈리고 토큰만 늘어난다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = '', diffCalib = '', axes?: GenAxes): string {
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = '', diffCalib = '', axes?: GenAxes, failurePatterns: string[] = []): string {
   const ax = axes ?? pickGenAxes();
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
@@ -154,6 +154,14 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
       ]
     : [];
 
+  // Level 3: 누적된 검증 탈락 패턴 — 같은 실수 반복 방지
+  const failureLines = failurePatterns.length > 0
+    ? [
+        `· [이 카테고리에서 반복적으로 탈락한 패턴 — 절대 반복하지 마라]:`,
+        failurePatterns.map(p => `      • ${p}`).join('\n'),
+      ]
+    : [];
+
   return [
     '너는 추리 퀴즈 게임의 출제자다. 아래 조건으로 단 하나의 정답을 비밀리에 정하고, 그 정답을 맞히기 위한 힌트들을 만든다.',
     '',
@@ -170,6 +178,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     ...biasLines,
     diffCalib ? `· ${diffCalib}` : '',
     ...exclusionLines,
+    ...failureLines,
     `· 랜덤 시드 ${seed} — 매 출제마다 다른 정답을 골라라.`,
     '',
     '【정답 선택 규칙】',

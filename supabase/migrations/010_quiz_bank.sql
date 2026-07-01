@@ -39,6 +39,10 @@ create table if not exists public.quiz_generations (
   lint_passed       boolean not null default true,
   verify_passed     boolean not null default true,
   verify_problem    text not null default '',
+  -- 실패 기록 (Level 1) — rejected=true면 채택되지 않은 탈락 후보
+  rejected          boolean not null default false,
+  reject_stage      text not null default '',   -- lint | wiki | verify
+  reject_reason     text not null default '',
   created_at        timestamptz not null default now()
 );
 create index if not exists quiz_generations_bank_idx
@@ -266,3 +270,108 @@ end;
 $$;
 
 grant execute on function public.record_quiz_appeal(text,text) to authenticated;
+
+-- ============================================================
+-- RPC ④: 탈락 후보 기록 (Level 1)
+--   retry loop에서 버려지는 후보를 rejected=true로 quiz_generations에 저장.
+--   duplicate(중복)은 세션 내 현상이라 저장하지 않음.
+-- ============================================================
+create or replace function public.record_quiz_rejection(
+  p_answer_key     text,
+  p_category_key   text,
+  p_category_label text,
+  p_answer         text,
+  p_hints          text[],
+  p_max_hints      integer,
+  p_reject_stage   text,
+  p_reject_reason  text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.quiz_generations (
+    category_key, category_label, answer, hints, max_hints,
+    rejected, reject_stage, reject_reason, created_by
+  ) values (
+    p_category_key, p_category_label, p_answer,
+    coalesce(p_hints, '{}'), coalesce(p_max_hints, 0),
+    true, p_reject_stage, coalesce(p_reject_reason, ''), auth.uid()
+  );
+end;
+$$;
+
+grant execute on function public.record_quiz_rejection(text,text,text,text,text[],integer,text,text)
+  to authenticated;
+
+-- ============================================================
+-- RPC ⑤: 만성 실패 정답 조회 (Level 2)
+--   reject >= p_min_rejects 이면서 accept 이력이 없는 answer.
+--   클라이언트는 이 목록을 exclusion에 추가 → 프롬프트에서 자동 차단.
+-- ============================================================
+create or replace function public.get_chronic_failures(
+  p_category_key text,
+  p_min_rejects  int default 3
+)
+returns table(answer text, reject_count bigint, top_reason text)
+language sql
+security definer
+set search_path = public
+as $$
+  with rejected_agg as (
+    select
+      answer_key,
+      -- 가장 최근 answer 텍스트 사용 (같은 key가 조금씩 다를 수 있음)
+      (array_agg(answer order by created_at desc))[1] as answer,
+      count(*) as rc,
+      (array_agg(reject_reason order by created_at desc))[1] as top_reason
+    from public.quiz_generations
+    where category_key = p_category_key
+      and rejected = true
+      and reject_stage in ('wiki', 'verify', 'lint')
+    group by answer_key
+    having count(*) >= p_min_rejects
+  ),
+  accepted_keys as (
+    select distinct answer_key
+    from public.quiz_generations
+    where category_key = p_category_key
+      and rejected = false
+  )
+  select r.answer, r.rc, r.top_reason
+  from rejected_agg r
+  where r.answer_key not in (select answer_key from accepted_keys)
+  order by r.rc desc
+  limit 30;
+$$;
+
+grant execute on function public.get_chronic_failures(text, int) to authenticated;
+
+-- ============================================================
+-- RPC ⑥: 탈락 패턴 조회 (Level 3)
+--   verify_problem / reject_reason 빈도를 집계해 반환.
+--   클라이언트가 buildSetupPrompt에 네거티브 예시로 주입한다.
+-- ============================================================
+create or replace function public.get_failure_patterns(
+  p_category_key text,
+  p_limit        int default 5
+)
+returns table(pattern text, cnt bigint)
+language sql
+security definer
+set search_path = public
+as $$
+  select reject_reason, count(*) as cnt
+  from public.quiz_generations
+  where category_key = p_category_key
+    and rejected = true
+    and reject_stage = 'verify'
+    and reject_reason <> ''
+  group by reject_reason
+  order by cnt desc
+  limit p_limit;
+$$;
+
+grant execute on function public.get_failure_patterns(text, int) to authenticated;

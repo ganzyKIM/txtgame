@@ -94,3 +94,56 @@ export async function recordQuizAppeal(answer: string, categoryKey: string): Pro
     /* 무시 */
   }
 }
+
+// ── Level 1~3: 실패 기록 + 패턴 학습 ────────────────────────────────────
+
+export interface QuizRejectionMeta {
+  categoryKey: string;
+  categoryLabel: string;
+  answer: string;
+  hints: string[];
+  maxHints: number;
+  /** 'lint' | 'wiki' | 'verify' */
+  rejectStage: string;
+  rejectReason: string;
+}
+
+/** Level 1 — 탈락 후보 기록. retry loop에서 버려지는 후보를 저장. */
+export async function saveQuizRejection(m: QuizRejectionMeta): Promise<void> {
+  try {
+    await rpc.rpc('record_quiz_rejection', {
+      p_answer_key: normAnswerKey(m.answer),
+      p_category_key: m.categoryKey,
+      p_category_label: m.categoryLabel,
+      p_answer: m.answer,
+      p_hints: m.hints,
+      p_max_hints: m.maxHints,
+      p_reject_stage: m.rejectStage,
+      p_reject_reason: m.rejectReason,
+    });
+  } catch { /* 무시 */ }
+}
+
+/** Level 2 — 만성 실패 정답 목록. 3회+ 탈락 & 채택 이력 없는 answer 텍스트 반환. */
+export async function getChronicFailures(categoryKey: string): Promise<string[]> {
+  if (!categoryKey) return [];
+  try {
+    const { data } = await rpc.rpc('get_chronic_failures', {
+      p_category_key: categoryKey,
+      p_min_rejects: 3,
+    }) as { data: { answer: string }[] | null };
+    return (data ?? []).map((r: { answer: string }) => r.answer);
+  } catch { return []; }
+}
+
+/** Level 3 — 탈락 패턴 목록. verify 실패 이유 빈도순 반환. */
+export async function getFailurePatterns(categoryKey: string): Promise<string[]> {
+  if (!categoryKey) return [];
+  try {
+    const { data } = await rpc.rpc('get_failure_patterns', {
+      p_category_key: categoryKey,
+      p_limit: 5,
+    }) as { data: { pattern: string }[] | null };
+    return (data ?? []).map((r: { pattern: string }) => r.pattern);
+  } catch { return []; }
+}
