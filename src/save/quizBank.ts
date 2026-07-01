@@ -147,3 +147,19 @@ export async function getFailurePatterns(categoryKey: string): Promise<string[]>
     return (data ?? []).map((r: { pattern: string }) => r.pattern);
   } catch { return []; }
 }
+
+/** 이용자 문제 신고 (2회 이상 → 서버에서 banned). */
+export async function reportQuizProblem(
+  answer: string,
+  categoryKey: string,
+  reason: 'hallucination' | 'off_topic',
+): Promise<void> {
+  if (!categoryKey) return;
+  try {
+    await rpc.rpc('record_quiz_report', {
+      p_answer_key: normAnswerKey(answer),
+      p_category_key: categoryKey,
+      p_reason: reason,
+    });
+  } catch { /* 무시 */ }
+}

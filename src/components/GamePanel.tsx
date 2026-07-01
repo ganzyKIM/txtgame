@@ -18,12 +18,16 @@ interface Props {
   onRestartSame?: () => void;
   onEliminate: () => void;
   onNext: () => void;
+  onReport: (reason: 'hallucination' | 'off_topic') => void;
 }
 
-export default function GamePanel({ state, judging, appealing, result, generating, examMode, runScores, onReveal, onGuess, onAppeal, onRestart, onRestartSame, onEliminate, onNext }: Props) {
+export default function GamePanel({ state, judging, appealing, result, generating, examMode, runScores, onReveal, onGuess, onAppeal, onRestart, onRestartSame, onEliminate, onNext, onReport }: Props) {
   const [guess, setGuess] = useState('');
+  const [reportStep, setReportStep] = useState<'idle' | 'selecting' | 'done'>('idle');
   const hintListRef = useRef<HTMLDivElement>(null);
   const puzzle = state.puzzle;
+
+  useEffect(() => { setReportStep('idle'); }, [puzzle?.answer]);
 
   useEffect(() => {
     const el = hintListRef.current;
@@ -50,6 +54,28 @@ export default function GamePanel({ state, judging, appealing, result, generatin
     onGuess(g);
     setGuess('');
   }
+
+  function handleReport(reason: 'hallucination' | 'off_topic') {
+    setReportStep('done');
+    onReport(reason);
+  }
+
+  const reportZone = (
+    <div className="report-zone">
+      {reportStep === 'done' ? (
+        <span className="report-done">✓ 신고가 접수되었습니다</span>
+      ) : reportStep === 'selecting' ? (
+        <div className="report-options">
+          <span className="report-ask">신고 사유를 선택해주세요:</span>
+          <button className="btn btn-xs btn-report" onClick={() => handleReport('hallucination')}>환각 (존재하지 않는 정답)</button>
+          <button className="btn btn-xs btn-report" onClick={() => handleReport('off_topic')}>주제 부적합</button>
+          <button className="btn btn-xs" onClick={() => setReportStep('idle')}>취소</button>
+        </div>
+      ) : (
+        <button className="btn-report-trigger" onClick={() => setReportStep('selecting')}>⚠ 문제 신고</button>
+      )}
+    </div>
+  );
 
   return (
     <div className="body">
@@ -190,6 +216,7 @@ export default function GamePanel({ state, judging, appealing, result, generatin
                       다음 문제 → <small>({done}/{CENTER_QUESTIONS} 완료)</small>
                     </button>
                   </div>
+                  {reportZone}
                 </div>
               )
             ) : (
@@ -210,6 +237,7 @@ export default function GamePanel({ state, judging, appealing, result, generatin
                   )}
                   <button className="btn" onClick={onRestart}>↩ 다른 주제</button>
                 </div>
+                {reportZone}
               </div>
             )
           )}

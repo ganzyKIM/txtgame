@@ -400,6 +400,16 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 .restart-btns .btn-primary{flex:1;}
 .restart-btns .btn{flex:1;}
 
+/* 문제 신고 */
+.report-zone{margin-top:10px;text-align:center;}
+.btn-report-trigger{background:none;border:none;color:var(--ink-soft);font-size:10px;cursor:pointer;padding:2px 6px;opacity:.6;font-family:inherit;}
+.btn-report-trigger:hover{opacity:1;color:#c23a6a;text-decoration:underline;}
+.report-options{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;align-items:center;}
+.report-ask{font-size:10px;color:var(--ink-soft);width:100%;margin-bottom:2px;}
+.btn-report{background:linear-gradient(#fff0f4,#ffe0ea);border-color:var(--bevel-lt) #c03060 #c03060 var(--bevel-lt);color:#902040;}
+.btn-report:hover{background:linear-gradient(#ffe0ea,#ffc8d8);}
+.report-done{font-size:10px;color:var(--ink-soft);}
+
 /* 로딩바 — DOS × 귀염뽀짝 스타일 */
 .generating-full{flex:1;display:flex;align-items:center;justify-content:center;}
 .generating-wrap{

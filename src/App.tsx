@@ -9,11 +9,12 @@ import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia } from './game/wiki';
+import { checkNamuWiki, fetchNamuContent } from './game/namu';
 import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
-import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns } from './save/quizBank';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
 import { CENTER_QUESTIONS } from './game/types';
@@ -169,11 +170,16 @@ export default function App() {
         : null;
 
       if (bankEntry) {
+        // 뱅크 재사용: 나무위키 내용을 힌트 생성 컨텍스트로 주입 (최대 2.5초 대기)
+        const namuCtx = await Promise.race([
+          fetchNamuContent(bankEntry.answer),
+          new Promise<null>(r => setTimeout(() => r(null), 2500)),
+        ]);
         // 힌트만 새로 생성 — 정답은 이미 검증됨, 환각 불가
         const { text, balance } = await proxyGenerateText(
           cfg.tier,
           [{ role: 'user', text: `정답 "${bankEntry.answer}"에 대한 힌트를 만들어줘.` }],
-          { system: buildHintOnlyPrompt(bankEntry.answer, cfg.categoryLabel, cfg.difficulty, cfg.categoryPrompt), temperature: 0.9 },
+          { system: buildHintOnlyPrompt(bankEntry.answer, cfg.categoryLabel, cfg.difficulty, cfg.categoryPrompt, namuCtx ?? undefined), temperature: 0.9 },
         );
         applyBalance(balance);
         cand = parseHintOnly(text, bankEntry.answer, cfg.categoryLabel, cfg.theme, bankEntry.acceptable);
@@ -216,14 +222,19 @@ export default function App() {
         continue;
       }
 
-      // ① Wikipedia 실존 검증 (풀 재사용 경로는 이미 검증됨, 건너뜀)
+      // ① 실존 검증: Wikipedia → (탈락 시 오타쿠 계열만) 나무위키 추가 확인
       let wikiOk = true;
       if (!fromBank) {
         wikiOk = await checkWikipedia(cand.answer);
         if (!wikiOk) {
+          // Wikipedia 전부 탈락 시 나무위키 추가 확인 (전 카테고리 적용)
+          wikiOk = await checkNamuWiki(cand.answer);
+          if (wikiOk) push(`> ✓ 나무위키 확인("${cand.answer}")`);
+        }
+        if (!wikiOk) {
           extraBanned.push(cand.answer, baseName(cand.answer));
-          push(`> ↻ 위키백과 미확인("${cand.answer}") — 다시 출제`);
-          void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'wiki', rejectReason: '위키백과 한국어/영어판 문서 없음' });
+          push(`> ↻ 위키백과·나무위키 미확인("${cand.answer}") — 다시 출제`);
+          void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'wiki', rejectReason: '위키백과·나무위키 문서 없음' });
           continue;
         }
       }
@@ -550,6 +561,11 @@ export default function App() {
     recordQuestionEnd(r);
   }
 
+  function handleReport(reason: 'hallucination' | 'off_topic') {
+    if (!game.puzzle) return;
+    void reportQuizProblem(game.puzzle.answer, game.puzzle.categoryKey ?? '', reason);
+  }
+
   function handleRestart() {
     setGame(emptyGame);
     setResult(null);
@@ -657,6 +673,7 @@ export default function App() {
               onAppeal={(t) => void handleAppeal(t)}
               appealing={appealing}
               onNext={handleNextQuestion}
+              onReport={handleReport}
             />
           )}
         </Window>

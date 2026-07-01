@@ -167,7 +167,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '',
     '━━━━━━━━━━━━━━━━━━━━━━━━',
     '【0순위 규칙 — 위키백과 실존 검증】',
-    '정답은 한국어(ko.wikipedia.org) 또는 영어(en.wikipedia.org) 위키백과에 "그 대상만 다루는 독립 문서"가 실제로 존재해야 한다.',
+    '정답은 한국어(ko.wikipedia.org)·일본어(ja.wikipedia.org)·영어(en.wikipedia.org) 위키백과 중 하나에 "그 대상만 다루는 독립 문서"가 실제로 존재해야 한다.',
     '존재가 조금이라도 의심되면 즉시 다른 정답으로 교체하라. 이 규칙은 난이도·초성·기조 등 다른 모든 지침보다 우선한다.',
     '━━━━━━━━━━━━━━━━━━━━━━━━',
     '',
@@ -184,7 +184,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
     '【정답 선택 규칙】',
     '1. 실존: 0순위 규칙을 반드시 통과. 가상·허구·지어낸 대상 금지. (정답은 인물/작품/사건/장소/동식물/개념 등 다양한 형태 가능)',
     '2. 대중성: "해당 카테고리를 좋아하는 일반인 대다수가 이름을 들으면 바로 아는" 수준이어야 한다. 마니아·전문가만 아는 딥컷, 소규모 인디·지역 팀, 검색해도 정보가 거의 없는 대상 금지. (단, 난이도가 어려움이면 위 난이도 지침을 우선한다.)',
-    '3. 표기: answer는 한국어 위키백과 문서 제목 기준의 공식 풀네임. 약칭·별명·성(姓)만 쓰기 금지. (예: "미쿠"X→"하츠네 미쿠"O, "손흥민"O)',
+    '3. 표기: answer는 한국어 위키백과 문서 제목 기준의 공식 풀네임. 약칭·별명·성(姓)만 쓰기 금지. (예: "미쿠"X→"하츠네 미쿠"O, "손흥민"O) ★일본 작품·캐릭터는 일본어 발음 그대로 옮긴 표기(예: "카라카이 죠즈노 타카기-상") 대신, 한국어 번역명이 있으면 반드시 번역명 사용(예: "장난을 잘 치는 타카기양"). 번역명이 없을 때만 통용 표기를 써라.',
     '4. 범주 함정 금지: 힌트가 사실상 특정 구체 대상(예: 고지라)을 묘사한다면, 그것을 포함하는 상위범주(예: 거대괴수 장르)를 정답으로 두지 마라. 힌트가 가리키는 가장 자연스러운 대상을 정답으로 삼아라.',
     '',
     '【힌트 작성 규칙】',
@@ -413,15 +413,27 @@ export function lintHints(puzzle: Puzzle, categoryLabel: string): string[] {
 /**
  * Stage 2(재사용 경로): 정답이 확정된 상태에서 힌트만 새로 생성하는 프롬프트.
  * AI에게 정답을 고르는 역할을 맡기지 않으므로 정답 환각이 원천적으로 불가하다.
+ * namuContext: 나무위키 문서 앞부분 — 서브컬처 정답의 힌트 품질 향상에 사용.
  */
-export function buildHintOnlyPrompt(answer: string, categoryLabel: string, difficulty: Difficulty, categoryDetail = ''): string {
+export function buildHintOnlyPrompt(answer: string, categoryLabel: string, difficulty: Difficulty, categoryDetail = '', namuContext?: string): string {
   const diffGuide = DIFFICULTY_GUIDE[difficulty];
-  return [
+  const lines = [
     `너는 추리 퀴즈 출제자다. 정답은 이미 "${answer}"로 확정돼 있다. 이 정답에 대한 힌트만 새로 만들어라.`,
     '',
     `[카테고리] ${categoryLabel}${categoryDetail ? ` — ${categoryDetail}` : ''}`,
     `[정답] ${answer}  ← 이 값은 변경 불가. 힌트를 만들기 위한 참고 전용.`,
     `[난이도] ${diffGuide}`,
+  ];
+
+  if (namuContext) {
+    lines.push(
+      '',
+      '[나무위키 참고자료 — 사실 확인 및 힌트 소재 발굴에 활용. 직접 인용 금지, 함축적 힌트로 재가공할 것]',
+      namuContext,
+    );
+  }
+
+  lines.push(
     '',
     '[힌트 작성 규칙]',
     '· 6~8개. 모호→구체 순(앞 1~2개 범주 수준, 마지막 1~2개 결정적).',
@@ -431,7 +443,9 @@ export function buildHintOnlyPrompt(answer: string, categoryLabel: string, diffi
     '',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"hints": string[], "maxHints": number, "acceptable": string[]}',
-  ].join('\n');
+  );
+
+  return lines.join('\n');
 }
 
 /** 힌트 전용 응답 파싱 — answer는 호출부에서 제공 */
