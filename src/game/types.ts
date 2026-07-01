@@ -33,6 +33,8 @@ export interface Puzzle {
   maxHints: number;
   /** 정답으로 인정하는 표기 변형들 (로컬 즉시 매칭용) */
   acceptable: string[];
+  /** 내부 카테고리 키 — 서버 뱅크 통계/이의제기 갱신에 필요 */
+  categoryKey?: string;
 }
 
 export type Phase = 'setup' | 'playing' | 'won' | 'lost';

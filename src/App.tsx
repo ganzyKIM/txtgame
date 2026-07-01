@@ -7,12 +7,13 @@ import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
-import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly } from './game/puzzle';
+import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia } from './game/wiki';
 import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
 import { CENTER_QUESTIONS } from './game/types';
@@ -136,10 +137,16 @@ export default function App() {
     const extraBanned: string[] = [];
     let puzzle!: Puzzle;
 
+    // 채택된 문제의 생성 메타데이터 (서버 DB 저장용)
+    let genSource: 'ai_fresh' | 'bank_reuse' = 'ai_fresh';
+    let genAxes: GenAxes | null = null;
+    let genWiki = false, genLint = false, genVerify = false, genVerifyProblem = '';
+
     for (let attempt = 0; ; attempt++) {
       const banned = [...baseExclusions, ...extraBanned];
       let cand: Puzzle;
       let fromBank = false;
+      let candAxes: GenAxes | null = null;
 
       // ② 정답 풀 재사용 (trusted): 첫 시도 한정, 60% 확률
       const bankEntry = attempt === 0 && Math.random() < 0.6
@@ -157,18 +164,26 @@ export default function App() {
         cand = parseHintOnly(text, bankEntry.answer, cfg.categoryLabel, cfg.theme, bankEntry.acceptable);
         fromBank = true;
       } else {
-        // 새 정답 생성
+        // 새 정답 생성 — 다양성 축을 밖에서 뽑아 프롬프트에 주입 + 저장용 보관
+        candAxes = pickGenAxes();
         const { text, balance } = await proxyGenerateText(
           cfg.tier,
           [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib), temperature: 0.8 },
+          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib, candAxes), temperature: 0.8 },
         );
         applyBalance(balance);
         cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
       }
 
       // 마지막 시도는 무조건 채택 (무한루프·과도한 호출 방지)
-      if (attempt >= MAX_RETRY) { puzzle = cand; break; }
+      // — 검증을 건너뛰므로 통과 플래그는 미검증(false)으로 남긴다.
+      if (attempt >= MAX_RETRY) {
+        puzzle = cand;
+        genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+        genAxes = candAxes;
+        genWiki = fromBank; // 뱅크는 이미 검증됨
+        break;
+      }
 
       // 중복 차단
       if (collidesWithRecent(cand, banned)) {
@@ -186,8 +201,9 @@ export default function App() {
       }
 
       // ① Wikipedia 실존 검증 (풀 재사용 경로는 이미 검증됨, 건너뜀)
+      let wikiOk = true;
       if (!fromBank) {
-        const wikiOk = await checkWikipedia(cand.answer);
+        wikiOk = await checkWikipedia(cand.answer);
         if (!wikiOk) {
           extraBanned.push(cand.answer, baseName(cand.answer));
           push(`> ↻ 위키백과 미확인("${cand.answer}") — 다시 출제`);
@@ -204,9 +220,15 @@ export default function App() {
         continue;
       }
 
+      // 모든 검증 통과
       puzzle = cand;
+      genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+      genAxes = candAxes;
+      genWiki = true; genLint = true; genVerify = true; genVerifyProblem = v.problem ?? '';
       break;
     }
+
+    puzzle.categoryKey = cfg.categoryKey ?? '';
 
     // 정답 풀에 편입 (candidate로 시작, plays 쌓이면 trusted 승격)
     answerBank.current = addToBank(answerBank.current, {
@@ -216,6 +238,27 @@ export default function App() {
       acceptable: puzzle.acceptable,
       wikiVerified: true,
       difficultyLabeled: cfg.difficulty,
+    });
+
+    // 서버 퀴즈 DB 적재 (fire-and-forget) — 생성 콘텐츠 + 검증·출처 메타
+    void saveQuizGeneration({
+      categoryKey: cfg.categoryKey ?? '',
+      categoryLabel: cfg.categoryLabel,
+      theme: puzzle.theme,
+      answer: puzzle.answer,
+      acceptable: puzzle.acceptable,
+      hints: puzzle.hints,
+      maxHints: puzzle.maxHints,
+      difficultyLabeled: cfg.difficulty,
+      promptVersion: PROMPT_VERSION,
+      genEra: genAxes?.era ?? null,
+      genRegion: genAxes?.region ?? null,
+      genAngle: genAxes?.angle ?? null,
+      source: genSource,
+      wikiVerified: genWiki,
+      lintPassed: genLint,
+      verifyPassed: genVerify,
+      verifyProblem: genVerifyProblem,
     });
 
     exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
@@ -383,8 +426,9 @@ export default function App() {
         push(`> ⭕ 정답! 등급 ${r.rank} · ${r.score}점`);
         mascot.current?.event('win');
         recordQuestionEnd(r);
-        // ④ 정답 풀 통계 반영
+        // ④ 정답 풀 통계 반영 (로컬 + 서버)
         answerBank.current = updateBankStats(answerBank.current, normAnswerKey(game.puzzle.answer), { won: true, hintsUsed: game.revealedCount });
+        void updateQuizBankStats(game.puzzle.answer, game.puzzle.categoryKey ?? '', true, game.revealedCount);
         return;
       }
 
@@ -411,8 +455,9 @@ export default function App() {
         push(`> ❌ 탈락… 정답은 "${game.puzzle.answer}"`);
         mascot.current?.event('eliminated');
         recordQuestionEnd(r);
-        // ④ 정답 풀 통계 반영
+        // ④ 정답 풀 통계 반영 (로컬 + 서버)
         answerBank.current = updateBankStats(answerBank.current, normAnswerKey(game.puzzle.answer), { won: false, hintsUsed: game.revealedCount });
+        void updateQuizBankStats(game.puzzle.answer, game.puzzle.categoryKey ?? '', false, game.revealedCount);
       } else {
         setGame((g) => ({
           ...g,
@@ -453,8 +498,11 @@ export default function App() {
         push(`> ✅ 이의제기 인용! "${guessText}" 정답으로 인정됨`);
         mascot.current?.event('win');
         if (user) void saveResult(user.id, r);
-        // 이의제기 인용 = 저장된 정답이 환각이었을 가능성 → 정답 풀 신뢰도 감소
-        if (game.puzzle) answerBank.current = recordAppealUpheld(answerBank.current, normAnswerKey(game.puzzle.answer));
+        // 이의제기 인용 = 저장된 정답이 환각이었을 가능성 → 정답 풀 신뢰도 감소 (로컬 + 서버)
+        if (game.puzzle) {
+          answerBank.current = recordAppealUpheld(answerBank.current, normAnswerKey(game.puzzle.answer));
+          void recordQuizAppeal(game.puzzle.answer, game.puzzle.categoryKey ?? '');
+        }
       } else {
         push(`> ⚖ 이의제기 기각 — ${res.reason}`);
         mascot.current?.event('wrong');

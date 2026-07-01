@@ -100,6 +100,15 @@ function pick<T>(pool: T[]): T {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/** 출제 프롬프트 버전 — 프롬프트를 고칠 때마다 올린다. 서버 DB에 태깅해 A/B 분석에 쓴다. */
+export const PROMPT_VERSION = 'v1';
+
+/** 이번 출제의 다양성 축 (시대·지역·결). 저장용으로 밖에서 뽑아 프롬프트에 주입한다. */
+export interface GenAxes { era: string; region: string; angle: string; }
+export function pickGenAxes(): GenAxes {
+  return { era: pick(ERA_POOL), region: pick(REGION_POOL), angle: pick(ANGLE_POOL) };
+}
+
 const OTAKU_CATEGORY_KEYS = new Set(['otaku', 'anime', 'game']);
 
 /**
@@ -115,7 +124,8 @@ const ALWAYS_EXCLUDE: Record<string, string[]> = {};
  * 규칙은 중복 없이 단일 출처로 정리한다 — 같은 지침을 여러 곳에 반복하면
  * 모델이 우선순위를 헷갈리고 토큰만 늘어난다.
  */
-export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = '', diffCalib = ''): string {
+export function buildSetupPrompt(categoryLabel: string, theme: string, difficulty: Difficulty, recentAnswers: string[] = [], categoryDetail = '', categoryKey = '', diffCalib = '', axes?: GenAxes): string {
+  const ax = axes ?? pickGenAxes();
   const seed = Math.floor(Math.random() * 99991) + 10000;
   const [cho, choEg] = CHOSEONG_HINTS[Math.floor(Math.random() * CHOSEONG_HINTS.length)];
   const diffGuide = OTAKU_CATEGORY_KEYS.has(categoryKey)
@@ -125,9 +135,9 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
   // ── 이번 출제 기조 (소프트 선호) ──
   const biasLines = [
     '· 이번 출제 기조 (가능하면 반영하되, 정확성·대중성·난이도를 해치면서까지 억지로 맞추진 마라):',
-    `    - 시대: ${pick(ERA_POOL)}`,
-    `    - 지역: ${pick(REGION_POOL)}`,
-    `    - 결: ${pick(ANGLE_POOL)}`,
+    `    - 시대: ${ax.era}`,
+    `    - 지역: ${ax.region}`,
+    `    - 결: ${ax.angle}`,
   ];
   if (difficulty !== 'hard') {
     biasLines.push(`· 초성 가이드: 가능하면 정답 첫 초성을 '${cho}'(${choEg})로 맞춰라. 맞는 실존 정답이 없으면 자유. 초성을 위해 없는 대상을 지어내지 마라.`);
