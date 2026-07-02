@@ -622,10 +622,6 @@ export default function App() {
             <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
             <span className="desktop-icon-label">✞퀴즈대합전✞</span>
           </div>
-          <div className="desktop-icon" onClick={() => { setMode('multi'); setMpRoom(null); setMinimized(false); }}>
-            <img className="desktop-icon-img" src="/icon_neko.png" alt="멀티대합전" draggable={false} />
-            <span className="desktop-icon-label">◆ 멀티 대합전</span>
-          </div>
           <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
             <span className="desktop-icon-label">🐢 바다거북수프 <small style={{fontSize:'10px',opacity:.8}}>(beta)</small></span>

@@ -227,8 +227,8 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     await sendChat(m);
   }
 
-  // 다른 플레이어의 오답만 표시 (내 오답은 submitError로 표시됨)
-  const othersWrongGuesses = wrongGuesses.filter(wg => wg.user_id !== myUserId);
+  // 전체 오답 표시 (내 오답 포함)
+  const allWrongGuesses = wrongGuesses;
 
   // ── 대기실 ─────────────────────────────────────────────────────
   if (roomStatus === 'waiting') {
@@ -362,9 +362,9 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
         )}
 
         {/* 다른 플레이어 오답 기록 */}
-        {round && !generating && !round.ended && othersWrongGuesses.length > 0 && (
+        {round && !generating && !round.ended && allWrongGuesses.length > 0 && (
           <div className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
-            {othersWrongGuesses.slice(-8).map((wg, i) => (
+            {allWrongGuesses.slice(-8).map((wg, i) => (
               <div key={i} className="mp-wrong-entry">
                 <span className="mp-wrong-x">✗</span>
                 <b>{wg.nickname}</b>: {wg.guess}
