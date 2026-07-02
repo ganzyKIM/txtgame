@@ -156,21 +156,43 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     if (advancedRef.current) return;
     advancedRef.current = true;
 
-    const t = window.setTimeout(async () => {
+    let cancelled = false;
+
+    const advance = async () => {
       if (round.roundNum >= MP_TOTAL_ROUNDS) {
-        await finishGame();
+        await new Promise<void>(r => window.setTimeout(r, ROUND_TRANSITION_MS));
+        if (!cancelled) await finishGame();
+        return;
+      }
+
+      // 퍼즐 생성과 7초 타이머를 병렬 실행
+      // — prefetch 완료 시 생성 불필요, 타이머만 대기
+      // — prefetch 미완료 시 지금 생성 시작, 7초와 동시에 진행
+      let puzzlePromise: Promise<Puzzle>;
+      if (prefetchRef.current) {
+        puzzlePromise = Promise.resolve(prefetchRef.current);
       } else {
         setGenerating(true); setGenError(null);
-        try {
-          const puzzle = prefetchRef.current ?? await generatePuzzle(mpCfg);
-          prefetchRef.current = null;
-          await startRound(round.roundNum + 1, puzzle.hints, puzzle.maxHints, puzzle.answer, puzzle.acceptable);
-          prefetchNext(round.roundNum + 1);
-        } catch { setGenError('문제 생성에 실패했어. 다시 시도할게…'); }
-        finally { setGenerating(false); }
+        puzzlePromise = generatePuzzle(mpCfg);
       }
-    }, ROUND_TRANSITION_MS);
-    return () => window.clearTimeout(t);
+
+      // 반드시 7초를 채운 뒤에 다음 라운드로 넘어감
+      const timerPromise = new Promise<void>(r => window.setTimeout(r, ROUND_TRANSITION_MS));
+
+      try {
+        const [puzzle] = await Promise.all([puzzlePromise, timerPromise]);
+        if (cancelled) return;
+        prefetchRef.current = null;
+        setGenerating(false);
+        await startRound(round.roundNum + 1, puzzle.hints, puzzle.maxHints, puzzle.answer, puzzle.acceptable);
+        if (!cancelled) prefetchNext(round.roundNum + 1);
+      } catch {
+        if (!cancelled) { setGenError('문제 생성에 실패했어. 다시 시도할게…'); setGenerating(false); }
+      }
+    };
+
+    void advance();
+    return () => { cancelled = true; setGenerating(false); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.ended, round?.roundNum, iAmHost]);
 
