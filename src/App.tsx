@@ -304,7 +304,7 @@ export default function App() {
   // 준비된 문제로 즉시 플레이 화면 전환
   function startWithPuzzle(puzzle: Puzzle, cfg: StartConfig) {
     lastCfgRef.current = cfg;
-    prefetchArmed.current = false; // 새 판 → 프리페치 트리거 재무장
+    prefetchArmed.current = true;
     setGame({
       phase: 'playing',
       puzzle,
@@ -315,17 +315,13 @@ export default function App() {
     });
     push(`> 출제 완료! 힌트 ${puzzle.hints.length}개 · 탈락 임계값 ${puzzle.maxHints} · 첫 힌트 공개`);
     mascot.current?.event('intro');
+    // 문제 표시 즉시 다음 문제 백그라운드 생성 시작 (센터시험 마지막 문제 제외)
+    if (!(cfg.examMode === 'center' && runScores.length >= CENTER_QUESTIONS - 1)) {
+      prefetchNext(cfg);
+    }
   }
 
-  // 유저가 "이어서 할 의사"를 보인 시점(첫 추가 힌트 공개 또는 첫 추측)에 1회만
-  // 다음 문제를 미리 만든다. 한 문제만 보고 나가면 프리페치를 아예 안 해 크레딧 낭비를 막는다.
-  function maybePrefetch() {
-    if (prefetchArmed.current) return;
-    // 센터시험 마지막 문제(10번째)에선 다음 문제가 없으므로 프리페치하지 않음 (크레딧 낭비 방지)
-    if (examMode === 'center' && runScores.length >= CENTER_QUESTIONS - 1) return;
-    prefetchArmed.current = true;
-    if (lastCfgRef.current) prefetchNext(lastCfgRef.current);
-  }
+  function maybePrefetch() { /* prefetch는 startWithPuzzle에서 즉시 시작하므로 no-op */ }
 
   // ── 다음 문제 백그라운드 미리 생성 ────────────────────────────────
   // 유저가 현재 문제를 푸는 동안 같은 설정의 다음 문제를 만들어 캐시에 넣어둔다.

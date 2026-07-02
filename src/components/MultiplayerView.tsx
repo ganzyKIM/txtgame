@@ -205,9 +205,9 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     setGenerating(true); setGenError(null);
     try {
       await startGame();
-      const puzzle = await generatePuzzle(mpCfg);
+      // round 1 생성과 동시에 round 2 프리페치 시작
+      const [puzzle] = await Promise.all([generatePuzzle(mpCfg), (prefetchNext(0), Promise.resolve())]);
       await startRound(1, puzzle.hints, puzzle.maxHints, puzzle.answer, puzzle.acceptable);
-      prefetchNext(1);
     } catch { setGenError('게임 시작 실패. 다시 시도해줘.'); }
     finally { setGenerating(false); }
   }
