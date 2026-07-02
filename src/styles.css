@@ -548,9 +548,25 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 .soup-hint-btn:disabled{opacity:.4;}
 
 /* ── 멀티플레이 ─────────────────────────────────────────────── */
-.mp-timer-track{height:6px;background:var(--pink-1);border:1px solid var(--bevel-dk);margin:2px 0 4px;}
+.mp-timer-track{height:6px;background:var(--pink-1);border:1px solid var(--bevel-dk);margin:0;}
 .mp-timer-bar{height:100%;background:linear-gradient(90deg,var(--magenta-d),var(--magenta));width:100%;animation:mpDeplete 7s linear forwards;}
 @keyframes mpDeplete{from{width:100%}to{width:0%}}
+
+/* 카운트다운 숫자 — 바뀔 때마다 key로 재애니메이션 */
+.mp-countdown-num{
+  display:inline-block;
+  font-size:14px;font-weight:bold;color:var(--magenta);
+  min-width:18px;text-align:center;
+  animation:mpCountPop .3s ease;
+}
+@keyframes mpCountPop{
+  0%{transform:scale(1.5);opacity:.5;}
+  100%{transform:scale(1);opacity:1;}
+}
+
+/* 오답 기록 행 */
+.mp-wrong-entry{font-size:10px;color:var(--ink-soft);display:flex;gap:3px;align-items:baseline;}
+.mp-wrong-x{color:#c03060;font-size:10px;}
 
 .mp-round-result{
   background:linear-gradient(var(--lav-1),var(--pink-1));

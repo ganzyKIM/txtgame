@@ -4,8 +4,9 @@ import { supabase } from '../lib/supabase';
 import type { MpMember, RoomStatus } from '../game/multiplayer';
 import { MP_HINT_INTERVAL_MS, MP_LAST_HINT_GRACE_MS } from '../game/multiplayer';
 
-export interface ChatEntry  { user_id: string; nickname: string; message: string; ts: number }
-export interface ScoreEntry { user_id: string; nickname: string; score: number; rounds_won: number }
+export interface ChatEntry       { user_id: string; nickname: string; message: string; ts: number }
+export interface ScoreEntry      { user_id: string; nickname: string; score: number; rounds_won: number }
+export interface WrongGuessEntry { user_id: string; nickname: string; guess: string; ts: number }
 
 export interface RoundView {
   roundNum: number;
@@ -31,11 +32,12 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   const gaveUpRef   = useRef<string[]>([]);
   const timerRef    = useRef<number | null>(null);
 
-  const [roomStatus,  setRoomStatus]  = useState<RoomStatus>('waiting');
-  const [members,     setMembers]     = useState<MpMember[]>([]);
-  const [round,       setRound]       = useState<RoundView | null>(null);
-  const [chat,        setChat]        = useState<ChatEntry[]>([]);
-  const [finalScores, setFinalScores] = useState<ScoreEntry[] | null>(null);
+  const [roomStatus,   setRoomStatus]   = useState<RoomStatus>('waiting');
+  const [members,      setMembers]      = useState<MpMember[]>([]);
+  const [round,        setRound]        = useState<RoundView | null>(null);
+  const [chat,         setChat]         = useState<ChatEntry[]>([]);
+  const [finalScores,  setFinalScores]  = useState<ScoreEntry[] | null>(null);
+  const [wrongGuesses, setWrongGuesses] = useState<WrongGuessEntry[]>([]);
 
   // ref mirrors for timer callbacks (no stale closures)
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -64,12 +66,17 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   }, []);
 
   // ── 노위너 라운드 종료 (호스트 전용) ────────────────────────
+  // try/catch로 감싸서 RPC 실패해도 반드시 round_end 브로드캐스트
   const doEndRoundNoWinner = useCallback(async () => {
     const r = roundRef.current;
     if (!r || r.ended) return;
-    const { data: answer } = await rpc.rpc('mp_end_round', { p_room_id: roomId, p_round_num: r.roundNum });
+    let answer = '?';
+    try {
+      const { data } = await rpc.rpc('mp_end_round', { p_room_id: roomId, p_round_num: r.roundNum });
+      if (data) answer = data;
+    } catch { /* RPC 실패해도 round_end는 반드시 전송 */ }
     const scores = membersRef.current.map(m => ({ user_id: m.user_id, nickname: m.nickname, score: m.score, rounds_won: m.rounds_won }));
-    channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: null, winner_nickname: null, answer: answer ?? '?', scores } });
+    channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: null, winner_nickname: null, answer, scores } });
   }, [roomId]);
 
   // ── 힌트 타이머 (호스트만 구동) ─────────────────────────────
@@ -79,8 +86,8 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     if (r.revealedCount >= r.maxHints) {
-      // 마지막 힌트 공개됨 → 전원 포기 대기 grace timer
-      timerRef.current = window.setTimeout(() => doEndRoundNoWinner(), MP_LAST_HINT_GRACE_MS);
+      // 마지막 힌트 → grace timer 후 노위너 종료
+      timerRef.current = window.setTimeout(() => { void doEndRoundNoWinner(); }, MP_LAST_HINT_GRACE_MS);
       return;
     }
     const nextRevealAt = r.startedAt.getTime() + r.revealedCount * MP_HINT_INTERVAL_MS;
@@ -116,6 +123,7 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
           answer: null,
         };
         gaveUpRef.current = [];
+        setWrongGuesses([]);
         setRound(r);
         roundRef.current = r;
         if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -153,11 +161,25 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
         }
       })
 
+      // 오답 공유 (다른 플레이어의 오답을 전체에 공유)
+      .on('broadcast', { event: 'wrong_guess' }, ({ payload }) => {
+        setWrongGuesses(prev => [...prev, payload as WrongGuessEntry].slice(-20));
+      })
+
       // 라운드 종료
       .on('broadcast', { event: 'round_end' }, ({ payload }) => {
         if (timerRef.current) window.clearTimeout(timerRef.current);
-        setRound(prev => prev ? { ...prev, ended: true, winnerId: payload.winner_id, winnerNickname: payload.winner_nickname, answer: payload.answer } : null);
-        if (payload.scores) setMembers(prev => prev.map(m => { const s = payload.scores.find((e: ScoreEntry) => e.user_id === m.user_id); return s ? { ...m, score: s.score, rounds_won: s.rounds_won } : m; }));
+        setRound(prev => prev ? {
+          ...prev,
+          ended: true,
+          winnerId: payload.winner_id,
+          winnerNickname: payload.winner_nickname,
+          answer: payload.answer ?? null,
+        } : null);
+        if (payload.scores) setMembers(prev => prev.map(m => {
+          const s = payload.scores.find((e: ScoreEntry) => e.user_id === m.user_id);
+          return s ? { ...m, score: s.score, rounds_won: s.rounds_won } : m;
+        }));
       })
 
       // 게임 종료
@@ -198,8 +220,8 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   const giveUp = useCallback(() => {
     const r = roundRef.current;
     if (!r || r.ended) return;
-    channelRef.current?.send({ type: 'broadcast', event: 'gave_up', payload: { user_id: myUserId, nickname: members.find(m => m.user_id === myUserId)?.nickname ?? '' } });
-  }, [myUserId, members]);
+    channelRef.current?.send({ type: 'broadcast', event: 'gave_up', payload: { user_id: myUserId, nickname: membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '' } });
+  }, [myUserId]);
 
   const submitGuess = useCallback(async (guess: string, hintsUsed: number) => {
     const r = roundRef.current;
@@ -209,16 +231,20 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
       // 승자: 최신 멤버 점수 로드 후 round_end 브로드캐스트
       const { data: freshMembers } = await supabase.from('mp_members').select('*').eq('room_id', roomId);
       const scores = (freshMembers ?? membersRef.current).map((m: MpMember) => ({ user_id: m.user_id, nickname: m.nickname, score: m.score, rounds_won: m.rounds_won }));
-      channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: myUserId, winner_nickname: members.find(m => m.user_id === myUserId)?.nickname ?? '', answer: data.answer, scores } });
+      channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: myUserId, winner_nickname: membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '', answer: data.answer, scores } });
+    } else {
+      // 오답: 전체에 브로드캐스트
+      const nick = membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '';
+      channelRef.current?.send({ type: 'broadcast', event: 'wrong_guess', payload: { user_id: myUserId, nickname: nick, guess, ts: Date.now() } });
     }
     return { correct: !!data?.correct, answer: data?.answer };
-  }, [roomId, myUserId, members]);
+  }, [roomId, myUserId]);
 
   const sendChat = useCallback(async (message: string) => {
-    const nick = members.find(m => m.user_id === myUserId)?.nickname ?? '';
+    const nick = membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '';
     channelRef.current?.send({ type: 'broadcast', event: 'chat', payload: { user_id: myUserId, nickname: nick, message, ts: Date.now() } });
     await rpc.rpc('mp_send_chat', { p_room_id: roomId, p_message: message });
-  }, [roomId, myUserId, members]);
+  }, [roomId, myUserId]);
 
   const finishGame = useCallback(async () => {
     await rpc.rpc('mp_finish_game', { p_room_id: roomId });
@@ -227,7 +253,7 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   }, [roomId]);
 
   return {
-    roomStatus, members, round, chat, finalScores,
+    roomStatus, members, round, chat, finalScores, wrongGuesses,
     isHost: isHostRef.current,
     startGame, startRound, giveUp, submitGuess, sendChat, finishGame,
   };

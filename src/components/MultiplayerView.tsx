@@ -10,6 +10,8 @@ import type { TextTier } from '../types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc: any = null; // unused — leave/rpc handled via hook
 
+const ROUND_TRANSITION_MS = 7000; // 다음 라운드 전환 대기 (카운트다운과 동일)
+
 interface Props {
   room: JoinedRoom;
   myUserId: string;
@@ -21,7 +23,7 @@ interface Props {
 
 export default function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave }: Props) {
   void rpc; // suppress lint
-  const { roomStatus, members, round, chat, finalScores, startGame, startRound, giveUp, submitGuess, sendChat, finishGame } = useMultiplayerRoom(room.id, myUserId);
+  const { roomStatus, members, round, chat, finalScores, wrongGuesses, startGame, startRound, giveUp, submitGuess, sendChat, finishGame } = useMultiplayerRoom(room.id, myUserId);
 
   const iAmHost = members.find(m => m.user_id === myUserId)?.is_host ?? false;
   const [generating, setGenerating] = useState(false);
@@ -29,9 +31,11 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   const [guess, setGuess] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hintCountdown, setHintCountdown] = useState(7);
+  const [nextRoundCountdown, setNextRoundCountdown] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const advancedRef = useRef(false);
-  const prefetchRef = useRef<Puzzle | null>(null);   // 미리 만들어둔 다음 문제
+  const prefetchRef = useRef<Puzzle | null>(null);
   const prefetchingRef = useRef(false);
 
   const mpCfg: StartConfig = {
@@ -43,7 +47,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   // 다음 문제 백그라운드 생성 (호스트 전용)
   function prefetchNext(currentRound: number) {
     if (!iAmHost) return;
-    if (currentRound >= MP_TOTAL_ROUNDS) return; // 마지막 라운드엔 불필요
+    if (currentRound >= MP_TOTAL_ROUNDS) return;
     if (prefetchingRef.current || prefetchRef.current) return;
     prefetchingRef.current = true;
     void generatePuzzle(mpCfg).then(p => {
@@ -58,6 +62,35 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   // auto-scroll chat
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
 
+  // 힌트 카운트다운 (힌트가 바뀔 때마다 7→0)
+  useEffect(() => {
+    if (!round || round.ended || round.revealedCount >= round.maxHints) {
+      setHintCountdown(0);
+      return;
+    }
+    setHintCountdown(7);
+    const t = window.setInterval(() => {
+      setHintCountdown(prev => {
+        if (prev <= 1) { window.clearInterval(t); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [round?.revealedCount, round?.ended]);
+
+  // 라운드 종료 후 카운트다운 (7→0)
+  useEffect(() => {
+    if (!round?.ended) { setNextRoundCountdown(0); return; }
+    setNextRoundCountdown(Math.ceil(ROUND_TRANSITION_MS / 1000));
+    const t = window.setInterval(() => {
+      setNextRoundCountdown(prev => {
+        if (prev <= 1) { window.clearInterval(t); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [round?.ended, round?.roundNum]);
+
   // host: auto-advance after round ends
   useEffect(() => {
     if (!round?.ended || !iAmHost) return;
@@ -70,15 +103,14 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       } else {
         setGenerating(true); setGenError(null);
         try {
-          // 프리페치가 준비됐으면 즉시 사용, 아니면 지금 생성
           const puzzle = prefetchRef.current ?? await generatePuzzle(mpCfg);
           prefetchRef.current = null;
           await startRound(round.roundNum + 1, puzzle.hints, puzzle.maxHints, puzzle.answer, puzzle.acceptable);
-          prefetchNext(round.roundNum + 1); // 바로 다음다음 문제 예열
+          prefetchNext(round.roundNum + 1);
         } catch { setGenError('문제 생성에 실패했어. 다시 시도할게…'); }
         finally { setGenerating(false); }
       }
-    }, 3500);
+    }, ROUND_TRANSITION_MS);
     return () => window.clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.ended, round?.roundNum, iAmHost]);
@@ -92,7 +124,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       await startGame();
       const puzzle = await generatePuzzle(mpCfg);
       await startRound(1, puzzle.hints, puzzle.maxHints, puzzle.answer, puzzle.acceptable);
-      prefetchNext(1); // 라운드 1 시작 → 라운드 2 즉시 예열
+      prefetchNext(1);
     } catch { setGenError('게임 시작 실패. 다시 시도해줘.'); }
     finally { setGenerating(false); }
   }
@@ -111,6 +143,9 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     setChatInput('');
     await sendChat(m);
   }
+
+  // 다른 플레이어의 오답만 표시 (내 오답은 submitError로 표시됨)
+  const othersWrongGuesses = wrongGuesses.filter(wg => wg.user_id !== myUserId);
 
   // ── 대기실 ─────────────────────────────────────────────────────
   if (roomStatus === 'waiting') {
@@ -136,16 +171,26 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           {genError && <div style={{ fontSize: 11, color: '#c03060' }}>{genError}</div>}
 
           {iAmHost && (
-            <button className="btn" disabled={members.length < 1 || generating} onClick={() => void handleStartGame()}>
-              {generating ? '◆ 문제 출제 중…' : '◆ 게임 시작'}
-            </button>
+            <>
+              {generating && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--magenta-d)', textAlign: 'center' }}>◆ 문제 출제 중… ♡</div>
+                  <div className="generating-bar-bg" style={{ margin: '0 0 2px' }}>
+                    <div className="generating-bar-fill" />
+                  </div>
+                </div>
+              )}
+              <button className="btn" disabled={members.length < 1 || generating} onClick={() => void handleStartGame()}>
+                {generating ? '출제 중…' : '◆ 게임 시작'}
+              </button>
+            </>
           )}
           {!iAmHost && <div style={{ fontSize: 11, color: 'var(--ink-soft)', textAlign: 'center' }}>호스트가 시작하기를 기다리는 중… ♡</div>}
 
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', gap: 4 }}>
             <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') void handleChat(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChat(); }}
               placeholder="채팅…" style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
             <button className="btn btn-xs" onClick={() => void handleChat()}>전송</button>
           </div>
@@ -192,16 +237,32 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           <span style={{ fontSize: 11 }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label}</span>
         </div>
 
+        {/* 문제 출제 중 로딩바 */}
         {generating && (
-          <div style={{ textAlign: 'center', padding: 20, fontSize: 12, color: 'var(--ink-soft)' }}>◆ 문제 출제 중… ♡</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--magenta-d)' }}>◆ 문제 출제 중… ♡</div>
+            <div className="generating-bar-bg" style={{ margin: 0 }}>
+              <div className="generating-bar-fill" />
+            </div>
+          </div>
         )}
 
         {round && !generating && (
           <>
-            {/* 타이머 바 */}
+            {/* 타이머 바 + 카운트다운 숫자 */}
             {!round.ended && (
-              <div className="mp-timer-track">
-                <div key={`timer-${round.revealedCount}`} className="mp-timer-bar" />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="mp-timer-track" style={{ flex: 1 }}>
+                    <div key={`timer-${round.revealedCount}`} className="mp-timer-bar" />
+                  </div>
+                  <span key={`cd-${round.revealedCount}-${hintCountdown}`} className="mp-countdown-num">
+                    {hintCountdown}
+                  </span>
+                </div>
+                {round.revealedCount >= round.maxHints && (
+                  <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>마지막 힌트</div>
+                )}
               </div>
             )}
 
@@ -213,23 +274,45 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
                   <span>{h}</span>
                 </div>
               ))}
-              {!round.ended && round.revealedCount < round.maxHints && (
-                <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'center', marginTop: 4 }}>
-                  다음 힌트까지 7초…
-                </div>
-              )}
             </div>
 
-            {/* 라운드 종료 오버레이 */}
+            {/* 다른 플레이어 오답 기록 */}
+            {othersWrongGuesses.length > 0 && !round.ended && (
+              <div className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
+                {othersWrongGuesses.slice(-8).map((wg, i) => (
+                  <div key={i} className="mp-wrong-entry">
+                    <span className="mp-wrong-x">✗</span>
+                    <b>{wg.nickname}</b>: {wg.guess}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 라운드 종료 결과 */}
             {round.ended && (
               <div className="mp-round-result">
                 {round.winnerId
-                  ? <><div className="mp-result-winner">✓ {round.winnerNickname}{round.winnerId === myUserId ? ' (나!)' : ''} 정답!</div></>
+                  ? <div className="mp-result-winner">✓ {round.winnerNickname}{round.winnerId === myUserId ? ' (나!)' : ''} 정답!</div>
                   : <div className="mp-result-no-winner">이번 라운드는 아무도 못 맞혔어…</div>
                 }
-                <div className="mp-result-answer">정답: <b>{round.answer}</b></div>
-                {generating ? <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>다음 문제 출제 중…</div>
-                  : <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>잠시 후 다음 라운드…</div>}
+                <div className="mp-result-answer">정답: <b>{round.answer ?? '확인 중…'}</b></div>
+                {generating
+                  ? (
+                    <div style={{ marginTop: 6 }}>
+                      <div style={{ fontSize: 10, color: 'var(--magenta-d)' }}>◆ 다음 문제 출제 중…</div>
+                      <div className="generating-bar-bg" style={{ margin: '3px 0 0' }}>
+                        <div className="generating-bar-fill" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>
+                      {nextRoundCountdown > 0
+                        ? <>다음 라운드까지 <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
+                        : '다음 라운드 준비 중…'
+                      }
+                    </div>
+                  )
+                }
               </div>
             )}
 
@@ -253,7 +336,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
             <input
               className="sunken" value={guess}
               onChange={e => { setGuess(e.target.value); setSubmitError(null); }}
-              onKeyDown={e => { if (e.key === 'Enter') void handleGuess(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleGuess(); }}
               disabled={!round || round.ended}
               placeholder={round?.ended ? '라운드 종료' : '정답을 입력해봐…'}
               style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }}
@@ -291,7 +374,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') void handleChat(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChat(); }}
               placeholder="채팅…" style={{ flex: 1, fontSize: 11, padding: '2px 5px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
             <button className="btn btn-xs" onClick={() => void handleChat()}>↵</button>
           </div>
