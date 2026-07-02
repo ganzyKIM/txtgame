@@ -16,6 +16,8 @@ import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem } from './save/quizBank';
 import StatsModal from './components/StatsModal';
+import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
+import MultiplayerView from './components/MultiplayerView';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
 import { CENTER_QUESTIONS } from './game/types';
 import type { TextTier } from './types';
@@ -74,7 +76,8 @@ export default function App() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
-  const [mode, setMode] = useState<'quiz' | 'soup'>('quiz');
+  const [mode, setMode] = useState<'quiz' | 'soup' | 'multi'>('quiz');
+  const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
   // 센터시험(10문제 루틴)에서 완료한 문제들의 점수 (length = 완료 문제 수)
   const [runScores, setRunScores] = useState<number[]>([]);
   // 현재 판의 출제 모드 (마지막 시작 설정에서 파생)
@@ -599,8 +602,11 @@ export default function App() {
   }
   if (!user) return <LoginScreen />;
 
+  const myNickname = user?.email?.split('@')[0] ?? 'player';
+
   const statusText =
-    mode === 'soup' ? '🐢 바다거북 수프'
+    mode === 'soup'  ? '🐢 바다거북 수프'
+    : mode === 'multi' ? (mpRoom ? `◆ 대합전 중 · ${mpRoom.category_label}` : '◆ 대합전 대기실')
     : game.phase === 'setup' ? '준비됨 ♡'
     : game.phase === 'playing' ? `진행 중 · 힌트 ${game.revealedCount}/${game.puzzle?.maxHints}`
     : game.phase === 'won' ? '클리어! ♡'
@@ -613,6 +619,10 @@ export default function App() {
           <div className="desktop-icon" onClick={() => { setMode('quiz'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
             <span className="desktop-icon-label">✞퀴즈대합전✞</span>
+          </div>
+          <div className="desktop-icon" onClick={() => { setMode('multi'); setMpRoom(null); setMinimized(false); }}>
+            <img className="desktop-icon-img" src="/icon_neko.png" alt="멀티대합전" draggable={false} />
+            <span className="desktop-icon-label">◆ 멀티 대합전</span>
           </div>
           <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
@@ -629,9 +639,33 @@ export default function App() {
           onOpenStats={() => setStatsOpen(true)}
           onMinimize={handleMinimize}
           onClose={handleClose}
-          onHome={mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart : undefined}
+          hideConsole={mode === 'multi'}
+          onMultiplay={mode !== 'multi' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
+          onHome={
+            mode === 'multi' ? () => { setMode('quiz'); setMpRoom(null); }
+            : mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart
+            : undefined
+          }
         >
-          {mode === 'soup' ? (
+          {mode === 'multi' ? (
+            mpRoom ? (
+              <MultiplayerView
+                room={mpRoom}
+                myUserId={user.id}
+                myNickname={myNickname}
+                tier={tier}
+                generatePuzzle={generatePuzzle}
+                onLeave={() => setMpRoom(null)}
+              />
+            ) : (
+              <MultiplayerLobby
+                myUserId={user.id}
+                myNickname={myNickname}
+                onJoin={(room) => setMpRoom(room)}
+                onBack={() => setMode('quiz')}
+              />
+            )
+          ) : mode === 'soup' ? (
             <SoupGame
               tier={tier}
               userId={user.id}

@@ -547,6 +547,21 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 .soup-action-row .btn{flex:1;}
 .soup-hint-btn:disabled{opacity:.4;}
 
+/* ── 멀티플레이 ─────────────────────────────────────────────── */
+.mp-timer-track{height:6px;background:var(--pink-1);border:1px solid var(--bevel-dk);margin:2px 0 4px;}
+.mp-timer-bar{height:100%;background:linear-gradient(90deg,var(--magenta-d),var(--magenta));width:100%;animation:mpDeplete 7s linear forwards;}
+@keyframes mpDeplete{from{width:100%}to{width:0%}}
+
+.mp-round-result{
+  background:linear-gradient(var(--lav-1),var(--pink-1));
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+  padding:10px;text-align:center;display:flex;flex-direction:column;gap:4px;
+}
+.mp-result-winner{font-size:13px;color:var(--magenta-d);font-weight:bold;}
+.mp-result-no-winner{font-size:12px;color:var(--ink-soft);}
+.mp-result-answer{font-size:12px;color:var(--ink);}
+
+
 /* 힌트 카운터 (타이틀바 오른쪽) */
 .soup-hint-counter{font-size:10px;font-weight:normal;color:#ffe8f8;opacity:.9;}
 

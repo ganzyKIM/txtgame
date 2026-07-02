@@ -68,13 +68,15 @@ create or replace function public.get_chronic_failures(
   p_min_rejects  int default 3
 )
 returns table(answer text, reject_count bigint, top_reason text)
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
+begin
+  return query
   with rejected_agg as (
     select
-      answer_key,
+      g.answer_key,
       (array_agg(g.answer order by g.created_at desc))[1] as answer,
       count(*) as rc,
       (array_agg(g.reject_reason order by g.created_at desc))[1] as top_reason
@@ -82,20 +84,21 @@ as $$
     where g.category_key = p_category_key
       and g.rejected = true
       and g.reject_stage in ('wiki', 'verify', 'lint')
-    group by answer_key
+    group by g.answer_key
     having count(*) >= p_min_rejects
   ),
   accepted_keys as (
-    select distinct answer_key
-    from public.quiz_generations
-    where category_key = p_category_key
-      and rejected = false
+    select distinct qg.answer_key
+    from public.quiz_generations qg
+    where qg.category_key = p_category_key
+      and qg.rejected = false
   )
   select r.answer, r.rc, r.top_reason
   from rejected_agg r
-  where r.answer_key not in (select answer_key from accepted_keys)
+  where r.answer_key not in (select ak.answer_key from accepted_keys ak)
   order by r.rc desc
   limit 30;
+end;
 $$;
 
 grant execute on function public.get_chronic_failures(text, int) to authenticated;
@@ -110,19 +113,22 @@ create or replace function public.get_failure_patterns(
   p_limit        int default 5
 )
 returns table(pattern text, cnt bigint)
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select reject_reason, count(*) as cnt
-  from public.quiz_generations
-  where category_key = p_category_key
-    and rejected = true
-    and reject_stage = 'verify'
-    and reject_reason <> ''
-  group by reject_reason
+begin
+  return query
+  select g.reject_reason, count(*) as cnt
+  from public.quiz_generations g
+  where g.category_key = p_category_key
+    and g.rejected = true
+    and g.reject_stage = 'verify'
+    and g.reject_reason <> ''
+  group by g.reject_reason
   order by cnt desc
   limit p_limit;
+end;
 $$;
 
 grant execute on function public.get_failure_patterns(text, int) to authenticated;

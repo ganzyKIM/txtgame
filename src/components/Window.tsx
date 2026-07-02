@@ -11,12 +11,16 @@ interface Props {
   onClose: () => void;
   /** 제공되면 메뉴바에 "처음으로"(카테고리 선택 복귀) 버튼 노출 */
   onHome?: () => void;
+  /** 멀티플레이 진입 버튼 */
+  onMultiplay?: () => void;
+  /** true면 하단 로그창 숨김 (멀티플레이: 정답 노출 방지) */
+  hideConsole?: boolean;
   children: ReactNode;
 }
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, children,
+  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, hideConsole, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
 
@@ -41,7 +45,10 @@ export default function Window({
         <div className="menubar">
           <button className="mascot-transform" onClick={onTransform} title="변신!">✧ 변신 ✧</button>
           {onHome && (
-            <button className="menu-btn" onClick={onHome} title="퀴즈를 그만두고 카테고리 선택으로">🏠 처음으로</button>
+            <button className="menu-btn" onClick={onHome} title="카테고리 선택으로">🏠 처음으로</button>
+          )}
+          {onMultiplay && (
+            <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">◆ 멀티</button>
           )}
           <span className="menu-spacer" />
           <span className="menu-info" style={{cursor:'pointer'}} onClick={() => alert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
@@ -51,10 +58,12 @@ export default function Window({
         {/* 본문 */}
         <div id="pane">{children}</div>
 
-        {/* 인라인 진행 로그 */}
-        <div className="console-strip">
-          <pre ref={consoleRef} className="console">{consoleLines.join('\n')}</pre>
-        </div>
+        {/* 인라인 진행 로그 — 멀티플레이 중엔 숨김 (정답 노출 방지) */}
+        {!hideConsole && (
+          <div className="console-strip">
+            <pre ref={consoleRef} className="console">{consoleLines.join('\n')}</pre>
+          </div>
+        )}
 
         {/* 상태바 */}
         <div className="statusbar">
