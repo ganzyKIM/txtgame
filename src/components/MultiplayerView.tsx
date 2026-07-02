@@ -391,7 +391,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
                   ) : (
                     <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>
                       {nextRoundCountdown > 0
-                        ? <>다음 라운드까지 <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
+                        ? <>{round.roundNum >= MP_TOTAL_ROUNDS ? '결과 발표까지' : '다음 라운드까지'} <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
                         : '다음 라운드 준비 중…'
                       }
                     </div>
