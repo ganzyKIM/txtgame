@@ -201,6 +201,13 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   // reset advancedRef on new round
   useEffect(() => { advancedRef.current = false; }, [round?.roundNum]);
 
+  // 라운드 시작 즉시 다음 문제 프리페치 (호스트만)
+  useEffect(() => {
+    if (!round || round.ended) return;
+    prefetchNext(round.roundNum);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.roundNum]);
+
   async function handleStartGame() {
     setGenerating(true); setGenError(null);
     try {

@@ -105,12 +105,14 @@ export default function App() {
   useEffect(() => {
     const BG_CLASSES = ['bg-garden', 'bg-kitchen', 'bg-lib', 'bg-battle'] as const;
     BG_CLASSES.forEach((c) => document.body.classList.remove(c));
-    if (mode === 'quiz' && game.phase !== 'setup' && lastConfig?.categoryBg) {
-      document.body.classList.add(`bg-${lastConfig.categoryBg}`);
-    } else if (mode === 'multi') {
-      document.body.classList.add('bg-battle');
+    let bg: string | undefined;
+    if (mode === 'multi') {
+      bg = CATEGORIES.find(c => c.key === mpRoom?.category_key)?.bg ?? lastConfig?.categoryBg;
+    } else if (mode === 'quiz' && game.phase !== 'setup') {
+      bg = lastConfig?.categoryBg;
     }
-  }, [mode, game.phase, lastConfig?.categoryBg]);
+    if (bg) document.body.classList.add(`bg-${bg}`);
+  }, [mode, game.phase, lastConfig?.categoryBg, mpRoom?.category_key]);
 
   // 최초 로그인 후 마스코트 인사
   useEffect(() => {
