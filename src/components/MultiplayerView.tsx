@@ -25,7 +25,7 @@ interface Props {
 
 export default function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave, onMascotEvent }: Props) {
   void rpc; // suppress lint
-  const { roomStatus, members, round, chat, finalScores, wrongGuesses, startGame, startRound, giveUp, submitGuess, sendChat, finishGame } = useMultiplayerRoom(room.id, myUserId);
+  const { roomStatus, members, round, chat, finalScores, wrongGuesses, roomClosed, startGame, startRound, giveUp, submitGuess, sendChat, finishGame, leaveRoom } = useMultiplayerRoom(room.id, myUserId);
 
   const iAmHost = members.find(m => m.user_id === myUserId)?.is_host ?? false;
   const [generating, setGenerating] = useState(false);
@@ -61,6 +61,9 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       prefetchingRef.current = false;
     });
   }
+
+  // 호스트 이탈로 방이 폐쇄되면 자동으로 로비로 복귀
+  useEffect(() => { if (roomClosed) onLeave(); }, [roomClosed, onLeave]);
 
   // ── 마스코트 이벤트 트리거 ────────────────────────────────────
   // 로비 입장 시 1회
@@ -210,7 +213,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
         <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="panel-title">
             <span>◆ 대합전 대기실 — {CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label} / {DIFFICULTIES.find(d => d.key === room.difficulty)?.label}</span>
-            <button className="btn btn-xs btn-warn" onClick={onLeave}>나가기</button>
+            <button className="btn btn-xs btn-warn" onClick={async () => { await leaveRoom(); onLeave(); }}>나가기</button>
           </div>
 
           <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginBottom: 4 }}>참가자 ({members.length}/{10})</div>
@@ -274,7 +277,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
               <span style={{ fontSize: 12, color: 'var(--magenta-d)' }}>{s.rounds_won}문제 · {s.score}점</span>
             </div>
           ))}
-          <button className="btn" style={{ marginTop: 12 }} onClick={onLeave}>로비로 돌아가기</button>
+          <button className="btn" style={{ marginTop: 12 }} onClick={async () => { await leaveRoom(); onLeave(); }}>로비로 돌아가기</button>
         </div>
       </div>
     );

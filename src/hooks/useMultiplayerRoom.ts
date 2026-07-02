@@ -38,6 +38,7 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   const [chat,         setChat]         = useState<ChatEntry[]>([]);
   const [finalScores,  setFinalScores]  = useState<ScoreEntry[] | null>(null);
   const [wrongGuesses, setWrongGuesses] = useState<WrongGuessEntry[]>([]);
+  const [roomClosed,   setRoomClosed]   = useState(false);
 
   // ref mirrors for timer callbacks (no stale closures)
   useEffect(() => { membersRef.current = members; }, [members]);
@@ -188,6 +189,11 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
         setRoomStatus('finished');
       })
 
+      // 방 폐쇄 (호스트 이탈)
+      .on('broadcast', { event: 'room_closed' }, () => {
+        setRoomClosed(true);
+      })
+
       // 채팅
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         setChat(prev => [...prev, payload as ChatEntry].slice(-100));
@@ -246,6 +252,15 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
     await rpc.rpc('mp_send_chat', { p_room_id: roomId, p_message: message });
   }, [roomId, myUserId]);
 
+  const leaveRoom = useCallback(async () => {
+    if (isHostRef.current) {
+      // 호스트 이탈: 먼저 브로드캐스트해서 다른 플레이어에게 알림
+      channelRef.current?.send({ type: 'broadcast', event: 'room_closed', payload: {} });
+      await new Promise(r => window.setTimeout(r, 300)); // 전송 여유
+    }
+    try { await rpc.rpc('mp_leave_room', { p_room_id: roomId }); } catch { /* 무시 */ }
+  }, [roomId]);
+
   const finishGame = useCallback(async () => {
     await rpc.rpc('mp_finish_game', { p_room_id: roomId });
     const scores = membersRef.current.map(m => ({ user_id: m.user_id, nickname: m.nickname, score: m.score, rounds_won: m.rounds_won }));
@@ -253,8 +268,8 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   }, [roomId]);
 
   return {
-    roomStatus, members, round, chat, finalScores, wrongGuesses,
+    roomStatus, members, round, chat, finalScores, wrongGuesses, roomClosed,
     isHost: isHostRef.current,
-    startGame, startRound, giveUp, submitGuess, sendChat, finishGame,
+    startGame, startRound, giveUp, submitGuess, sendChat, finishGame, leaveRoom,
   };
 }
