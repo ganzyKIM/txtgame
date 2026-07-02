@@ -31,6 +31,7 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   const roundRef    = useRef<RoundView | null>(null);
   const gaveUpRef   = useRef<string[]>([]);
   const timerRef    = useRef<number | null>(null);
+  const answerRef   = useRef<string>(''); // 호스트가 출제한 정답 (fallback용)
 
   const [roomStatus,   setRoomStatus]   = useState<RoomStatus>('waiting');
   const [members,      setMembers]      = useState<MpMember[]>([]);
@@ -170,17 +171,29 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
       // 라운드 종료
       .on('broadcast', { event: 'round_end' }, ({ payload }) => {
         if (timerRef.current) window.clearTimeout(timerRef.current);
+        const answer = (payload.answer as string) || null;
         setRound(prev => prev ? {
           ...prev,
           ended: true,
           winnerId: payload.winner_id,
           winnerNickname: payload.winner_nickname,
-          answer: payload.answer ?? null,
+          answer,
         } : null);
         if (payload.scores) setMembers(prev => prev.map(m => {
           const s = payload.scores.find((e: ScoreEntry) => e.user_id === m.user_id);
           return s ? { ...m, score: s.score, rounds_won: s.rounds_won } : m;
         }));
+        // 호스트가 answer를 갖고 있는데 payload에 없으면 별도 이벤트로 전송
+        if (isHostRef.current && !answer && answerRef.current) {
+          channelRef.current?.send({ type: 'broadcast', event: 'round_answer', payload: { answer: answerRef.current } });
+        }
+      })
+
+      // 정답 보조 전송 (호스트가 round_end에 answer가 없을 때 fallback)
+      .on('broadcast', { event: 'round_answer' }, ({ payload }) => {
+        if (payload.answer) {
+          setRound(prev => prev ? { ...prev, answer: payload.answer as string } : null);
+        }
       })
 
       // 게임 종료
@@ -218,6 +231,7 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
   }, [roomId]);
 
   const startRound = useCallback(async (roundNum: number, hints: string[], maxHints: number, answer: string, acceptable: string[]) => {
+    answerRef.current = answer; // 호스트만 알고 있는 정답 보관
     await rpc.rpc('mp_submit_round', { p_room_id: roomId, p_round_num: roundNum, p_hints: hints, p_max_hints: maxHints, p_answer: answer, p_acceptable: acceptable });
     const started_at = new Date().toISOString();
     channelRef.current?.send({ type: 'broadcast', event: 'round_start', payload: { round_num: roundNum, hints, max_hints: maxHints, started_at } });
@@ -237,7 +251,8 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
       // 승자: 최신 멤버 점수 로드 후 round_end 브로드캐스트
       const { data: freshMembers } = await supabase.from('mp_members').select('*').eq('room_id', roomId);
       const scores = (freshMembers ?? membersRef.current).map((m: MpMember) => ({ user_id: m.user_id, nickname: m.nickname, score: m.score, rounds_won: m.rounds_won }));
-      channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: myUserId, winner_nickname: membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '', answer: data.answer, scores } });
+      const winnerAnswer = (data?.answer as string) ?? '';
+      channelRef.current?.send({ type: 'broadcast', event: 'round_end', payload: { round_num: r.roundNum, winner_id: myUserId, winner_nickname: membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '', answer: winnerAnswer, scores } });
     } else {
       // 오답: 전체에 브로드캐스트
       const nick = membersRef.current.find(m => m.user_id === myUserId)?.nickname ?? '';
