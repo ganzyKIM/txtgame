@@ -657,6 +657,7 @@ export default function App() {
                 tier={tier}
                 generatePuzzle={generatePuzzle}
                 onLeave={() => setMpRoom(null)}
+                onMascotEvent={kind => mascot.current?.event(kind)}
               />
             ) : (
               <MultiplayerLobby

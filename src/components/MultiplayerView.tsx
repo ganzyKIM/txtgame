@@ -6,6 +6,7 @@ import type { Puzzle } from '../game/types';
 import type { JoinedRoom } from './MultiplayerLobby';
 import { MP_TOTAL_ROUNDS } from '../game/multiplayer';
 import type { TextTier } from '../types';
+import type { LineKind } from './Mascot';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc: any = null; // unused — leave/rpc handled via hook
@@ -19,9 +20,10 @@ interface Props {
   tier: TextTier;
   generatePuzzle: (cfg: StartConfig) => Promise<Puzzle>;
   onLeave: () => void;
+  onMascotEvent?: (kind: LineKind) => void;
 }
 
-export default function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave }: Props) {
+export default function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave, onMascotEvent }: Props) {
   void rpc; // suppress lint
   const { roomStatus, members, round, chat, finalScores, wrongGuesses, startGame, startRound, giveUp, submitGuess, sendChat, finishGame } = useMultiplayerRoom(room.id, myUserId);
 
@@ -37,6 +39,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   const advancedRef = useRef(false);
   const prefetchRef = useRef<Puzzle | null>(null);
   const prefetchingRef = useRef(false);
+  const allGaveUpFiredRef = useRef(false);
 
   const mpCfg: StartConfig = {
     categoryKey: room.category_key, categoryLabel: room.category_label,
@@ -58,6 +61,59 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       prefetchingRef.current = false;
     });
   }
+
+  // ── 마스코트 이벤트 트리거 ────────────────────────────────────
+  // 로비 입장 시 1회
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { onMascotEvent?.('mp_lobby'); }, []);
+
+  // 라운드 시작
+  useEffect(() => {
+    if (!round || round.ended) return;
+    onMascotEvent?.(round.roundNum === 1 ? 'mp_start' : 'mp_round');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.roundNum]);
+
+  // 라운드 종료 결과
+  useEffect(() => {
+    if (!round?.ended) return;
+    if (round.winnerId === myUserId) onMascotEvent?.('mp_correct');
+    else if (round.winnerId)         onMascotEvent?.('mp_rival_correct');
+    else                             onMascotEvent?.('mp_timeout');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.ended, round?.roundNum]);
+
+  // 마지막 힌트 공개
+  useEffect(() => {
+    if (round && !round.ended && round.revealedCount >= round.maxHints) {
+      onMascotEvent?.('mp_lasthint');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.revealedCount]);
+
+  // 문제 생성 중
+  useEffect(() => {
+    if (generating) onMascotEvent?.('mp_loading');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating]);
+
+  // 전원 포기
+  useEffect(() => {
+    if (!round || round.ended) { allGaveUpFiredRef.current = false; return; }
+    if (round.gaveUpIds.length > 0 && round.gaveUpIds.length >= members.length && !allGaveUpFiredRef.current) {
+      allGaveUpFiredRef.current = true;
+      onMascotEvent?.('mp_allgiveup');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.gaveUpIds.length, round?.ended]);
+
+  // 최종 결과
+  useEffect(() => {
+    if (!finalScores) return;
+    const sorted = [...finalScores].sort((a, b) => b.score - a.score);
+    onMascotEvent?.(sorted[0]?.user_id === myUserId ? 'mp_win' : 'mp_rank');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalScores]);
 
   // auto-scroll chat
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
