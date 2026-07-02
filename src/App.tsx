@@ -634,7 +634,7 @@ export default function App() {
           onMinimize={handleMinimize}
           onClose={handleClose}
           hideConsole={mode === 'multi'}
-          onMultiplay={mode !== 'multi' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
+          onMultiplay={mode === 'quiz' && game.phase === 'setup' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
           onHome={
             mode === 'multi' ? () => { setMode('quiz'); setMpRoom(null); }
             : mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart
