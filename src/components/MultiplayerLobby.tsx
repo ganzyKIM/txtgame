@@ -29,6 +29,7 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
   const [catKey, setCatKey] = useState(CATEGORIES[0].key);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [joining, setJoining] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadRooms = useCallback(async () => {
@@ -59,6 +60,15 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
       if (err || !roomId) throw err ?? new Error('방 생성 실패');
       onJoin({ id: roomId, category_key: cat.key, category_label: cat.label, category_prompt: cat.prompt, difficulty, host_id: myUserId, host_nickname: myNickname });
     } catch (e) { setError((e as Error)?.message ?? '방 생성 실패'); setCreating(false); }
+  }
+
+  async function handleDelete(roomId: string) {
+    setDeleting(roomId); setError(null);
+    try {
+      await rpc.rpc('mp_delete_room', { p_room_id: roomId });
+      await loadRooms();
+    } catch (e) { setError((e as Error)?.message ?? '삭제 실패'); }
+    setDeleting(null);
   }
 
   async function handleJoin(room: MpRoom) {
@@ -117,7 +127,10 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
               </div>
             </div>
             {room.host_id === myUserId
-              ? <button className="btn btn-xs btn-lav" disabled>내 방</button>
+              ? <>
+                  <button className="btn btn-xs btn-lav" disabled>내 방</button>
+                  <button className="btn btn-xs btn-warn" disabled={deleting === room.id} onClick={() => void handleDelete(room.id)}>{deleting === room.id ? '…' : '삭제'}</button>
+                </>
               : <button className="btn btn-xs" disabled={joining === room.id || (room.mp_members?.length ?? 0) >= room.max_players} onClick={() => void handleJoin(room)}>{joining === room.id ? '…' : '참가'}</button>
             }
           </div>
