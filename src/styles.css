@@ -547,6 +547,26 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 .soup-action-row .btn{flex:1;}
 .soup-hint-btn:disabled{opacity:.4;}
 
+/* ── 멀티플레이 배경 이미지 ─────────────────────────────────── */
+#pane.pane-mp-bg{
+  background-image:url('/back/battle_choten.webp');
+  background-size:cover;
+  background-position:center top;
+  background-repeat:no-repeat;
+}
+body.mode-ame #pane.pane-mp-bg{
+  background-image:url('/back/battle_ame.webp');
+}
+/* 멀티 패널은 반투명하게 해서 배경이 비치게 */
+#pane.pane-mp-bg .panel{
+  background:rgba(255,240,250,0.82);
+  backdrop-filter:blur(2px);
+}
+body.mode-ame #pane.pane-mp-bg .panel{
+  background:rgba(24,12,34,0.82);
+  backdrop-filter:blur(2px);
+}
+
 /* ── 멀티플레이 ─────────────────────────────────────────────── */
 .mp-timer-track{height:6px;background:var(--pink-1);border:1px solid var(--bevel-dk);margin:0;}
 .mp-timer-bar{height:100%;background:linear-gradient(90deg,var(--magenta-d),var(--magenta));width:100%;animation:mpDeplete 7s linear forwards;}

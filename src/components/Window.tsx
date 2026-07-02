@@ -15,12 +15,14 @@ interface Props {
   onMultiplay?: () => void;
   /** true면 하단 로그창 숨김 (멀티플레이: 정답 노출 방지) */
   hideConsole?: boolean;
+  /** true면 #pane에 멀티플레이 배경 이미지 적용 */
+  multiBackground?: boolean;
   children: ReactNode;
 }
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, hideConsole, children,
+  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, hideConsole, multiBackground, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
 
@@ -56,7 +58,7 @@ export default function Window({
         </div>
 
         {/* 본문 */}
-        <div id="pane">{children}</div>
+        <div id="pane" className={multiBackground ? 'pane-mp-bg' : undefined}>{children}</div>
 
         {/* 인라인 진행 로그 — 멀티플레이 중엔 숨김 (정답 노출 방지) */}
         {!hideConsole && (

@@ -640,6 +640,7 @@ export default function App() {
           onMinimize={handleMinimize}
           onClose={handleClose}
           hideConsole={mode === 'multi'}
+          multiBackground={mode === 'multi'}
           onMultiplay={mode !== 'multi' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
           onHome={
             mode === 'multi' ? () => { setMode('quiz'); setMpRoom(null); }
