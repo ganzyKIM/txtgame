@@ -320,8 +320,8 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           <span style={{ fontSize: 11 }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label}</span>
         </div>
 
-        {/* 문제 출제 중 로딩바 */}
-        {generating && (
+        {/* 문제 출제 중 로딩바 — 라운드 종료 후엔 mp-round-result 내부 로딩바로 대체 */}
+        {generating && !round?.ended && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0' }}>
             <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--magenta-d)' }}>◆ 문제 출제 중… ♡</div>
             <div className="generating-bar-bg" style={{ margin: 0 }}>
