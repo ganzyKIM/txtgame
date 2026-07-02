@@ -105,9 +105,7 @@ export default function App() {
   useEffect(() => {
     const BG_CLASSES = ['bg-garden', 'bg-kitchen', 'bg-lib', 'bg-battle'] as const;
     BG_CLASSES.forEach((c) => document.body.classList.remove(c));
-    if (mode === 'multi') {
-      document.body.classList.add('bg-battle');
-    } else if (mode === 'quiz' && game.phase !== 'setup' && lastConfig?.categoryBg) {
+    if (mode === 'quiz' && game.phase !== 'setup' && lastConfig?.categoryBg) {
       document.body.classList.add(`bg-${lastConfig.categoryBg}`);
     }
   }, [mode, game.phase, lastConfig?.categoryBg]);
