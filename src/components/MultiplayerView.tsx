@@ -330,84 +330,84 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           </div>
         )}
 
-        {round && !generating && (
+        {round && !generating && !round.ended && (
           <>
             {/* 타이머 바 + 카운트다운 숫자 */}
-            {!round.ended && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div className="mp-timer-track" style={{ flex: 1 }}>
-                    <div key={`timer-${round.revealedCount}`} className="mp-timer-bar" />
-                  </div>
-                  <span key={`cd-${round.revealedCount}-${hintCountdown}`} className="mp-countdown-num">
-                    {hintCountdown}
-                  </span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="mp-timer-track" style={{ flex: 1 }}>
+                  <div key={`timer-${round.revealedCount}`} className="mp-timer-bar" />
                 </div>
-                {round.revealedCount >= round.maxHints && (
-                  <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>마지막 힌트</div>
-                )}
+                <span key={`cd-${round.revealedCount}-${hintCountdown}`} className="mp-countdown-num">
+                  {hintCountdown}
+                </span>
               </div>
-            )}
-
-            {/* 힌트 목록 */}
-            <div className="sunken" style={{ flex: 1, overflowY: 'auto', padding: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {revealedHints.map((h, i) => (
-                <div key={i} className="hint-item">
-                  <span className="hint-num">{i + 1}</span>
-                  <span>{h}</span>
-                </div>
-              ))}
+              {round.revealedCount >= round.maxHints && (
+                <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>마지막 힌트</div>
+              )}
             </div>
-
-            {/* 다른 플레이어 오답 기록 */}
-            {othersWrongGuesses.length > 0 && !round.ended && (
-              <div className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
-                {othersWrongGuesses.slice(-8).map((wg, i) => (
-                  <div key={i} className="mp-wrong-entry">
-                    <span className="mp-wrong-x">✗</span>
-                    <b>{wg.nickname}</b>: {wg.guess}
-                  </div>
-                ))}
-                <div ref={wrongGuessEndRef} />
-              </div>
-            )}
-
-            {/* 라운드 종료 결과 */}
-            {round.ended && (
-              <div className="mp-round-result">
-                {round.winnerId
-                  ? <div className="mp-result-winner">✓ {round.winnerNickname}{round.winnerId === myUserId ? ' (나!)' : ''} 정답!</div>
-                  : <div className="mp-result-no-winner">이번 라운드는 아무도 못 맞혔어…</div>
-                }
-                <div className="mp-result-answer">정답: <b>{round.answer ?? '확인 중…'}</b></div>
-                {generating
-                  ? (
-                    <div style={{ marginTop: 6 }}>
-                      <div style={{ fontSize: 10, color: 'var(--magenta-d)' }}>◆ 다음 문제 출제 중…</div>
-                      <div className="generating-bar-bg" style={{ margin: '3px 0 0' }}>
-                        <div className="generating-bar-fill" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>
-                      {nextRoundCountdown > 0
-                        ? <>{round.roundNum >= MP_TOTAL_ROUNDS ? '결과 발표까지' : '다음 라운드까지'} <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
-                        : '다음 라운드 준비 중…'
-                      }
-                    </div>
-                  )
-                }
-              </div>
-            )}
-
-            {/* 포기 버튼: 마지막 힌트 공개 후에만 표시 (힌트 대기 중엔 숨김) */}
-            {!round.ended && round.revealedCount >= round.maxHints && !myGaveUp && (
-              <button className="btn btn-xs btn-warn" style={{ alignSelf: 'flex-end' }} onClick={giveUp}>포기</button>
-            )}
-            {!round.ended && round.revealedCount >= round.maxHints && myGaveUp && (
-              <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>포기함… 결과 대기 중</div>
-            )}
           </>
+        )}
+
+        {/* 힌트 목록 — 진행 중일 때만 표시 */}
+        {round && !generating && !round.ended && (
+          <div className="sunken" style={{ flex: 1, overflowY: 'auto', padding: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {revealedHints.map((h, i) => (
+              <div key={i} className="hint-item">
+                <span className="hint-num">{i + 1}</span>
+                <span>{h}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 다른 플레이어 오답 기록 */}
+        {round && !generating && !round.ended && othersWrongGuesses.length > 0 && (
+          <div className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
+            {othersWrongGuesses.slice(-8).map((wg, i) => (
+              <div key={i} className="mp-wrong-entry">
+                <span className="mp-wrong-x">✗</span>
+                <b>{wg.nickname}</b>: {wg.guess}
+              </div>
+            ))}
+            <div ref={wrongGuessEndRef} />
+          </div>
+        )}
+
+        {/* 라운드 종료 결과 — generating 중에도 반드시 표시 */}
+        {round?.ended && (
+          <div className="mp-round-result">
+            {round.winnerId
+              ? <div className="mp-result-winner">✓ {round.winnerNickname}{round.winnerId === myUserId ? ' (나!)' : ''} 정답!</div>
+              : <div className="mp-result-no-winner">이번 라운드는 아무도 못 맞혔어…</div>
+            }
+            <div className="mp-result-answer">정답: <b>{round.answer ?? '확인 중…'}</b></div>
+            {generating
+              ? (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 10, color: 'var(--magenta-d)' }}>◆ 다음 문제 출제 중…</div>
+                  <div className="generating-bar-bg" style={{ margin: '3px 0 0' }}>
+                    <div className="generating-bar-fill" />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>
+                  {nextRoundCountdown > 0
+                    ? <>{round.roundNum >= MP_TOTAL_ROUNDS ? '결과 발표까지' : '다음 라운드까지'} <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
+                    : '다음 라운드 준비 중…'
+                  }
+                </div>
+              )
+            }
+          </div>
+        )}
+
+        {/* 포기 버튼: 마지막 힌트 공개 후에만 표시 (힌트 대기 중엔 숨김) */}
+        {round && !generating && !round.ended && round.revealedCount >= round.maxHints && !myGaveUp && (
+          <button className="btn btn-xs btn-warn" style={{ alignSelf: 'flex-end' }} onClick={giveUp}>포기</button>
+        )}
+        {round && !generating && !round.ended && round.revealedCount >= round.maxHints && myGaveUp && (
+          <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>포기함… 결과 대기 중</div>
         )}
       </div>
 

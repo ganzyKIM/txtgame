@@ -107,6 +107,8 @@ export default function App() {
     BG_CLASSES.forEach((c) => document.body.classList.remove(c));
     if (mode === 'quiz' && game.phase !== 'setup' && lastConfig?.categoryBg) {
       document.body.classList.add(`bg-${lastConfig.categoryBg}`);
+    } else if (mode === 'multi') {
+      document.body.classList.add('bg-battle');
     }
   }, [mode, game.phase, lastConfig?.categoryBg]);
 
