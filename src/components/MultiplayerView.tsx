@@ -36,6 +36,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   const [hintCountdown, setHintCountdown] = useState(7);
   const [nextRoundCountdown, setNextRoundCountdown] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const wrongGuessEndRef = useRef<HTMLDivElement>(null);
   const advancedRef = useRef(false);
   const prefetchRef = useRef<Puzzle | null>(null);
   const prefetchingRef = useRef(false);
@@ -120,6 +121,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
 
   // auto-scroll chat
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
+  useEffect(() => { wrongGuessEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [wrongGuesses]);
 
   // 힌트 카운트다운 (힌트가 바뀔 때마다 7→0)
   useEffect(() => {
@@ -366,6 +368,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
                     <b>{wg.nickname}</b>: {wg.guess}
                   </div>
                 ))}
+                <div ref={wrongGuessEndRef} />
               </div>
             )}
 
@@ -397,12 +400,12 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
               </div>
             )}
 
-            {/* 포기 버튼 */}
-            {!round.ended && !myGaveUp && (
+            {/* 포기 버튼: 마지막 힌트 공개 후에만 표시 (힌트 대기 중엔 숨김) */}
+            {!round.ended && round.revealedCount >= round.maxHints && !myGaveUp && (
               <button className="btn btn-xs btn-warn" style={{ alignSelf: 'flex-end' }} onClick={giveUp}>포기</button>
             )}
-            {!round.ended && myGaveUp && (
-              <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>포기함… 다음 힌트 대기 중</div>
+            {!round.ended && round.revealedCount >= round.maxHints && myGaveUp && (
+              <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>포기함… 결과 대기 중</div>
             )}
           </>
         )}
