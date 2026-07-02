@@ -851,13 +851,13 @@ body.mode-ame.bg-lib{
 }
 body.bg-battle{
   background:
-    linear-gradient(rgba(255,230,245,.25),rgba(255,230,245,.25)),
+    linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),
     url('/back/battle_choten.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
 }
 body.mode-ame.bg-battle{
   background:
-    linear-gradient(rgba(10,0,20,.35),rgba(10,0,20,.35)),
+    linear-gradient(rgba(20,5,30,.5),rgba(20,5,30,.5)),
     url('/back/battle_ame.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
 }
