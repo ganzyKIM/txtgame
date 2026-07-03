@@ -30,7 +30,6 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   const iAmHost = members.find(m => m.user_id === myUserId)?.is_host ?? false;
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [guess, setGuess] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hintCountdown, setHintCountdown] = useState(7);
@@ -225,19 +224,21 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     finally { setGenerating(false); }
   }
 
-  async function handleGuess() {
-    const g = guess.trim();
-    if (!g || !round || round.ended) return;
-    setGuess(''); setSubmitError(null);
-    const res = await submitGuess(g, round.revealedCount);
-    if (!res.correct) setSubmitError('오답!');
-  }
-
-  async function handleChat() {
-    const m = chatInput.trim();
-    if (!m) return;
+  // 채팅창 통합 입력: "!"로 시작하면 정답 제출, 그 외엔 일반 채팅
+  async function handleChatOrGuess() {
+    const trimmed = chatInput.trim();
+    if (!trimmed) return;
     setChatInput('');
-    await sendChat(m);
+    if (trimmed.startsWith('!') && round && !round.ended) {
+      const g = trimmed.slice(1).trim();
+      if (!g) return; // "!"만 친 경우 무시
+      setSubmitError(null);
+      const res = await submitGuess(g, round.revealedCount);
+      if (!res.correct) setSubmitError('오답!');
+      return;
+    }
+    setSubmitError(null);
+    await sendChat(trimmed);
   }
 
   // 전체 오답 표시 (내 오답 포함)
@@ -286,9 +287,9 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', gap: 4 }}>
             <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChat(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChatOrGuess(); }}
               placeholder="채팅…" style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
-            <button className="btn btn-xs" onClick={() => void handleChat()}>전송</button>
+            <button className="btn btn-xs" onClick={() => void handleChatOrGuess()}>전송</button>
           </div>
           <div className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
             {chat.map((c, i) => <div key={i}><b>{c.nickname}</b>: {c.message}</div>)}
@@ -436,26 +437,8 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
         )}
       </div>
 
-      {/* 우: 입력 + 점수 + 채팅 */}
+      {/* 우: 점수 + 채팅(정답 겸용) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-        {/* 정답 입력 */}
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div className="panel-title">◆ 정답 입력</div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <input
-              className="sunken" value={guess}
-              onChange={e => { setGuess(e.target.value); setSubmitError(null); }}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleGuess(); }}
-              disabled={!round || round.ended}
-              placeholder={round?.ended ? '라운드 종료' : '정답을 입력해봐…'}
-              style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }}
-            />
-            <button className="btn btn-xs" disabled={!round || round.ended || !guess.trim()} onClick={() => void handleGuess()}>입력</button>
-          </div>
-          {submitError && <div style={{ fontSize: 10, color: '#c03060' }}>{submitError}</div>}
-          {genError && <div style={{ fontSize: 10, color: '#c03060' }}>{genError}</div>}
-        </div>
-
         {/* 점수판 */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div className="panel-title">◆ 점수판</div>
@@ -481,11 +464,14 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
             ))}
             <div ref={chatEndRef} />
           </div>
+          {submitError && <div style={{ fontSize: 10, color: '#c03060' }}>{submitError}</div>}
+          {genError && <div style={{ fontSize: 10, color: '#c03060' }}>{genError}</div>}
           <div style={{ display: 'flex', gap: 4 }}>
             <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChat(); }}
-              placeholder="채팅…" style={{ flex: 1, fontSize: 11, padding: '2px 5px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
-            <button className="btn btn-xs" onClick={() => void handleChat()}>↵</button>
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChatOrGuess(); }}
+              placeholder={round && !round.ended ? '채팅… (정답은 !로 외쳐!)' : '채팅…'}
+              style={{ flex: 1, fontSize: 11, padding: '2px 5px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
+            <button className="btn btn-xs" onClick={() => void handleChatOrGuess()}>↵</button>
           </div>
         </div>
       </div>
