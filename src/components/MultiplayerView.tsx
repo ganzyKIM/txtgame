@@ -469,7 +469,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           <div style={{ display: 'flex', gap: 4 }}>
             <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void handleChatOrGuess(); }}
-              placeholder={round && !round.ended ? '채팅… (정답은 !로 외쳐!)' : '채팅…'}
+              placeholder={round && !round.ended ? '정답은 !입력 후 작성' : '채팅…'}
               style={{ flex: 1, fontSize: 11, padding: '2px 5px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
             <button className="btn btn-xs" onClick={() => void handleChatOrGuess()}>↵</button>
           </div>
