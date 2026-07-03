@@ -97,9 +97,9 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
             >
               {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>)}
             </select>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className="seg">
               {DIFFICULTIES.map(d => (
-                <button key={d.key} className={`btn btn-xs${difficulty === d.key ? ' btn-lav' : ''}`} onClick={() => setDifficulty(d.key as Difficulty)}>{d.label}</button>
+                <button key={d.key} className={`seg-btn ${difficulty === d.key ? 'active' : ''}`} onClick={() => setDifficulty(d.key as Difficulty)}>{d.label}</button>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
