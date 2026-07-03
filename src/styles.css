@@ -1038,10 +1038,13 @@ body.office-mode .text-input{background:#fff; color:#1a1a1a;}
 body.office-mode .text-input::placeholder{color:#999;}
 body.office-mode .guess-line{background:#f0eee4;}
 body.office-mode .gauge{background:#fff;}
+/* 게이지 라벨(힌트 n/n)은 채워진 진한 파랑 구간과 흰 배경 구간에 동시에 걸쳐 표시되므로,
+   흰 글자 + 검정 외곽선(다방향 text-shadow)으로 두 배경 모두에서 읽히게 한다 */
+body.office-mode .gauge-label{color:#fff; text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;}
 
 /* 모달·전적 */
 body.office-mode .modal-overlay{background:rgba(20,20,20,.45);}
-body.office-mode .modal{background:#fff;}
+body.office-mode .modal{background:#fff; box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 0 1px #0a246a;}
 body.office-mode .modal-close{background:#ece9d8;}
 body.office-mode .modal-section{background:#f5f4ee;}
 body.office-mode .modal-section-title{color:#0a246a; border-bottom-color:#c8c4ac;}
@@ -1052,6 +1055,7 @@ body.office-mode .rank-bar-bg{background:#fff;}
 body.office-mode .result-card{border-color:var(--bevel-lt) #7fae95 #7fae95 var(--bevel-lt);}
 body.office-mode .result-card.lost{background:#f5d9d9; border-color:var(--bevel-lt) #c78a8a #c78a8a var(--bevel-lt);}
 body.office-mode .result-rank{color:#3a6ea5;}
+body.office-mode .result-card.lost .result-rank{color:#b0303f;}
 
 /* 마스코트 이펙트(변신 연출) — 화면에 남아있을 일은 없지만 안전망 */
 body.office-mode .mascot-summon{background:linear-gradient(#f5f4ee,#ece9d8); color:#1a1a1a;}
@@ -1076,6 +1080,8 @@ body.office-mode .soup-result-head{color:#0a246a;}
 body.office-mode .soup-result.revealed .soup-result-head{color:#b0303f;}
 body.office-mode .soup-solution{background:#fff; color:#1a1a1a; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
 body.office-mode .soup-busy-bar{background:#fff; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
+body.office-mode .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#3a6ea5 0 10px,#0a246a 10px 12px);}
+body.office-mode .soup-hint-counter{color:#0a246a;}
 body.office-mode .soup-a.v-정답 .soup-verdict{background:linear-gradient(90deg,#3a6ea5,#0a246a);}
 
 /* 출제 중 로딩바 — 눈에 띄는 핫핑크 스트라이프를 회사용 파랑으로 */
