@@ -635,6 +635,7 @@ export default function App() {
     if (officeMode) {
       setOfficeMode(false);
       mascot.current?.summon();
+      mascot.current?.event('office_exit');
     } else {
       mascot.current?.transform();
     }

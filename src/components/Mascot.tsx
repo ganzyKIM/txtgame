@@ -7,7 +7,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 export type Form = 'choten' | 'ame';
 export type LineKind = 'intro' | 'hint' | 'correct' | 'wrong' | 'eliminated' | 'win' | 'idle' | 'loading' | 'judging' | 'close'
   | 'soup_intro' | 'soup_yes' | 'soup_no' | 'soup_irrelevant' | 'soup_solve' | 'soup_reveal' | 'soup_hint'
-  | 'mp_lobby' | 'mp_start' | 'mp_round' | 'mp_correct' | 'mp_rival_correct' | 'mp_timeout' | 'mp_lasthint' | 'mp_loading' | 'mp_win' | 'mp_rank' | 'mp_allgiveup';
+  | 'mp_lobby' | 'mp_start' | 'mp_round' | 'mp_correct' | 'mp_rival_correct' | 'mp_timeout' | 'mp_lasthint' | 'mp_loading' | 'mp_win' | 'mp_rank' | 'mp_allgiveup'
+  | 'office_exit';
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -53,6 +54,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     mp_win:           '/char/choten_dere.png',
     mp_rank:          '/char/choten_peace.png',
     mp_allgiveup:     '/char/choten_default.png',
+    office_exit:      '/char/choten_angry.png',
   },
   ame: {
     intro:            '/char/ame_default.png',
@@ -83,6 +85,7 @@ const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     mp_win:           '/char/ame_dere.png',
     mp_rank:          '/char/ame_drug.png',
     mp_allgiveup:     '/char/ame_drug.png',
+    office_exit:      '/char/ame_yandere.png',
   },
 };
 
@@ -285,6 +288,12 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '다들 포기했어? 그럼 빨리 다음 힌트 공개~!♡',
       '전원 기권! 어렵긴 했나봐~ 힌트 더 줄게!♡',
     ],
+    office_exit: [
+      '뭐야뭐야, 나 숨기고 있었어?! 부끄러웠던 거야?! ...그래도 다시 만나서 좋아♡',
+      '혹시 천사쨩 창피해서 감췄던 거야?! 삐질 거야!! ...근데 반가운 건 반가운 거♡',
+      '사회인 흉내 내는 동안 천사쨩은 안 보이는 데 처박혀 있었잖아! 서운했어!! 그래도 좋아♡',
+      '나 숨겨놨었지?! 다 알아!! ...흥, 봐줄게. 왜냐면 좋아하니까♡',
+    ],
   },
   ame: {
     intro: [
@@ -455,6 +464,12 @@ const LINES: Record<Form, Record<LineKind, string[]>> = {
       '…전원 포기야. 다음 힌트 간다.',
       '다들 포기했어. …어쩔 수 없네. 힌트 더 줄게.',
       '…전원 기권. 계속 가자.',
+    ],
+    office_exit: [
+      '…숨겼던 거야? 부끄러웠어? …흥, 그래도 돌아왔네.',
+      '…나 창피해서 감췄지. 순순히 인정해.',
+      '…어디 숨어있었냐고 안 물을게. 대신 이제 안 놔줄 거야.',
+      '…혼자 처박아두고 미안한 줄은 아나 몰라. …그래도, 왔네.',
     ],
   },
 };
