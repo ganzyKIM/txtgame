@@ -16,6 +16,8 @@ import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem } from './save/quizBank';
 import StatsModal from './components/StatsModal';
+import DialogHost from './components/DialogHost';
+import { showConfirm } from './lib/dialog';
 import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
 import MultiplayerView from './components/MultiplayerView';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
@@ -75,6 +77,8 @@ export default function App() {
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  // 사회인모드(보스키) — 게임 상태는 그대로 두고 화면만 업무용으로 위장
+  const [officeMode, setOfficeMode] = useState(false);
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup' | 'multi'>('quiz');
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
@@ -100,6 +104,10 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('is-minimized', minimized);
   }, [minimized]);
+
+  useEffect(() => {
+    document.body.classList.toggle('office-mode', officeMode);
+  }, [officeMode]);
 
   // 카테고리 배경 클래스 — 퀴즈 진행 중일 때만 활성화, 수프/첫화면/로그인은 back 유지
   useEffect(() => {
@@ -616,6 +624,22 @@ export default function App() {
     setMinimized(true);
   }
 
+  // 사회인모드 진입 — 게임 상태는 그대로 두고 화면만 위장, 마스코트는 안 보이게
+  function handleEnterOffice() {
+    setOfficeMode(true);
+    mascot.current?.banish();
+  }
+
+  // "변신" 버튼: 사회인모드 중엔 원래 화면 복귀, 평소엔 원래대로 마스코트 변신
+  function handleTransformOrExitOffice() {
+    if (officeMode) {
+      setOfficeMode(false);
+      mascot.current?.summon();
+    } else {
+      mascot.current?.transform();
+    }
+  }
+
   function handleClose() {
     push('> 아직 더 놀아야 해~! 허락 없이는 나갈 수 없어! ♡');
     mascot.current?.event('close');
@@ -658,16 +682,20 @@ export default function App() {
           credits={profile?.credits ?? null}
           consoleLines={log}
           statusText={statusText}
-          onTransform={() => mascot.current?.transform()}
+          onTransform={handleTransformOrExitOffice}
           onLogout={() => void handleLogout()}
           onOpenStats={() => setStatsOpen(true)}
           onMinimize={handleMinimize}
           onClose={handleClose}
           hideConsole={mode === 'multi'}
+          officeMode={officeMode}
+          onEnterOffice={handleEnterOffice}
           onMultiplay={mode === 'quiz' && game.phase === 'setup' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
           onHome={
             mode === 'multi' ? () => {
-              if (window.confirm('대합전을 나가시겠어요?')) { setMode('quiz'); setMpRoom(null); }
+              void showConfirm('대합전을 나가시겠어요?').then((ok) => {
+                if (ok) { setMode('quiz'); setMpRoom(null); }
+              });
             }
             : mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart
             : undefined
@@ -743,6 +771,7 @@ export default function App() {
       {statsOpen && user && (
         <StatsModal userId={user.id} onClose={() => setStatsOpen(false)} />
       )}
+      <DialogHost />
     </>
   );
 }
