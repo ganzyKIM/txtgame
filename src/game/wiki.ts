@@ -55,36 +55,61 @@ function titleVariants(title: string): string[] {
 }
 
 /**
+ * 여러 boolean 프로미스 중 하나라도 true면 즉시 true로 확정.
+ * 전부 false(또는 실패)일 때만 false — Promise.any/race와 달리
+ * "모두 끝나야 실패로 확정"하는 대신 "하나만 성공해도 즉시 확정"하는 커스텀 레이스.
+ * ko/ja/en을 직렬로 기다리던 것을 병렬화해 최악 지연을 개별 타임아웃 수준으로 캡핑한다.
+ */
+function anyTrue(promises: Promise<boolean>[]): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (promises.length === 0) { resolve(false); return; }
+    let remaining = promises.length;
+    for (const p of promises) {
+      p.then((v) => {
+        if (v) { resolve(true); return; }
+        remaining -= 1;
+        if (remaining === 0) resolve(false);
+      }).catch(() => {
+        remaining -= 1;
+        if (remaining === 0) resolve(false);
+      });
+    }
+  });
+}
+
+/**
  * 직접 타이틀 조회 전부 실패 시 전문 검색(list=search) 폴백.
  * 일본어 발음 표기(カタカナ→한글)처럼 타이틀이 번역명과 문자열이 전혀 다를 때도
- * 기사 본문 키워드로 매칭한다. ko·ja 순으로 시도.
+ * 기사 본문 키워드로 매칭한다. ko·ja 동시 조회.
  */
-async function searchWikiFallback(query: string): Promise<boolean> {
+function searchWikiFallback(query: string): Promise<boolean> {
   const bases = [
     'https://ko.wikipedia.org/w/api.php',
     'https://ja.wikipedia.org/w/api.php',
   ];
-  for (const base of bases) {
+  return anyTrue(bases.map(async (base) => {
     try {
       const url = `${base}?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=0&srlimit=1&format=json&origin=*`;
       const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-      if (!res.ok) continue;
+      if (!res.ok) return false;
       const data = await res.json() as { query?: { search?: unknown[] } };
-      if ((data?.query?.search?.length ?? 0) > 0) return true;
+      return (data?.query?.search?.length ?? 0) > 0;
     } catch {
-      continue;
+      return false;
     }
-  }
-  return false;
+  }));
 }
 
 export async function checkWikipedia(answer: string): Promise<boolean> {
   try {
     const variants = titleVariants(answer);
-    // ① 직접 타이틀 조회: ko → ja → en (변형 후보 전체를 한 번에)
-    if (await queryWikiMulti('https://ko.wikipedia.org/w/api.php', variants)) return true;
-    if (await queryWikiMulti('https://ja.wikipedia.org/w/api.php', variants)) return true;
-    if (await queryWikiMulti('https://en.wikipedia.org/w/api.php', variants)) return true;
+    // ① 직접 타이틀 조회: ko·ja·en 동시 조회, 하나라도 있으면 즉시 확정
+    const directHit = await anyTrue([
+      queryWikiMulti('https://ko.wikipedia.org/w/api.php', variants),
+      queryWikiMulti('https://ja.wikipedia.org/w/api.php', variants),
+      queryWikiMulti('https://en.wikipedia.org/w/api.php', variants),
+    ]);
+    if (directHit) return true;
     // ② 폴백: 전문 검색 (번역명·원어명 표기 불일치 대응)
     return await searchWikiFallback(answer);
   } catch {

@@ -229,27 +229,55 @@ export default function App() {
         continue;
       }
 
-      // ① 실존 검증: Wikipedia → (탈락 시 오타쿠 계열만) 나무위키 추가 확인
-      let wikiOk = true;
-      if (!fromBank) {
-        wikiOk = await checkWikipedia(cand.answer);
-        if (!wikiOk) {
-          // Wikipedia 전부 탈락 시 나무위키 추가 확인 (전 카테고리 적용)
-          wikiOk = await checkNamuWiki(cand.answer);
-          if (wikiOk) push(`> ✓ 나무위키 확인("${cand.answer}")`);
-        }
-        if (!wikiOk) {
-          extraBanned.push(cand.answer, baseName(cand.answer));
-          push(`> ↻ 위키백과·나무위키 미확인("${cand.answer}") — 다시 출제`);
-          void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'wiki', rejectReason: '위키백과·나무위키 문서 없음' });
-          continue;
-        }
+      // ① 실존 검증(위키·나무위키)과 ② 2차 AI 검증을 병렬 실행 — 서로 독립적이라 직렬로 기다릴 이유가 없다.
+      const wikiPromise: Promise<boolean> = fromBank
+        ? Promise.resolve(true)
+        : checkWikipedia(cand.answer).then(async (ok) => {
+            if (ok) return true;
+            // Wikipedia 전부 탈락 시 나무위키 추가 확인 (전 카테고리 적용)
+            const namuOk = await checkNamuWiki(cand.answer);
+            if (namuOk) push(`> ✓ 나무위키 확인("${cand.answer}")`);
+            return namuOk;
+          });
+      const verifyPromise = verifyPuzzle(cand);
+      const [wikiOk, v] = await Promise.all([wikiPromise, verifyPromise]);
+      if (typeof v.balance === 'number') applyBalance(v.balance);
+
+      if (!wikiOk) {
+        extraBanned.push(cand.answer, baseName(cand.answer));
+        push(`> ↻ 위키백과·나무위키 미확인("${cand.answer}") — 다시 출제`);
+        void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'wiki', rejectReason: '위키백과·나무위키 문서 없음' });
+        continue;
       }
 
-      // 2차 AI 검증 (싼 모델)
-      const v = await verifyPuzzle(cand);
-      if (typeof v.balance === 'number') applyBalance(v.balance);
       if (!v.ok) {
+        // 정답 자체는 위키 검증을 통과했으므로 버리지 않고, 힌트만 1회 재생성해본다.
+        // (정답 재선정 + 위키 재검증을 건너뛰므로 전체 재출제보다 빠르다)
+        let repaired: Puzzle | null = null;
+        try {
+          const { text, balance: repairBalance } = await proxyGenerateText(
+            cfg.tier,
+            [{ role: 'user', text: `정답 "${cand.answer}"에 대한 힌트를 아래 문제점을 고쳐서 다시 만들어줘.\n[문제점] ${v.problem || '품질 미달'}` }],
+            { system: buildHintOnlyPrompt(cand.answer, cfg.categoryLabel, cfg.difficulty, cfg.categoryPrompt), temperature: 0.7 },
+          );
+          applyBalance(repairBalance);
+          repaired = parseHintOnly(text, cand.answer, cfg.categoryLabel, cfg.theme, cand.acceptable);
+        } catch { /* 재생성 실패 — 아래에서 전체 재출제로 폴백 */ }
+
+        if (repaired && lintHints(repaired, cfg.categoryLabel).length === 0) {
+          const v2 = await verifyPuzzle(repaired);
+          if (typeof v2.balance === 'number') applyBalance(v2.balance);
+          if (v2.ok) {
+            push(`> ✓ 힌트 재생성으로 복구("${cand.answer}")`);
+            puzzle = repaired;
+            genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+            genAxes = candAxes;
+            genWiki = true; genLint = true; genVerify = true; genVerifyProblem = v2.problem ?? '';
+            break;
+          }
+        }
+
+        // 힌트 재생성도 실패 — 정답 자체를 버리고 전체 재출제
         extraBanned.push(cand.answer, baseName(cand.answer));
         push(`> ↻ 검증 탈락(${v.problem || '품질 미달'}) — 다시 출제`);
         void saveQuizRejection({ categoryKey: catKey, categoryLabel: cfg.categoryLabel, answer: cand.answer, hints: cand.hints, maxHints: cand.maxHints, rejectStage: 'verify', rejectReason: v.problem || '품질 미달' });

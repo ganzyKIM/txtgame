@@ -167,14 +167,16 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
   }
 
   // ── 금지 정답: 상시 금지 + 플레이 이력 ──
+  // 토큰 절약: 카테고리를 합쳐 부르는 오타쿠 계열은 목록이 100개를 넘기도 해 프롬프트가 비대해진다.
+  // 표기 다양성엔 최근 항목이 가장 중요하므로 상한을 두고 최신(배열 뒤쪽) 위주로 유지한다.
+  const MAX_INJECTED_EXCLUSIONS = 30;
   const alwaysBanned = ALWAYS_EXCLUDE[categoryKey] ?? [];
-  const allBanned = [...new Set([...alwaysBanned, ...recentAnswers])];
+  const mergedBanned = [...new Set([...alwaysBanned, ...recentAnswers])];
+  const allBanned = mergedBanned.length > MAX_INJECTED_EXCLUSIONS
+    ? mergedBanned.slice(-MAX_INJECTED_EXCLUSIONS)
+    : mergedBanned;
   const exclusionLines = allBanned.length > 0
-    ? [
-        `· [금지 정답 ${allBanned.length}개 — 절대 반복 금지] 아래 목록과 같은 대상은 표현을 어떻게 바꿔도 출제 금지. 하나라도 해당하면 즉시 다른 정답으로:`,
-        '    ① 동일 대상  ② 표기만 다른 같은 대상(한글/영문/약칭/띄어쓰기)  ③ 같은 대상의 다른 매체·버전·시즌(예: "은하철도 999"가 있으면 "은하철도 999(영화)"도 금지)  ④ 상위 시리즈/스핀오프/리메이크/속편',
-        allBanned.map(a => `      • ${a}`).join('\n'),
-      ]
+    ? [`· [금지 정답 ${allBanned.length}개 — 동일 대상·표기 변형(한글/영문/약칭/띄어쓰기)·다른 매체/시즌·상위 시리즈/스핀오프/리메이크/속편 전부 출제 금지]: ${allBanned.join(', ')}`]
     : [];
 
   // Level 3: 누적된 검증 탈락 패턴 — 같은 실수 반복 방지
