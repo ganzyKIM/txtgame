@@ -638,7 +638,9 @@ export default function App() {
           hideConsole={mode === 'multi'}
           onMultiplay={mode === 'quiz' && game.phase === 'setup' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
           onHome={
-            mode === 'multi' ? () => { setMode('quiz'); setMpRoom(null); }
+            mode === 'multi' ? () => {
+              if (window.confirm('대합전을 나가시겠어요?')) { setMode('quiz'); setMpRoom(null); }
+            }
             : mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart
             : undefined
           }

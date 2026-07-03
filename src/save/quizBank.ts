@@ -37,7 +37,7 @@ export interface QuizGenMeta {
 /** 생성 1건 기록 + 뱅크 upsert. 출제 확정 직후 1회. */
 export async function saveQuizGeneration(m: QuizGenMeta): Promise<void> {
   try {
-    await rpc.rpc('record_quiz_generation', {
+    const { error } = await rpc.rpc('record_quiz_generation', {
       p_answer_key: normAnswerKey(m.answer),
       p_category_key: m.categoryKey,
       p_category_label: m.categoryLabel,
@@ -57,8 +57,9 @@ export async function saveQuizGeneration(m: QuizGenMeta): Promise<void> {
       p_verify_passed: m.verifyPassed,
       p_verify_problem: m.verifyProblem,
     });
-  } catch {
-    /* 저장 실패는 무시 */
+    if (error) console.error('[quiz_bank] record_quiz_generation error:', error);
+  } catch (e) {
+    console.error('[quiz_bank] saveQuizGeneration exception:', e);
   }
 }
 

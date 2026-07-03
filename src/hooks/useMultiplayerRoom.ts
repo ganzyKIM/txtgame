@@ -183,8 +183,9 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
           const s = payload.scores.find((e: ScoreEntry) => e.user_id === m.user_id);
           return s ? { ...m, score: s.score, rounds_won: s.rounds_won } : m;
         }));
-        // 호스트가 answer를 갖고 있는데 payload에 없으면 별도 이벤트로 전송
-        if (isHostRef.current && !answer && answerRef.current) {
+        // 호스트는 항상 자신이 알고 있는 정답을 round_answer로 재확인 전송
+        // — payload.answer가 빈 문자열/null일 경우를 방어하며 모든 클라이언트 동기화
+        if (isHostRef.current && answerRef.current) {
           channelRef.current?.send({ type: 'broadcast', event: 'round_answer', payload: { answer: answerRef.current } });
         }
       })

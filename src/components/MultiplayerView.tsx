@@ -40,6 +40,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   const advancedRef = useRef(false);
   const prefetchRef = useRef<Puzzle | null>(null);
   const prefetchingRef = useRef(false);
+  const prefetchPromiseRef = useRef<Promise<Puzzle | null> | null>(null);
   const allGaveUpFiredRef = useRef(false);
 
   const mpCfg: StartConfig = {
@@ -54,13 +55,11 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
     if (currentRound >= MP_TOTAL_ROUNDS) return;
     if (prefetchingRef.current || prefetchRef.current) return;
     prefetchingRef.current = true;
-    void generatePuzzle(mpCfg).then(p => {
-      prefetchRef.current = p;
-    }).catch(() => {
-      // 실패해도 무방 — 라운드 종료 시 재시도
-    }).finally(() => {
-      prefetchingRef.current = false;
-    });
+    const p = generatePuzzle(mpCfg)
+      .then((puzzle: Puzzle) => { prefetchRef.current = puzzle; return puzzle as Puzzle | null; })
+      .catch(() => null as Puzzle | null)
+      .finally(() => { prefetchingRef.current = false; prefetchPromiseRef.current = null; });
+    prefetchPromiseRef.current = p;
   }
 
   // 호스트 이탈로 방이 폐쇄되면 자동으로 로비로 복귀
@@ -168,11 +167,18 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       }
 
       // 퍼즐 생성과 7초 타이머를 병렬 실행
-      // — prefetch 완료 시 생성 불필요, 타이머만 대기
-      // — prefetch 미완료 시 지금 생성 시작, 7초와 동시에 진행
+      // ① prefetch 완료 → 즉시 사용
+      // ② prefetch 진행 중 → 완료 대기 (이중 생성 방지, 로딩바 불필요)
+      // ③ prefetch 없음 → 즉석 생성 + 로딩바
       let puzzlePromise: Promise<Puzzle>;
       if (prefetchRef.current) {
         puzzlePromise = Promise.resolve(prefetchRef.current);
+      } else if (prefetchPromiseRef.current) {
+        puzzlePromise = prefetchPromiseRef.current.then(p => {
+          if (p) return p;
+          setGenerating(true); setGenError(null);
+          return generatePuzzle(mpCfg);
+        });
       } else {
         setGenerating(true); setGenError(null);
         puzzlePromise = generatePuzzle(mpCfg);
@@ -401,7 +407,14 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
                 <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 4 }}>
                   {nextRoundCountdown > 0
                     ? <>{round.roundNum >= MP_TOTAL_ROUNDS ? '결과 발표까지' : '다음 라운드까지'} <span key={`nr-${nextRoundCountdown}`} className="mp-countdown-num">{nextRoundCountdown}</span>초…</>
-                    : '다음 라운드 준비 중…'
+                    : (
+                      <>
+                        <div style={{ marginBottom: 3 }}>◆ 다음 문제 출제 중…</div>
+                        <div className="generating-bar-bg" style={{ margin: 0 }}>
+                          <div className="generating-bar-fill" />
+                        </div>
+                      </>
+                    )
                   }
                 </div>
               )
@@ -409,12 +422,17 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
           </div>
         )}
 
-        {/* 포기 버튼: 마지막 힌트 공개 후에만 표시 (힌트 대기 중엔 숨김) */}
-        {round && !generating && !round.ended && round.revealedCount >= round.maxHints && !myGaveUp && (
-          <button className="btn btn-xs btn-warn" style={{ alignSelf: 'flex-end' }} onClick={giveUp}>포기</button>
-        )}
-        {round && !generating && !round.ended && round.revealedCount >= round.maxHints && myGaveUp && (
-          <div style={{ fontSize: 10, color: 'var(--ink-soft)', textAlign: 'right' }}>포기함… 결과 대기 중</div>
+        {/* 포기 영역: 마지막 힌트 공개 후에만 표시 */}
+        {round && !generating && !round.ended && round.revealedCount >= round.maxHints && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--ink-soft)' }}>
+              포기 ({round.gaveUpIds.length}/{members.length})
+            </span>
+            {!myGaveUp
+              ? <button className="btn btn-xs btn-warn" onClick={giveUp}>포기</button>
+              : <span style={{ fontSize: 10, color: 'var(--ink-soft)' }}>포기함… 결과 대기 중</span>
+            }
+          </div>
         )}
       </div>
 
