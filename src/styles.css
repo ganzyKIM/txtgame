@@ -1027,7 +1027,12 @@ body.office-mode .hint-list{background:#fff; border-color:#c8c4ac;}
 body.office-mode .hint-item{background:#f0eee4; color:#1a1a1a;}
 body.office-mode .btn{background:linear-gradient(#f5f4ee,#ece9d8); color:#1a1a1a;}
 body.office-mode .btn:hover{background:linear-gradient(#ece9d8,#dcd9c8);}
-body.office-mode .btn-primary{background:linear-gradient(#3a6ea5,#0a246a);}
+/* 센터시험(.btn-primary) — 기본은 은은한 회색, 마우스오버·클릭 시에만 살짝 파랗게 */
+body.office-mode .btn-primary{
+  background:linear-gradient(#f5f4ee,#dcd9c8); color:#1a1a1a; text-shadow:none; animation:none;
+}
+body.office-mode .btn-primary:hover{background:linear-gradient(#d5e3f0,#b8cfe3);}
+body.office-mode .btn-primary:active{background:linear-gradient(#a6caf0,#7f9db9);}
 body.office-mode .btn-lav{background:linear-gradient(var(--lav-1),var(--lav-2));}
 body.office-mode .btn-warn{background:linear-gradient(#f5d9d9,#ecc0c0); color:#7a2020; border-color:var(--bevel-lt) #b06060 #b06060 var(--bevel-lt);}
 body.office-mode .seg-btn{background:#ece9d8; color:#333;}
