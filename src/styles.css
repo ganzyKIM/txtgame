@@ -1051,8 +1051,10 @@ body.office-mode .modal-section-title{color:#0a246a; border-bottom-color:#c8c4ac
 body.office-mode .stat-cell{background:#ece9d8;}
 body.office-mode .rank-bar-bg{background:#fff;}
 
-/* 결과 카드 */
-body.office-mode .result-card{border-color:var(--bevel-lt) #7fae95 #7fae95 var(--bevel-lt);}
+/* 결과 카드 — background를 명시하지 않으면 mode-ame(다크폼)와 겹칠 때
+   body.mode-ame .result-card{background:#0f1820;}가 그대로 남아 다크텍스트와
+   함께 다크-on-다크가 됨. var(--mint)로 명시 지정해 항상 밝은 배경을 보장. */
+body.office-mode .result-card{background:var(--mint); border-color:var(--bevel-lt) #7fae95 #7fae95 var(--bevel-lt);}
 body.office-mode .result-card.lost{background:#f5d9d9; border-color:var(--bevel-lt) #c78a8a #c78a8a var(--bevel-lt);}
 body.office-mode .result-rank{color:#3a6ea5;}
 body.office-mode .result-card.lost .result-rank{color:#b0303f;}
