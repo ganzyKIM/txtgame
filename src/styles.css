@@ -987,49 +987,99 @@ body.mode-ame .soup-solution{background:#120810; color:#ecd8f8; border-color:#3a
 body.mode-ame .soup-busy-bar{background:#08030f; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
 
 /* ════════════════════════════════════════════════════════════════════
-   사회인모드 (보스키) — 배경·마스코트·귀여운 UI를 전부 숨기고
-   평범한 오피스 문서/스프레드시트 톤으로 위장. CSS 변수를 재정의해
-   기존 컴포넌트(윈도우·버튼·메뉴바)를 재사용하면서 색만 갈아입힌다.
+   사회인모드 (보스키) — 실제 화면(children)은 그대로 두고 배색만 갈아입힌다.
+   별도 위장 화면으로 바꿔치기하지 않으므로, 모든 기능(카테고리 선택·게임·
+   멀티플레이·수프·전적 등)이 사회인모드 중에도 그대로 동작해야 한다.
+   CSS 변수 재정의로 대부분 자동 적용되고, 하드코딩된 색을 쓰는 곳만
+   body.mode-ame와 동일한 패턴으로 명시적으로 덮어쓴다(다크모드+사회인모드
+   동시 진입 시에도 어두운 배색이 새어나오지 않도록).
    ════════════════════════════════════════════════════════════════════ */
 body.office-mode{
   --pink-0:#ffffff; --pink-1:#ece9d8; --pink-2:#dcd9c8; --pink-3:#c8c4ac;
-  --magenta:#0a246a; --magenta-d:#0a246a;
-  --lav-1:#ece9d8; --lav-2:#dcd9c8; --mint:#ece9d8;
+  --magenta:#2b579a; --magenta-d:#0a246a;
+  --lav-1:#ece9d8; --lav-2:#dcd9c8; --mint:#dceee0;
   --ink:#1a1a1a; --ink-soft:#5a5a5a;
   --bevel-lt:#ffffff; --bevel-dk:#919b9c; --bevel-dk2:#5f6162;
   --face:#ece9d8; --win-bg:#ffffff;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif !important;
   background:#ece9d8 !important;
 }
-/* mode-ame(다크모드) 중 진입해도 하드코딩된 다크 배색이 새어나오지 않도록 명시적으로 덮어씀 */
-body.office-mode .window{background:#fff; box-shadow:0 0 0 1px #0a246a, 2px 2px 6px rgba(0,0,0,.3);}
-body.office-mode #pane{background:#fff;}
-body.office-mode .titlebar{background:linear-gradient(90deg,#0a246a 0%,#3a6ea5 100%); text-shadow:none;}
 body.office-mode .blink{display:none;}
 body.office-mode .console-strip{display:none;}
+
+/* 윈도우 뼈대 */
+body.office-mode .window{background:#fff; box-shadow:0 0 0 1px #0a246a, 2px 2px 6px rgba(0,0,0,.3);}
+body.office-mode #pane{background:#fff;}
+body.office-mode .body{background:#fff;}
+body.office-mode .titlebar{background:linear-gradient(90deg,#0a246a 0%,#3a6ea5 100%); text-shadow:none;}
+body.office-mode .tbtn-x{background:#ece9d8;}
 body.office-mode .menubar{background:#ece9d8;}
 body.office-mode .statusbar{background:#ece9d8; color:#444;}
-body.office-mode .tbtn-x{background:#ece9d8;}
 body.office-mode .mascot-transform{background:#ece9d8; color:#333; text-shadow:none; font-size:14px;}
+body.office-mode .menu-btn{background:#ece9d8; color:#1a1a1a;}
+body.office-mode .menu-info{color:#2b579a;} body.office-mode .menu-info b{color:#1a1a1a;}
 
-/* 가짜 스프레드시트 화면 */
-.office{display:flex; flex-direction:column; flex:1; min-height:0; background:#fff; color:#1a1a1a; font-size:12px;}
-.office-ribbon{display:flex; gap:14px; padding:4px 10px; background:#ece9d8; border-bottom:1px solid #aca899; font-size:11px; color:#333;}
-.office-toolbar{display:flex; align-items:center; gap:8px; padding:3px 8px; background:#f5f4ee; border-bottom:1px solid #d4d0c0;}
-.office-formula-label{font-style:italic; color:#555; font-size:11px;}
-.office-formula-bar{flex:1; background:#fff; border:1px solid #b8b5a8; padding:2px 6px; font-size:11px; color:#333;}
-.office-grid-wrap{flex:1; overflow:auto; background:#fff;}
-.office-grid{border-collapse:collapse; width:100%; font-size:11px;}
-.office-grid th{
-  background:#ece9d8; color:#333; font-weight:normal;
-  border:1px solid #c8c4ac; padding:2px 6px; min-width:70px; position:sticky; top:0;
-}
-.office-grid th:first-child{position:sticky; left:0; top:auto; z-index:1; min-width:28px; text-align:center;}
-.office-grid thead th:first-child{z-index:2;}
-.office-corner{background:#ece9d8;}
-.office-grid td{border:1px solid #d4d0c0; padding:2px 6px; white-space:nowrap; color:#1a1a1a;}
-.office-grid td.office-num{text-align:right; font-variant-numeric:tabular-nums;}
-.office-header-row{font-weight:bold; background:#f5f4ee;}
-.office-statusline{display:flex; align-items:center; gap:8px; padding:2px 10px; background:#ece9d8; border-top:1px solid #fff; font-size:10px; color:#444;}
-.office-spacer{flex:1;}
+/* 공용 컴포넌트 */
+body.office-mode .panel{background:#f5f4ee;}
+body.office-mode .panel-title{background:linear-gradient(90deg,#0a246a,#3a6ea5); text-shadow:none;}
+body.office-mode .ctl-group{background:#f5f4ee;}
+body.office-mode .hint-list{background:#fff; border-color:#c8c4ac;}
+body.office-mode .hint-item{background:#f0eee4; color:#1a1a1a;}
+body.office-mode .btn{background:linear-gradient(#f5f4ee,#ece9d8); color:#1a1a1a;}
+body.office-mode .btn:hover{background:linear-gradient(#ece9d8,#dcd9c8);}
+body.office-mode .btn-primary{background:linear-gradient(#3a6ea5,#0a246a);}
+body.office-mode .btn-lav{background:linear-gradient(var(--lav-1),var(--lav-2));}
+body.office-mode .btn-warn{background:linear-gradient(#f5d9d9,#ecc0c0); color:#7a2020; border-color:var(--bevel-lt) #b06060 #b06060 var(--bevel-lt);}
+body.office-mode .seg-btn{background:#ece9d8; color:#333;}
+body.office-mode .seg-btn.active{background:linear-gradient(#3a6ea5,#0a246a); color:#fff;}
+body.office-mode .cat-btn{background:#ece9d8; color:#333;}
+body.office-mode .cat-btn.active{background:linear-gradient(#3a6ea5,#0a246a); color:#fff;}
+body.office-mode .text-input{background:#fff; color:#1a1a1a;}
+body.office-mode .text-input::placeholder{color:#999;}
+body.office-mode .guess-line{background:#f0eee4;}
+body.office-mode .gauge{background:#fff;}
+
+/* 모달·전적 */
+body.office-mode .modal-overlay{background:rgba(20,20,20,.45);}
+body.office-mode .modal{background:#fff;}
+body.office-mode .modal-close{background:#ece9d8;}
+body.office-mode .modal-section{background:#f5f4ee;}
+body.office-mode .modal-section-title{color:#0a246a; border-bottom-color:#c8c4ac;}
+body.office-mode .stat-cell{background:#ece9d8;}
+body.office-mode .rank-bar-bg{background:#fff;}
+
+/* 결과 카드 */
+body.office-mode .result-card{border-color:var(--bevel-lt) #7fae95 #7fae95 var(--bevel-lt);}
+body.office-mode .result-card.lost{background:#f5d9d9; border-color:var(--bevel-lt) #c78a8a #c78a8a var(--bevel-lt);}
+body.office-mode .result-rank{color:#3a6ea5;}
+
+/* 마스코트 이펙트(변신 연출) — 화면에 남아있을 일은 없지만 안전망 */
+body.office-mode .mascot-summon{background:linear-gradient(#f5f4ee,#ece9d8); color:#1a1a1a;}
+body.office-mode .fx-ring{border-color:#7f9db9;} body.office-mode .fx-ring2{border-color:#a6caf0;}
+
+/* 바다거북 수프 */
+body.office-mode .soup-intro-card{background:#fff;}
+body.office-mode .soup-title{color:#0a246a;}
+body.office-mode .soup-eg{background:#f5f4ee; color:#5a5a5a;}
+body.office-mode .soup-eg b{color:#0a246a;}
+body.office-mode .soup-scenario{background:#fff; color:#1a1a1a; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
+body.office-mode .soup-log{background:#fff; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
+body.office-mode .soup-q{background:#ece9d8; color:#1a1a1a; border-color:var(--bevel-lt) #c8c4ac #c8c4ac var(--bevel-lt);}
+body.office-mode .soup-q-mark{color:#0a246a;}
+body.office-mode .soup-a{background:#fff; border-color:var(--bevel-lt) #c8c4ac #c8c4ac var(--bevel-lt);}
+body.office-mode .soup-a-text{color:#1a1a1a;}
+body.office-mode .soup-hint-turn{background:#f5f0e0; border-color:var(--bevel-lt) #c8b888 #c8b888 var(--bevel-lt); box-shadow:none;}
+body.office-mode .soup-hint-badge{background:#f0e6c8; color:#8a6d1a; border-color:#c8b888;}
+body.office-mode .soup-hint-text{color:#8a6d1a;}
+body.office-mode .soup-result{background:#fff;}
+body.office-mode .soup-result-head{color:#0a246a;}
+body.office-mode .soup-result.revealed .soup-result-head{color:#b0303f;}
+body.office-mode .soup-solution{background:#fff; color:#1a1a1a; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
+body.office-mode .soup-busy-bar{background:#fff; border-color:#c8c4ac var(--bevel-lt) var(--bevel-lt) #c8c4ac;}
+body.office-mode .soup-a.v-정답 .soup-verdict{background:linear-gradient(90deg,#3a6ea5,#0a246a);}
+
+/* 출제 중 로딩바 — 눈에 띄는 핫핑크 스트라이프를 회사용 파랑으로 */
+body.office-mode .generating-label{background:linear-gradient(90deg,#0a246a,#3a6ea5);}
+body.office-mode .generating-bar-bg{background:#e8e6dc;}
+body.office-mode .generating-bar-fill{background:repeating-linear-gradient(90deg,#3a6ea5 0 10px,#0a246a 10px 12px);}
 body.mode-ame .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#d080b8 0 10px,#8a2060 10px 12px);}

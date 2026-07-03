@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { showAlert } from '../lib/dialog';
-import OfficeMode from './OfficeMode';
 
 interface Props {
   credits: number | null;
@@ -19,7 +18,11 @@ interface Props {
   hideConsole?: boolean;
   /** true면 #pane에 멀티플레이 배경 이미지 적용 */
   multiBackground?: boolean;
-  /** true면 사회인모드(보스키) — 평범한 문서 화면으로 위장, 게임 상태는 보존 */
+  /**
+   * true면 사회인모드(보스키) — 실제 화면(children)은 그대로 유지하되
+   * 배경화면·마스코트·귀여운 배색을 전부 업무용 톤으로 갈아입힌다.
+   * 별도 위장 화면으로 바꿔치기하지 않는다 — 모든 기능을 그대로 쓸 수 있어야 한다.
+   */
   officeMode?: boolean;
   /** 사회인모드 진입 (일반 모드일 때만 버튼 노출) */
   onEnterOffice?: () => void;
@@ -41,7 +44,7 @@ export default function Window({
   return (
     <div className="desktop">
       <div className="window">
-        {/* 타이틀바 */}
+        {/* 타이틀바 — 사회인모드는 위장 문구만 (게임 정체를 드러내는 유일한 텍스트라 계속 가림) */}
         <div className="titlebar">
           {officeMode ? (
             <span className="title-text">2026년_1분기_실적현황.xlsx - Excel</span>
@@ -54,37 +57,31 @@ export default function Window({
           </div>
         </div>
 
-        {/* 메뉴바 */}
+        {/* 메뉴바 — 사회인모드에서도 기능은 그대로, 색만 업무 톤으로 바뀜 */}
         <div className="menubar">
           <button
             className="mascot-transform"
             onClick={onTransform}
-            title={officeMode ? '설정' : '변신!'}
+            title={officeMode ? '원래대로' : '변신!'}
           >
             {officeMode ? '⚙' : '✧ 변신 ✧'}
           </button>
           {!officeMode && onEnterOffice && (
-            <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 화면으로 전환)">🗂️ 사회인모드</button>
+            <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">🗂️ 사회인모드</button>
           )}
-          {!officeMode && onHome && (
+          {onHome && (
             <button className="menu-btn" onClick={onHome} title="카테고리 선택으로">🏠 처음으로</button>
           )}
-          {!officeMode && onMultiplay && (
+          {onMultiplay && (
             <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">◆ 멀티</button>
           )}
           <span className="menu-spacer" />
-          {!officeMode && (
-            <>
-              <span className="menu-info" style={{cursor:'pointer'}} onClick={() => void showAlert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
-              <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
-            </>
-          )}
+          <span className="menu-info" style={{cursor:'pointer'}} onClick={() => void showAlert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
+          <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
         </div>
 
-        {/* 본문 */}
-        <div id="pane" className={multiBackground ? 'pane-mp-bg' : undefined}>
-          {officeMode ? <OfficeMode /> : children}
-        </div>
+        {/* 본문 — 사회인모드여도 실제 화면 그대로, 색만 CSS로 갈아입음 */}
+        <div id="pane" className={multiBackground ? 'pane-mp-bg' : undefined}>{children}</div>
 
         {/* 인라인 진행 로그 — 멀티플레이·사회인모드 중엔 숨김 (정답/게임 티 방지) */}
         {!hideConsole && !officeMode && (
@@ -93,16 +90,14 @@ export default function Window({
           </div>
         )}
 
-        {/* 상태바 — 사회인모드는 OfficeMode 자체 상태줄이 이미 있으므로 중복 노출 방지 위해 숨김 */}
-        {!officeMode && (
-          <div className="statusbar">
-            <span className="statusbar-left">
-              <button className="statusbar-logout" onClick={onLogout} title="로그아웃">로그아웃</button>
-              <span className="statusbar-status">{statusText}</span>
-            </span>
-            <span className="statusbar-right">Gemini · Supabase · ✞퀴즈대합전✞</span>
-          </div>
-        )}
+        {/* 상태바 — 사회인모드는 위장 문구, 로그아웃은 계속 사용 가능 */}
+        <div className="statusbar">
+          <span className="statusbar-left">
+            <button className="statusbar-logout" onClick={onLogout} title="로그아웃">로그아웃</button>
+            <span className="statusbar-status">{officeMode ? '자동 저장됨' : statusText}</span>
+          </span>
+          <span className="statusbar-right">{officeMode ? '100%' : 'Gemini · Supabase · ✞퀴즈대합전✞'}</span>
+        </div>
       </div>
     </div>
   );
