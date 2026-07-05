@@ -33,6 +33,12 @@
 *{box-sizing:border-box;}
 [hidden]{display:none !important;}
 html{height:100%;}
+/* React가 마운트하는 #root에 크기 지정이 없으면, body(flex)의 유일한 자식인
+   #root가 자기 콘텐츠(.desktop) 크기에 맞춰 커지는 순환 참조가 생겨
+   .desktop의 width:100%/max-width가 뷰포트가 아니라 그 커진 #root 기준으로
+   계산된다. 좁은 화면에서 좌우로 잘리는 현상의 근본 원인 — #root를
+   레이아웃에서 제거해 .desktop이 body의 진짜 flex 자식이 되게 한다. */
+#root{display:contents;}
 body{
   margin:0; height:100vh; height:100dvh; overflow:hidden;
   font-family:'Galmuri11','MS Gothic','Apple SD Gothic Neo',monospace;
