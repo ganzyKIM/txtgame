@@ -98,6 +98,9 @@ export default function App() {
   const lastCfgRef = useRef<StartConfig | null>(null);
   // 이번 판에서 프리페치를 이미 시작했는지 (유저가 "이어서 할 의사"를 보인 뒤 1회만)
   const prefetchArmed = useRef(false);
+  // 출제 중(busy) "처음으로"로 취소했을 때, 이미 날아간 generatePuzzle 응답이 뒤늦게
+  // 도착해 취소를 덮어쓰지 않도록 하는 세션 토큰 — 값이 바뀌면 이전 요청은 폐기.
+  const genSessionRef = useRef(0);
   const [log, setLog] = useState<string[]>(['> ✞퀴즈대합전✞ 준비완료. 카테고리를 골라줘… ♡']);
   const greeted = useRef(false);
 
@@ -398,6 +401,7 @@ export default function App() {
     }
 
     // 2) 캐시에 없으면 생성 — 백그라운드 생성이 진행 중이면 그걸 기다려 대기시간을 줄인다
+    const mySession = ++genSessionRef.current; // 출제 중 "처음으로"로 취소되면 이 세션은 폐기
     setBusy(true);
     push(`> 출제 중… [${cfg.categoryLabel}${cfg.theme ? ' · ' + cfg.theme : ''}]`);
     mascot.current?.event('loading');
@@ -412,15 +416,18 @@ export default function App() {
         puzzle = await generatePuzzle(cfg);
       }
       prefetchCache.current.delete(key); // 방금 소비한 항목 정리
+      if (mySession !== genSessionRef.current) return; // 그새 취소됨 — 결과 버림
       startWithPuzzle(puzzle, cfg);
       // 다음 문제 프리페치는 maybePrefetch(첫 힌트 공개/첫 추측)에서 시작
     } catch (e) {
+      if (mySession !== genSessionRef.current) return; // 그새 취소됨 — 실패 처리도 무시
       push(`! 출제 실패: ${(e as Error).message}`);
       mascot.current?.say('으… 출제에 실패했어. 다시 해줄래?');
       setGame(emptyGame);
     } finally {
       window.clearInterval(loadingTick);
-      setBusy(false);
+      // 그새 새 세션이 시작됐으면(취소 후 재출제) 그쪽의 busy 상태를 지우면 안 됨
+      if (mySession === genSessionRef.current) setBusy(false);
     }
   }
 
@@ -602,6 +609,8 @@ export default function App() {
   }
 
   function handleRestart() {
+    genSessionRef.current++; // 출제 중이었다면 그 결과가 나중에 도착해도 무시하도록 세션 무효화
+    setBusy(false);
     setGame(emptyGame);
     setResult(null);
     setRunScores([]); // 진행 중이던 센터시험 런 폐기 (중간 이탈 = 기록 안 함)
@@ -687,14 +696,15 @@ export default function App() {
           hideConsole={mode === 'multi'}
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}
-          onMultiplay={mode === 'quiz' && game.phase === 'setup' ? () => { setMode('multi'); setMpRoom(null); } : undefined}
+          onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => { setMode('multi'); setMpRoom(null); } : undefined}
           onHome={
             mode === 'multi' ? () => {
               void showConfirm('대합전을 나가시겠어요?').then((ok) => {
                 if (ok) { setMode('quiz'); setMpRoom(null); }
               });
             }
-            : mode === 'quiz' && game.phase !== 'setup' && !busy && !judging ? handleRestart
+            // 출제 중(busy)에도 "처음으로"가 떠서 취소할 수 있어야 함(멀티 버튼 대신)
+            : mode === 'quiz' && (game.phase !== 'setup' || busy) && !judging ? handleRestart
             : undefined
           }
         >
