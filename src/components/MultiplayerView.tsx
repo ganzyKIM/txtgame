@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useMultiplayerRoom } from '../hooks/useMultiplayerRoom';
 import { CATEGORIES, DIFFICULTIES } from '../game/puzzle';
 import type { StartConfig } from './StartScreen';
@@ -23,9 +23,15 @@ interface Props {
   onMascotEvent?: (kind: LineKind) => void;
 }
 
-export default function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave, onMascotEvent }: Props) {
+export interface MultiplayerViewHandle {
+  leaveRoom: () => Promise<void>;
+}
+
+const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function MultiplayerView({ room, myUserId, myNickname: _nick, tier, generatePuzzle, onLeave, onMascotEvent }, ref) {
   void rpc; // suppress lint
-  const { roomStatus, members, round, chat, finalScores, wrongGuesses, roomClosed, startGame, startRound, giveUp, submitGuess, sendChat, finishGame, leaveRoom } = useMultiplayerRoom(room.id, myUserId);
+  const { roomStatus, members, activeMembers, round, chat, finalScores, wrongGuesses, roomClosed, startGame, startRound, giveUp, submitGuess, sendChat, finishGame, leaveRoom } = useMultiplayerRoom(room.id, myUserId);
+
+  useImperativeHandle(ref, () => ({ leaveRoom }), [leaveRoom]);
 
   const iAmHost = members.find(m => m.user_id === myUserId)?.is_host ?? false;
   const [generating, setGenerating] = useState(false);
@@ -102,7 +108,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
   // 전원 포기
   useEffect(() => {
     if (!round || round.ended) { allGaveUpFiredRef.current = false; return; }
-    if (round.gaveUpIds.length > 0 && round.gaveUpIds.length >= members.length && !allGaveUpFiredRef.current) {
+    if (round.gaveUpIds.length > 0 && round.gaveUpIds.length >= activeMembers.length && !allGaveUpFiredRef.current) {
       allGaveUpFiredRef.current = true;
       onMascotEvent?.('mp_allgiveup');
     }
@@ -427,7 +433,7 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
         {round && !generating && !round.ended && round.revealedCount >= round.maxHints && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
             <span style={{ fontSize: 10, color: 'var(--ink-soft)' }}>
-              포기 ({round.gaveUpIds.length}/{members.length})
+              포기 ({round.gaveUpIds.length}/{activeMembers.length})
             </span>
             {!myGaveUp
               ? <button className="btn btn-xs btn-warn" onClick={giveUp}>포기</button>
@@ -443,11 +449,12 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div className="panel-title">◆ 점수판</div>
           {[...members].sort((a, b) => b.score - a.score).map(m => (
-            <div key={m.user_id} style={{ fontSize: 11, display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div key={m.user_id} style={{ fontSize: 11, display: 'flex', gap: 4, alignItems: 'center', opacity: m.left_at ? 0.5 : 1 }}>
               {m.is_host && <span style={{ color: 'var(--magenta)', fontSize: 10 }}>♛</span>}
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: m.left_at ? 'line-through' : 'none' }}>
                 {m.nickname}{m.user_id === myUserId ? '(나)' : ''}
               </span>
+              {m.left_at && <span style={{ fontSize: 9, color: 'var(--ink-soft)' }}>나감</span>}
               <span style={{ color: 'var(--magenta-d)', whiteSpace: 'nowrap' }}>{m.rounds_won}문/{m.score}점</span>
             </div>
           ))}
@@ -477,4 +484,6 @@ export default function MultiplayerView({ room, myUserId, myNickname: _nick, tie
       </div>
     </div>
   );
-}
+});
+
+export default MultiplayerView;

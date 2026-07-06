@@ -20,6 +20,7 @@ import DialogHost from './components/DialogHost';
 import { showConfirm } from './lib/dialog';
 import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
 import MultiplayerView from './components/MultiplayerView';
+import type { MultiplayerViewHandle } from './components/MultiplayerView';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
 import { CENTER_QUESTIONS } from './game/types';
 import type { TextTier } from './types';
@@ -68,6 +69,7 @@ const emptyGame: GameState = {
 export default function App() {
   const { user, profile, loading: authLoading, signOut, applyBalance } = useAuth();
   const mascot = useRef<MascotHandle>(null);
+  const mpViewRef = useRef<MultiplayerViewHandle>(null);
 
   const [game, setGame] = useState<GameState>(emptyGame);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -700,7 +702,9 @@ export default function App() {
           onHome={
             mode === 'multi' ? () => {
               void showConfirm('대합전을 나가시겠어요?').then((ok) => {
-                if (ok) { setMode('quiz'); setMpRoom(null); }
+                if (!ok) return;
+                void mpViewRef.current?.leaveRoom();
+                setMode('quiz'); setMpRoom(null);
               });
             }
             // 출제 중(busy)에도 "처음으로"가 떠서 취소할 수 있어야 함(멀티 버튼 대신)
@@ -711,6 +715,7 @@ export default function App() {
           {mode === 'multi' ? (
             mpRoom ? (
               <MultiplayerView
+                ref={mpViewRef}
                 room={mpRoom}
                 myUserId={user.id}
                 myNickname={myNickname}

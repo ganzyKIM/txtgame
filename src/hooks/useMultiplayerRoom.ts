@@ -151,7 +151,8 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
         gaveUpRef.current = [...new Set([...gaveUpRef.current, payload.user_id])];
         setRound(prev => prev ? { ...prev, gaveUpIds: gaveUpRef.current } : null);
 
-        if (isHostRef.current && gaveUpRef.current.length >= membersRef.current.length) {
+        const activeCount = membersRef.current.filter(m => !m.left_at).length;
+        if (isHostRef.current && gaveUpRef.current.length >= activeCount) {
           const r = roundRef.current;
           if (!r || r.ended) return;
           if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -283,8 +284,10 @@ export function useMultiplayerRoom(roomId: string, myUserId: string) {
     channelRef.current?.send({ type: 'broadcast', event: 'game_end', payload: { scores } });
   }, [roomId]);
 
+  const activeMembers = members.filter(m => !m.left_at);
+
   return {
-    roomStatus, members, round, chat, finalScores, wrongGuesses, roomClosed,
+    roomStatus, members, activeMembers, round, chat, finalScores, wrongGuesses, roomClosed,
     isHost: isHostRef.current,
     startGame, startRound, giveUp, submitGuess, sendChat, finishGame, leaveRoom,
   };

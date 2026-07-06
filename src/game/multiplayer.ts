@@ -30,6 +30,7 @@ export interface MpMember {
   is_host: boolean;
   score: number;
   rounds_won: number;
+  left_at: string | null;
 }
 
 /** Supabase Realtime Broadcast 이벤트 타입 */
