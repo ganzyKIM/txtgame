@@ -119,6 +119,7 @@ html.is-mac .console{
 }
 .menu-btn:hover{background:linear-gradient(var(--pink-2),var(--pink-3));}
 .menu-btn:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);transform:translateY(1px);}
+.menu-label-short{display:none;}
 
 /* ── 본문 ── */
 #pane{flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; background:var(--win-bg);}
@@ -808,10 +809,13 @@ body.mode-ame .wc-timerbar-fill{background:repeating-linear-gradient(90deg,#d080
   .title-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .title-btns{flex:none;}
 
-  /* 메뉴바: 버튼이 줄바꿈으로 깨지지 않게 한 줄 가로 스크롤 */
-  .menubar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
+  /* 메뉴바: 아이콘 제거 + 라벨 축약으로 버튼 너비를 줄여 스크롤 없이 한 줄에 배치 */
+  .menubar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:3px;padding:4px;}
   .menubar::-webkit-scrollbar{display:none;}
-  .menu-btn,.mascot-transform{flex:none;white-space:nowrap;}
+  .menu-btn,.mascot-transform{flex:none;white-space:nowrap;padding:3px 6px;font-size:11px;}
+  .menu-icon{display:none;}
+  .menu-label-full{display:none;}
+  .menu-label-short{display:inline;}
 
   /* 마스코트: transform 대신 이미지 직접 축소 → 말풍선이 scale에 영향 안 받음 */
   .mascot{transform:none;right:4px;}

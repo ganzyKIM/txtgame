@@ -57,27 +57,38 @@ export default function Window({
           </div>
         </div>
 
-        {/* 메뉴바 — 사회인모드에서도 기능은 그대로, 색만 업무 톤으로 바뀜 */}
+        {/* 메뉴바 — 사회인모드에서도 기능은 그대로, 색만 업무 톤으로 바뀜.
+            모바일에서는 아이콘을 숨기고 긴 라벨은 짧은 라벨로 바꿔 한 줄에 다 들어가게 함 */}
         <div className="menubar">
           <button
             className="mascot-transform"
             onClick={onTransform}
             title={officeMode ? '원래대로' : '변신!'}
           >
-            {officeMode ? '⚙' : '✧ 변신 ✧'}
+            {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
           </button>
           {!officeMode && onEnterOffice && (
-            <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">🗂️ 사회인모드</button>
+            <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
+              <span className="menu-icon">🗂️</span>
+              <span className="menu-label-full">사회인모드</span>
+              <span className="menu-label-short">사회인</span>
+            </button>
           )}
           {onHome && (
-            <button className="menu-btn" onClick={onHome} title="카테고리 선택으로">🏠 처음으로</button>
+            <button className="menu-btn" onClick={onHome} title="카테고리 선택으로">
+              <span className="menu-icon">🏠</span> 처음으로
+            </button>
           )}
           {onMultiplay && (
-            <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">◆ 멀티</button>
+            <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">
+              <span className="menu-icon">◆</span> 멀티
+            </button>
           )}
           <span className="menu-spacer" />
           <span className="menu-info" style={{cursor:'pointer'}} onClick={() => void showAlert('크레딧 충전은 P에게 요청해야해! kimdh12307@gmail.com')}>크레딧 <b>{credits ?? '—'}</b></span>
-          <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">◆ 전적</button>
+          <button className="menu-btn" onClick={onOpenStats} title="나의 전적·랭킹">
+            <span className="menu-icon">◆</span> 전적
+          </button>
         </div>
 
         {/* 본문 — 사회인모드여도 실제 화면 그대로, 색만 CSS로 갈아입음 */}
