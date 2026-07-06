@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
+import PwaInstallBanner from '../components/PwaInstallBanner';
 
 function isInAppBrowser(): boolean {
   const ua = navigator.userAgent;
@@ -74,6 +75,7 @@ export default function LoginScreen() {
                 {busy ? '문을 여는 중...' : 'Google 계정으로 시작하기'}
               </button>
               <p className="login-notice">로그인하면 전적이 계정에 안전하게 저장됩니다 ♡</p>
+              <PwaInstallBanner />
             </>
           )}
         </div>

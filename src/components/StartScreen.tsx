@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PwaInstallBanner from './PwaInstallBanner';
 import { CATEGORIES, DIFFICULTIES } from '../game/puzzle';
 import type { Difficulty, ExamMode } from '../game/types';
 import { CENTER_QUESTIONS } from '../game/types';
@@ -52,7 +53,8 @@ export default function StartScreen({ busy, onStart }: Props) {
   }
 
   return (
-    <div className="body">
+    <div className="body" style={{ flexDirection: 'column' }}>
+      <PwaInstallBanner />
       <div className="start-body">
 
         {/* 왼쪽: 카테고리 선택 */}
