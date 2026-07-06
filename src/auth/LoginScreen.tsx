@@ -39,7 +39,7 @@ export default function LoginScreen() {
           <div className="login-logo">🔍 ✞ 🔮</div>
           <h1 className="login-title">초텐짱의 편차치99<br />✞퀴즈대합전✞</h1>
           <p className="login-sub">
-            천사쨩이 숨긴 정답을, 작은 힌트만으로.<br />
+            초텐쨩이 숨긴 정답을, 작은 힌트만으로.<br />
             적게 보고 맞힐수록 고득점!
           </p>
           {inApp ? (

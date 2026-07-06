@@ -100,7 +100,7 @@ export default function StartScreen({ busy, onStart }: Props) {
             <label className="ctl-label">◆ 세부 주제·컨셉 (선택)</label>
             <input
               className="text-input"
-              placeholder="비워두면 천사쨩이 알아서 골라줘!"
+              placeholder="비워두면 초텐쨩이 알아서 골라줘!"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') start('center'); }}
@@ -143,7 +143,7 @@ export default function StartScreen({ busy, onStart }: Props) {
 
           <div className="start-modes">
             <button className="btn btn-primary" onClick={() => start('center')} disabled={!canStart}>
-              {busy ? '천사쨩이 문제 내는 중… ✦' : `🎯 센터시험 (${CENTER_QUESTIONS}문제 총점)`}
+              {busy ? '초텐쨩이 문제 내는 중… ✦' : `🎯 센터시험 (${CENTER_QUESTIONS}문제 총점)`}
             </button>
             <button className="btn btn-lav start-mock-btn" onClick={() => start('mock')} disabled={!canStart}>
               📝 모의시험 (자유 연습)

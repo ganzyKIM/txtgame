@@ -207,8 +207,8 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
               너는 <b>예 / 아니오</b>로 답할 수 있는 질문을 던지며 그 뒤에 숨은 <b>진상</b>을 추리하는 거야!
             </p>
             <ul className="soup-rules">
-              <li>천사쨩이 수수께끼 상황을 하나 보여줘.</li>
-              <li>너는 자유롭게 질문 → 천사쨩이 <b>「예」「아니오」「상관없음」</b>으로 답해.</li>
+              <li>초텐쨩이 수수께끼 상황을 하나 보여줘.</li>
+              <li>너는 자유롭게 질문 → 초텐쨩이 <b>「예」「아니오」「상관없음」</b>으로 답해.</li>
               <li>막히면 <b>💡 힌트</b>를 최대 3번까지 요청할 수 있어!</li>
               <li>충분히 감이 오면 <b>💡 정답 외치기</b>로 진상을 말해봐.</li>
               <li>핵심을 제대로 짚으면 <b>클리어!</b> ♡</li>
@@ -297,7 +297,7 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
             <div className="soup-input-row">
               <input
                 className="text-input"
-                placeholder={busy ? '천사쨩이 생각 중…' : '질문을 입력해봐!'}
+                placeholder={busy ? '초텐쨩이 생각 중…' : '질문을 입력해봐!'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') void ask(); }}
