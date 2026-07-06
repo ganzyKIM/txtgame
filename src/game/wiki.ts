@@ -60,7 +60,7 @@ function titleVariants(title: string): string[] {
  * "모두 끝나야 실패로 확정"하는 대신 "하나만 성공해도 즉시 확정"하는 커스텀 레이스.
  * ko/ja/en을 직렬로 기다리던 것을 병렬화해 최악 지연을 개별 타임아웃 수준으로 캡핑한다.
  */
-function anyTrue(promises: Promise<boolean>[]): Promise<boolean> {
+export function anyTrue(promises: Promise<boolean>[]): Promise<boolean> {
   return new Promise((resolve) => {
     if (promises.length === 0) { resolve(false); return; }
     let remaining = promises.length;

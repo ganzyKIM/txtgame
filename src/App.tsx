@@ -8,7 +8,7 @@ import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
-import { checkWikipedia } from './game/wiki';
+import { checkWikipedia, anyTrue } from './game/wiki';
 import { checkNamuWiki, fetchNamuContent } from './game/namu';
 import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
@@ -237,16 +237,12 @@ export default function App() {
         continue;
       }
 
-      // ① 실존 검증(위키·나무위키)과 ② 2차 AI 검증을 병렬 실행 — 서로 독립적이라 직렬로 기다릴 이유가 없다.
+      // ① 실존 검증(위키·나무위키를 처음부터 동시에 조회 — "위키 실패 후에만 나무위키" 직렬 폴백은
+      //    최악의 경우 위키 대기 + 나무위키 대기가 그대로 더해져서, 처음부터 둘 다 쏘고 하나만
+      //    통과해도 즉시 확정한다)와 ② 2차 AI 검증을 모두 병렬 실행.
       const wikiPromise: Promise<boolean> = fromBank
         ? Promise.resolve(true)
-        : checkWikipedia(cand.answer).then(async (ok) => {
-            if (ok) return true;
-            // Wikipedia 전부 탈락 시 나무위키 추가 확인 (전 카테고리 적용)
-            const namuOk = await checkNamuWiki(cand.answer);
-            if (namuOk) push(`> ✓ 나무위키 확인("${cand.answer}")`);
-            return namuOk;
-          });
+        : anyTrue([checkWikipedia(cand.answer), checkNamuWiki(cand.answer)]);
       const verifyPromise = verifyPuzzle(cand);
       const [wikiOk, v] = await Promise.all([wikiPromise, verifyPromise]);
       if (typeof v.balance === 'number') applyBalance(v.balance);
@@ -718,7 +714,6 @@ export default function App() {
                 myUserId={user.id}
                 myNickname={myNickname}
                 onJoin={(room) => setMpRoom(room)}
-                onBack={() => setMode('quiz')}
               />
             )
           ) : mode === 'soup' ? (

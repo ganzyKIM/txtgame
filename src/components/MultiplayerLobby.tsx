@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { CATEGORIES, DIFFICULTIES } from '../game/puzzle';
 import type { Difficulty } from '../game/types';
@@ -11,17 +12,18 @@ export interface JoinedRoom {
   host_id: string; host_nickname: string;
 }
 
+interface LobbyChatEntry { user_id: string; nickname: string; message: string; ts: number }
+
 interface Props {
   myUserId: string;
   myNickname: string;
   onJoin: (room: JoinedRoom) => void;
-  onBack: () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc = supabase as any;
 
-export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack }: Props) {
+export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props) {
   const [rooms, setRooms] = useState<(MpRoom & { mp_members?: { user_id: string }[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -31,6 +33,34 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
   const [joining, setJoining] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 대기실(방 목록 화면) 공용 채팅 — 특정 방에 속하지 않은 사람들끼리도 잡담 가능하게.
+  // 기록은 남기지 않고 실시간 브로드캐스트만(가벼운 잡담용, 굳이 DB에 남길 필요 없음).
+  const [chat, setChat] = useState<LobbyChatEntry[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    const ch = supabase.channel('mp:lobby', { config: { broadcast: { self: true } } });
+    channelRef.current = ch;
+    ch.on('broadcast', { event: 'chat' }, ({ payload }) => {
+      setChat(prev => [...prev, payload as LobbyChatEntry].slice(-50));
+    }).subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, []);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
+
+  function handleSendChat() {
+    const m = chatInput.trim();
+    if (!m) return;
+    setChatInput('');
+    channelRef.current?.send({
+      type: 'broadcast', event: 'chat',
+      payload: { user_id: myUserId, nickname: myNickname, message: m, ts: Date.now() },
+    });
+  }
 
   const loadRooms = useCallback(async () => {
     const { data } = await supabase
@@ -82,10 +112,9 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
 
   return (
     <div className="body">
-      <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+      <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
         <div className="panel-title">
           <span>◆ 대합전 — 대기실</span>
-          <button className="btn btn-xs" onClick={onBack}>← 돌아가기</button>
         </div>
 
         {showCreate ? (
@@ -113,28 +142,47 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin, onBack 
 
         {error && <div style={{ fontSize: 11, color: '#c03060' }}>{error}</div>}
 
-        {loading ? (
-          <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>불러오는 중…</div>
-        ) : rooms.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center', marginTop: 24 }}>대기 중인 방이 없어. 먼저 개설해봐! ♡</div>
-        ) : rooms.map(room => (
-          <div key={room.id} className="raised" style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 12, fontWeight: 'bold' }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label}</span>
-              <span style={{ fontSize: 10, color: 'var(--ink-soft)', marginLeft: 6 }}>{room.difficulty}</span>
-              <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>
-                {room.host_nickname} · {room.mp_members?.length ?? '?'}/{room.max_players}명
+        {/* 방 목록 — 이 영역만 스크롤, 채팅은 항상 아래 고정 */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {loading ? (
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>불러오는 중…</div>
+          ) : rooms.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center', marginTop: 24 }}>대기 중인 방이 없어. 먼저 개설해봐! ♡</div>
+          ) : rooms.map(room => (
+            <div key={room.id} className="raised" style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 12, fontWeight: 'bold' }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label}</span>
+                <span style={{ fontSize: 10, color: 'var(--ink-soft)', marginLeft: 6 }}>{room.difficulty}</span>
+                <div style={{ fontSize: 10, color: 'var(--ink-soft)' }}>
+                  {room.host_nickname} · {room.mp_members?.length ?? '?'}/{room.max_players}명
+                </div>
               </div>
+              {room.host_id === myUserId
+                ? <>
+                    <button className="btn btn-xs btn-lav" disabled>내 방</button>
+                    <button className="btn btn-xs btn-warn" disabled={deleting === room.id} onClick={() => void handleDelete(room.id)}>{deleting === room.id ? '…' : '삭제'}</button>
+                  </>
+                : <button className="btn btn-xs" disabled={joining === room.id || (room.mp_members?.length ?? 0) >= room.max_players} onClick={() => void handleJoin(room)}>{joining === room.id ? '…' : '참가'}</button>
+              }
             </div>
-            {room.host_id === myUserId
-              ? <>
-                  <button className="btn btn-xs btn-lav" disabled>내 방</button>
-                  <button className="btn btn-xs btn-warn" disabled={deleting === room.id} onClick={() => void handleDelete(room.id)}>{deleting === room.id ? '…' : '삭제'}</button>
-                </>
-              : <button className="btn btn-xs" disabled={joining === room.id || (room.mp_members?.length ?? 0) >= room.max_players} onClick={() => void handleJoin(room)}>{joining === room.id ? '…' : '참가'}</button>
-            }
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* 대기실 공용 채팅 — 아직 방에 안 들어간 사람들끼리도 잡담 가능 */}
+        <div className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
+          {chat.map((c, i) => (
+            <div key={i} style={{ color: c.user_id === myUserId ? 'var(--magenta-d)' : 'var(--ink)' }}>
+              <b>{c.nickname}</b>: {c.message}
+            </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSendChat(); }}
+            placeholder="채팅…" style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
+          <button className="btn btn-xs" onClick={handleSendChat}>전송</button>
+        </div>
       </div>
     </div>
   );
