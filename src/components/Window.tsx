@@ -58,27 +58,30 @@ export default function Window({
         </div>
 
         {/* 메뉴바 — 사회인모드에서도 기능은 그대로, 색만 업무 톤으로 바뀜.
+            처음으로는 맨 왼쪽, 변신·사회인 버튼은 중앙에 고정.
             모바일에서는 아이콘을 숨기고 긴 라벨은 짧은 라벨로 바꿔 한 줄에 다 들어가게 함 */}
         <div className="menubar">
-          <button
-            className="mascot-transform"
-            onClick={onTransform}
-            title={officeMode ? '원래대로' : '변신!'}
-          >
-            {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
-          </button>
-          {!officeMode && onEnterOffice && (
-            <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
-              <span className="menu-icon">🗂️</span>
-              <span className="menu-label-full">사회인모드</span>
-              <span className="menu-label-short">사회인</span>
-            </button>
-          )}
           {onHome && (
             <button className="menu-btn" onClick={onHome} title="카테고리 선택으로">
               <span className="menu-icon">🏠</span> 처음으로
             </button>
           )}
+          <div className="menu-center">
+            <button
+              className="mascot-transform"
+              onClick={onTransform}
+              title={officeMode ? '원래대로' : '변신!'}
+            >
+              {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
+            </button>
+            {!officeMode && onEnterOffice && (
+              <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
+                <span className="menu-icon">🗂️</span>
+                <span className="menu-label-full">사회인모드</span>
+                <span className="menu-label-short">사회인</span>
+              </button>
+            )}
+          </div>
           {onMultiplay && (
             <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">
               <span className="menu-icon">◆</span> 멀티
