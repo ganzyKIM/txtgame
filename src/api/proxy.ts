@@ -33,6 +33,15 @@ export interface TextResult {
 // "출제 실패, 다시 시도해줘" 흐름으로 정상 복구한다.
 const TEXT_TIMEOUT_MS = 45000;
 
+// 데스크톱 PWA(독립 창)는 포커스를 오래 안 받으면 OS가 JS 타이머를 스로틀링해서
+// Supabase의 자동 토큰 갱신 타이머가 제때 안 돌 수 있다 — 그 상태로 오래 놔뒀다가
+// 돌아와서 출제하면 만료된 토큰으로 호출해 "인증 실패"가 난다.
+// getSession()은 supabase-js가 내부적으로 만료 여부를 확인해 필요하면 먼저
+// 갱신하고 반환하므로, 매 호출 직전에 불러 항상 유효한 토큰으로 요청하게 한다.
+async function ensureFreshSession(): Promise<void> {
+  try { await supabase.auth.getSession(); } catch { /* 실패해도 호출은 그대로 시도 */ }
+}
+
 /**
  * 서버 프록시를 통한 텍스트 생성.
  * 클라이언트는 모델 tier와 메시지만 보내고, 실제 Gemini 호출/키/차감은 서버가 한다.
@@ -42,6 +51,7 @@ export async function proxyGenerateText(
   messages: ChatMessage[],
   opts: { system?: string; temperature?: number } = {},
 ): Promise<TextResult> {
+  await ensureFreshSession();
   const { data, error } = await Promise.race([
     supabase.functions.invoke('generate-text', {
       body: { tier, messages, system: opts.system, temperature: opts.temperature },
@@ -61,6 +71,7 @@ export interface ImageResult {
 
 /** 서버 프록시를 통한 이미지 생성 */
 export async function proxyGenerateImage(prompt: string): Promise<ImageResult> {
+  await ensureFreshSession();
   const { data, error } = await supabase.functions.invoke('generate-image', {
     body: { prompt },
   });
