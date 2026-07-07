@@ -9,8 +9,8 @@ import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia, anyTrue } from './game/wiki';
-import { checkNamuWiki, fetchNamuContent } from './game/namu';
-import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
+import { checkNamuWiki } from './game/namu';
+import { loadBank, addToBank, updateBankStats, recordAppealUpheld, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
@@ -209,48 +209,29 @@ export default function App() {
     for (let attempt = 0; ; attempt++) {
       const banned = [...baseExclusions, ...extraBanned];
       let cand: Puzzle;
-      let fromBank = false;
       let candAxes: GenAxes | null = null;
 
-      // ② 정답 풀 재사용 (trusted): 첫 시도 한정, 60% 확률
-      const bankEntry = attempt === 0 && Math.random() < 0.6
-        ? pickFromBank(answerBank.current, cfg.categoryKey ?? '', banned, cfg.difficulty)
-        : null;
-
-      if (bankEntry) {
-        // 뱅크 재사용: 나무위키 내용을 힌트 생성 컨텍스트로 주입 (최대 2.5초 대기)
-        const namuCtx = await Promise.race([
-          fetchNamuContent(bankEntry.answer),
-          new Promise<null>(r => setTimeout(() => r(null), 2500)),
-        ]);
-        // 힌트만 새로 생성 — 정답은 이미 검증됨, 환각 불가
-        const { text, balance } = await proxyGenerateText(
-          cfg.tier,
-          [{ role: 'user', text: `정답 "${bankEntry.answer}"에 대한 힌트를 만들어줘.` }],
-          { system: buildHintOnlyPrompt(bankEntry.answer, cfg.categoryLabel, cfg.difficulty, cfg.categoryPrompt, namuCtx ?? undefined), temperature: 0.9 },
-        );
-        applyBalance(balance);
-        cand = parseHintOnly(text, bankEntry.answer, cfg.categoryLabel, cfg.theme, bankEntry.acceptable);
-        fromBank = true;
-      } else {
-        // 새 정답 생성 — 다양성 축을 밖에서 뽑아 프롬프트에 주입 + 저장용 보관
-        candAxes = pickGenAxes();
-        const { text, balance } = await proxyGenerateText(
-          cfg.tier,
-          [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
-          { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib, candAxes, failurePatterns), temperature: 0.8 },
-        );
-        applyBalance(balance);
-        cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
-      }
+      // 새 정답 생성 — 다양성 축을 밖에서 뽑아 프롬프트에 주입 + 저장용 보관
+      // (로컬 localStorage 뱅크 재사용은 제거함 — 위키검증을 스킵해도 되는 근거가
+      //  "서버가 이미 검증한 답"이어야 하는데, 로컬 뱅크는 강제채택된 미검증 답도
+      //  wikiVerified=true로 잘못 기록해 그게 영구히 재순환하는 사고가 있었다.
+      //  진짜 검증된 재사용은 앞의 서버 pickServerBankPuzzle 경로가 담당한다.)
+      candAxes = pickGenAxes();
+      const { text, balance } = await proxyGenerateText(
+        cfg.tier,
+        [{ role: 'user', text: `카테고리: ${cfg.categoryLabel}\n주제: ${cfg.theme || '(자유)'}\n위 조건으로 문제를 출제해줘.` }],
+        { system: buildSetupPrompt(cfg.categoryLabel, cfg.theme, cfg.difficulty, banned, cfg.categoryPrompt, cfg.categoryKey, diffCalib, candAxes, failurePatterns), temperature: 0.8 },
+      );
+      applyBalance(balance);
+      cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
 
       // 마지막 시도는 무조건 채택 (무한루프·과도한 호출 방지)
-      // — 검증을 건너뛰므로 통과 플래그는 미검증(false)으로 남긴다.
+      // — 검증을 건너뛰었으므로 통과 플래그는 전부 미검증(false)으로 남긴다
+      // → 뱅크에는 안 쌓이고 quiz_generations 로그에만 남음(재사용 대상 아님).
       if (attempt >= MAX_RETRY) {
         puzzle = cand;
-        genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+        genSource = 'ai_fresh';
         genAxes = candAxes;
-        genWiki = fromBank; // 뱅크는 이미 검증됨
         break;
       }
 
@@ -273,9 +254,7 @@ export default function App() {
       // ① 실존 검증(위키·나무위키를 처음부터 동시에 조회 — "위키 실패 후에만 나무위키" 직렬 폴백은
       //    최악의 경우 위키 대기 + 나무위키 대기가 그대로 더해져서, 처음부터 둘 다 쏘고 하나만
       //    통과해도 즉시 확정한다)와 ② 2차 AI 검증을 모두 병렬 실행.
-      const wikiPromise: Promise<boolean> = fromBank
-        ? Promise.resolve(true)
-        : anyTrue([checkWikipedia(cand.answer), checkNamuWiki(cand.answer)]);
+      const wikiPromise: Promise<boolean> = anyTrue([checkWikipedia(cand.answer), checkNamuWiki(cand.answer)]);
       const verifyPromise = verifyPuzzle(cand);
       const [wikiOk, v] = await Promise.all([wikiPromise, verifyPromise]);
       if (typeof v.balance === 'number') applyBalance(v.balance);
@@ -307,7 +286,7 @@ export default function App() {
           if (v2.ok) {
             push(`> ✓ 힌트 재생성으로 복구("${cand.answer}")`);
             puzzle = repaired;
-            genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+            genSource = 'ai_fresh';
             genAxes = candAxes;
             genWiki = true; genLint = true; genVerify = true; genVerifyProblem = v2.problem ?? '';
             break;
@@ -325,7 +304,7 @@ export default function App() {
 
       // 모든 검증 통과
       puzzle = cand;
-      genSource = fromBank ? 'bank_reuse' : 'ai_fresh';
+      genSource = 'ai_fresh';
       genAxes = candAxes;
       genWiki = true; genLint = true; genVerify = true; genVerifyProblem = v.problem ?? '';
       break;
@@ -333,13 +312,13 @@ export default function App() {
 
     puzzle.categoryKey = cfg.categoryKey ?? '';
 
-    // 정답 풀에 편입 (candidate로 시작, plays 쌓이면 trusted 승격)
+    // 로컬 난이도 보정용 통계 누적(재사용 아님 — 실제 답 재활용은 서버 뱅크가 전담)
     answerBank.current = addToBank(answerBank.current, {
       answer: puzzle.answer,
       categoryKey: cfg.categoryKey ?? '',
       categoryLabel: cfg.categoryLabel,
       acceptable: puzzle.acceptable,
-      wikiVerified: true,
+      wikiVerified: genWiki,
       difficultyLabeled: cfg.difficulty,
     });
 

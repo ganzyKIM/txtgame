@@ -34,9 +34,6 @@ export function normAnswerKey(s: string): string {
   return s.toLowerCase().replace(/[\s·~!@#$%^&*()_+\-=[\]{};:'",.<>/?\\|`'""（）【】]/g, '').trim();
 }
 
-function baseNameLocal(s: string): string {
-  return s.replace(/\s*[(（【[][^)）】\]]*[)）】\]]\s*$/, '').trim();
-}
 
 export function loadBank(): AnswerBank {
   try {
@@ -95,32 +92,6 @@ export function recordAppealUpheld(bank: AnswerBank, answerKey: string): AnswerB
   return saveBank({ ...bank, [answerKey]: { ...entry, appealUpheld, status } });
 }
 
-/**
- * 신뢰 정답 풀에서 이번 출제 후보를 뽑는다.
- * - 같은 카테고리, trusted, 제외 목록에 없음, 난이도 실측이 맞음
- * - 최근 플레이 항목을 앞줄에서 제거해 최신성 편향 방지
- */
-export function pickFromBank(
-  bank: AnswerBank,
-  categoryKey: string,
-  recentExclusions: string[],
-  difficulty: string,
-): BankEntry | null {
-  const recentKeys = new Set<string>();
-  for (const r of recentExclusions) {
-    const k = normAnswerKey(r); if (k) recentKeys.add(k);
-    const b = normAnswerKey(baseNameLocal(r)); if (b) recentKeys.add(b);
-  }
-  const candidates = Object.values(bank).filter(e =>
-    e.categoryKey === categoryKey &&
-    e.status === 'trusted' &&
-    !recentKeys.has(normAnswerKey(e.answer)) &&
-    !recentKeys.has(normAnswerKey(baseNameLocal(e.answer))) &&
-    (e.difficultyActual === difficulty || e.difficultyLabeled === difficulty),
-  );
-  if (candidates.length === 0) return null;
-  return candidates[Math.floor(Math.random() * candidates.length)];
-}
 
 /**
  * Stage 4: 카테고리·난이도별 실측 통계로 난이도 보정 문구를 생성.

@@ -54,7 +54,7 @@ export async function judgeGuess(
   try {
     const { text, balance } = await proxyGenerateText(
       JUDGE_TIER,
-      [{ role: 'user', text: buildJudgePrompt(puzzle.answer, guess) }],
+      [{ role: 'user', text: buildJudgePrompt(puzzle.answer, guess, puzzle.categoryKey) }],
       { temperature: 0 },
     );
     const parsed = parseJudge(text);

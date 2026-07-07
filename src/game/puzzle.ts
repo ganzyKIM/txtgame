@@ -140,7 +140,10 @@ const OTAKU_CATEGORY_KEYS = new Set(['otaku', 'anime', 'game']);
  * 진짜로 절대 출제해선 안 되는 대상만 여기에 넣는다 (예: 저작권 민감, 실존 불분명 등).
  * 단순히 "자주 나온다"는 이유로 넣으면 안 됨 — 그건 제외 목록(플레이 이력)으로 충분하다.
  */
-const ALWAYS_EXCLUDE: Record<string, string[]> = {};
+const ALWAYS_EXCLUDE: Record<string, string[]> = {
+  // 실존하지 않는데 반복적으로 지어내 출제된 표현 (신고 확인됨)
+  proverb: ['노름마치'],
+};
 
 /**
  * 출제용 system instruction.
@@ -326,7 +329,7 @@ export function buildAppealPrompt(revealedHints: string[], storedAnswer: string,
     '  ✔ 힌트들이 유저 추측을 더 잘 가리키면 → correct: true (이의제기 인용)',
     '  ✗ 힌트들이 저장된 정답을 더 잘 가리키면 → correct: false (기각)',
     '  ✗ 힌트들이 둘 다 가리키지 않으면 → correct: false (기각)',
-    'reason에는 어떤 근거로 판단했는지 한 문장으로 설명하라. 정답을 직접 노출하지 마라.',
+    'reason은 5단어 이내로 짧게. 정답을 직접 노출하지 마라.',
     '',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"correct": boolean, "reason": string}',
@@ -334,25 +337,28 @@ export function buildAppealPrompt(revealedHints: string[], storedAnswer: string,
 }
 
 /** 의미 판정용 프롬프트 (로컬 매칭 실패 시 폴백) */
-export function buildJudgePrompt(answer: string, guess: string): string {
+export function buildJudgePrompt(answer: string, guess: string, categoryKey = ''): string {
+  const idiomRule = categoryKey === 'proverb'
+    ? '\n【고사성어·속담 전용 규칙 — 최우선 적용】 정답은 하나의 고정된 표현이다. 뜻이 비슷하거나 같은 상황에 쓸 수 있어도 "글자가 다른 별개의 표현"이면 무조건 오답이다 (예: [정답]이 "사면초가"인데 추측이 "고립무원"이면 뜻은 비슷해도 다른 표현이므로 오답). 오직 [정답]과 완전히 같은 표현, 또는 그 한자를 한글로 다르게 읽은 이표기·통용 이표기만 정답으로 인정한다. "비슷한 뜻의 다른 사자성어/속담"은 절대 인정 금지.\n'
+    : '';
   return [
     '너는 추리 퀴즈의 정답 판정관이다. 유저의 추측이 [정답]과 "같은 대상"을 가리키면 정답으로 인정하라.',
     '',
     `[정답] ${answer}`,
     `[유저 추측] ${guess}`,
-    '',
+    idiomRule,
     '【정답 인정】 — 같은 대상을 가리키기만 하면 표기가 달라도 인정(유저에게 유도리를 준다):',
     '  • 띄어쓰기/대소문자/한영 표기 차이, 약칭·별명·통칭',
     '  • 정답이 풀네임인데 유저가 그 일부(이름만/성만/핵심어만)를 댔고, 그것이 명백히 [정답]을 가리킬 때 (예: 정답 "하츠네 미쿠" ← 추측 "미쿠")',
     '  • 동일 인물·작품·사건의 다른 이름',
     '【오답】:',
     '  • 서로 다른 구체적 대상. 같은 분야·종류·시대·주제거나 성격이 비슷해도, 다른 사건·인물·작품·장소면 오답.',
-    '  • "비슷한 종류의 다른 것"은 절대 인정 금지 (예: 서로 다른 두 반란/전쟁/도시/작품은 오답).',
+    '  • "비슷한 종류의 다른 것"은 절대 인정 금지 (예: 서로 다른 두 반란/전쟁/도시/작품, 또는 뜻만 비슷한 다른 사자성어/속담은 오답).',
     '  • 유저 추측이 너무 짧거나 흔해서 [정답] 말고 다른 대상도 가리킬 수 있으면 오답.',
     '',
     '먼저 유저 추측이 무엇을 가리키는지 파악한 뒤 [정답]과 동일 대상인지만 따져라. 애매하면 오답.',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
-    '{"correct": boolean, "reason": string}  // reason은 한국어 한 문장, 정답을 직접 노출하지 말 것',
+    '{"correct": boolean, "reason": string}  // reason은 5단어 이내로 짧게, 정답을 직접 노출하지 말 것',
   ].join('\n');
 }
 
@@ -386,7 +392,7 @@ export function buildVerifyPrompt(puzzle: Puzzle): string {
     '',
     '엄격하게 보되, 사소한 표현 차이만으로 불합격시키지는 마라. 핵심은 "환각·엉터리 정답"과 "정답과 안 맞는 힌트" 두 가지를 걸러내는 것이다.',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
-    '{"ok": boolean, "problem": string}  // problem은 불합격 사유 한국어 한 문장(합격이면 빈 문자열)',
+    '{"ok": boolean, "problem": string}  // problem은 10단어 이내로 짧게(합격이면 빈 문자열)',
   ].join('\n');
 }
 
