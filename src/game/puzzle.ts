@@ -15,7 +15,7 @@ export const CATEGORIES: CategoryInfo[] = [
   { key: 'myth',    label: '신화·전설',   emoji: '🏛️', bg: 'garden', prompt: '그리스·로마·북유럽·한국·이집트·일본·중국 등 세계 각국의 신화 속 인물·사건·신·괴물' },
   { key: 'sport',   label: '스포츠·선수', emoji: '⚽', bg: 'garden', prompt: '축구·야구·농구·테니스·수영·격투기 등 다양한 종목의 유명 선수, 팀, 대회, 역사적 경기' },
   { key: 'otaku',   label: '오타쿠',      emoji: '🎴', bg: 'lib',    prompt: '오타쿠 서브컬처 전반에서, "그 분야 팬이라면 누구나 알 만한 대표적이고 유명한 대상"만 정답으로 골라라. 아래 영역을 번갈아 다루되 애니·만화로만 쏠리지는 마라: ① 유명 비디오게임 작품·캐릭터(JRPG·미소녀게임·비주얼노벨·리듬게임 등) ② 저명한 성우(声優) ③ 널리 알려진 VTuber·인터넷 방송인 ④ 유명 애니/게임송·오타쿠계 아이돌 ⑤ 대표적 라이트노벨 ⑥ 코미케 등 누구나 아는 동인·굿즈 문화의 대표 사례 ⑦ 아키하바라 등 유명 성지·행사 ⑧ 애니메이션·만화 작품/캐릭터. 핵심: 마이너하거나 검증하기 어려운 딥컷(특정 니코니코 밈, 무명 캐릭터 등)은 절대 고르지 마라 — 위키백과에 독립 항목이 있을 만큼 유명하고, 팬이라면 힌트로 충분히 떠올릴 수 있는 대상이어야 한다.' },
-  { key: 'proverb', label: '고사성어',      emoji: '📖', bg: 'lib',    prompt: '실제로 쓰이고 있는 한국 속담 또는 한자 사자성어(四字成語)만 다뤄라. ⚠️ 정답은 반드시 실존하는 표현이어야 한다 — 존재하지 않는 표현을 지어내거나, 서로 다른 속담·성어를 섞어 새로 만들거나, 뜻을 임의로 지어내는 것은 절대 금지. 국어사전·나무위키 등에 실제로 등재되어 통용되는 표현만 골라라. 속담과 사자성어를 번갈아 다루되 한쪽에 치우치지 마라. 힌트는 그 표현이 쓰이는 상황·유래·비슷한 뜻의 다른 표현을 설명하는 방식으로 쓰고, 정답 표현 자체나 그 안의 단어(사자성어의 개별 한자어 포함)를 힌트에 직접 노출하지 마라.' },
+  { key: 'proverb', label: '고사성어',      emoji: '📖', bg: 'lib',    prompt: '실제로 쓰이고 있는 한국 속담 또는 한자 사자성어(四字成語)만 다뤄라. ⚠️ 정답은 반드시 실존하는 표현이어야 한다 — 존재하지 않는 표현을 지어내거나, 서로 다른 속담·성어를 섞어 새로 만들거나, 뜻을 임의로 지어내는 것은 절대 금지. 국어사전·나무위키 등에 실제로 등재되어 통용되는 표현만 골라라. 속담과 사자성어를 번갈아 다루되 한쪽에 치우치지 마라. ⚠️ 스포일러 방지(가장 흔한 탈락 사유이니 특히 주의): (1) "고사성어"/"사자성어"/"속담"이라는 단어 자체를 힌트에 절대 쓰지 마라 — 대신 "이 표현", "이 말"로 지칭. (2) 사자성어를 앞 2글자/뒤 2글자로 쪼개 한자 뜻을 하나씩 직역 설명하지 마라 — 정답 음절이 그대로 노출된다. 예를 들어 정답이 "남귤북지"라면 "남쪽에 심으면 귤이 된다"처럼 앞 2글자를 그대로 살린 직역 대신, "환경에 따라 사람이나 사물의 성질이 달라진다는 뜻"처럼 전체 의미만 완전히 재구성한 문장으로 설명하라. 정답을 구성하는 한자 음절(한 글자 단위 포함)이 힌트 문장에 그대로 등장하면 안 된다. 힌트는 그 표현이 쓰이는 상황·유래·비슷한 뜻의 다른 표현을 설명하는 방식으로 쓰라.' },
 ];
 
 export const DIFFICULTIES: { key: Difficulty; label: string; note: string }[] = [
@@ -402,7 +402,7 @@ export function parseVerify(raw: string): { ok: boolean; problem: string } {
  * ② 중복: 완전히 같은 힌트
  * 카테고리 노출은 소프트 경고만(false positive 방지)
  */
-export function lintHints(puzzle: Puzzle, categoryLabel: string): string[] {
+export function lintHints(puzzle: Puzzle, categoryLabel: string, categoryKey = ''): string[] {
   function nk(s: string): string {
     return s.toLowerCase().replace(/[\s·~!@#$%^&*()_+\-=[\]{};:'",.<>/?\\|`'""（）【】]/g, '').trim();
   }
@@ -412,6 +412,11 @@ export function lintHints(puzzle: Puzzle, categoryLabel: string): string[] {
   const catKey  = nk(categoryLabel);
   // 정답 구성 토큰 (3자 이상만 — 짧은 단어 오탐 방지)
   const ansTokens = puzzle.answer.split(/[\s·]/).map(nk).filter(t => t.length >= 3);
+  // 고사성어: 4글자를 반씩 쪼개 직역하다 음절이 새는 사례가 잦아, 2글자 연속 조각까지 검사
+  // (AI 2차검증에만 의존하면 매번 크레딧을 쓰고 나서야 걸러진다 — 결정론적으로 먼저 차단)
+  const ansBigrams = categoryKey === 'proverb' && ansKey.length >= 4
+    ? Array.from({ length: ansKey.length - 1 }, (_, i) => ansKey.slice(i, i + 2))
+    : [];
 
   const seenHints = new Set<string>();
   puzzle.hints.forEach((hint, i) => {
@@ -424,6 +429,8 @@ export function lintHints(puzzle: Puzzle, categoryLabel: string): string[] {
       issues.push(`힌트 ${i + 1}: 정답 기본명 노출`);
     } else if (ansTokens.some(t => t.length >= 4 && hk.includes(t))) {
       issues.push(`힌트 ${i + 1}: 정답 토큰 노출 가능성`);
+    } else if (ansBigrams.some(g => hk.includes(g))) {
+      issues.push(`힌트 ${i + 1}: 정답 음절 일부 노출`);
     }
 
     // ② 카테고리 이름 (첫 2개 힌트만, 명백한 경우만)

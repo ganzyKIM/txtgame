@@ -262,7 +262,7 @@ export default function App() {
       }
 
       // ③ 힌트 린터 (결정론적, 무료)
-      const lintIssues = lintHints(cand, cfg.categoryLabel);
+      const lintIssues = lintHints(cand, cfg.categoryLabel, catKey);
       if (lintIssues.length > 0) {
         extraBanned.push(cand.answer, baseName(cand.answer));
         push(`> ↻ 힌트 품질 문제(${lintIssues[0]}) — 다시 출제`);
@@ -301,7 +301,7 @@ export default function App() {
           repaired = parseHintOnly(text, cand.answer, cfg.categoryLabel, cfg.theme, cand.acceptable);
         } catch { /* 재생성 실패 — 아래에서 전체 재출제로 폴백 */ }
 
-        if (repaired && lintHints(repaired, cfg.categoryLabel).length === 0) {
+        if (repaired && lintHints(repaired, cfg.categoryLabel, catKey).length === 0) {
           const v2 = await verifyPuzzle(repaired);
           if (typeof v2.balance === 'number') applyBalance(v2.balance);
           if (v2.ok) {
