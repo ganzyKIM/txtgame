@@ -14,7 +14,7 @@ import { loadBank, addToBank, updateBankStats, recordAppealUpheld, pickFromBank,
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
-import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem } from './save/quizBank';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import DialogHost from './components/DialogHost';
 import { showConfirm } from './lib/dialog';
@@ -169,7 +169,35 @@ export default function App() {
       ...chronicFailures,  // Level 2: 만성 실패 정답 자동 차단
     ])];
 
-    const MAX_RETRY = 3;
+    // ① 서버 문제은행 우선 재사용 — 적중하면 AI 호출 없이 출제(0크레딧).
+    //    저장된 힌트 세트는 전부 생성 당시 검증을 통과했으므로 재검증도 생략.
+    //    항상 뱅크만 쓰면 신선도가 떨어지므로 확률 상한을 둔다.
+    const SERVER_BANK_REUSE_P = 0.65;
+    if (Math.random() < SERVER_BANK_REUSE_P) {
+      const hit = await pickServerBankPuzzle(catKey, cfg.difficulty, baseExclusions);
+      if (hit) {
+        const reused: Puzzle = {
+          answer: hit.answer,
+          hints: hit.hints,
+          maxHints: hit.maxHints,
+          acceptable: hit.acceptable,
+          category: cfg.categoryLabel,
+          categoryKey: catKey,
+          theme: cfg.theme,
+        };
+        if (!collidesWithRecent(reused, baseExclusions)) {
+          push('> ♻ 문제은행에서 검증된 문제 재사용 (크레딧 0)');
+          answerBank.current = addToBank(answerBank.current, {
+            answer: reused.answer, categoryKey: catKey, categoryLabel: cfg.categoryLabel,
+            acceptable: reused.acceptable, wikiVerified: true, difficultyLabeled: cfg.difficulty,
+          });
+          exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, reused.answer);
+          return reused;
+        }
+      }
+    }
+
+    const MAX_RETRY = 2;
     const extraBanned: string[] = [];
     let puzzle!: Puzzle;
 

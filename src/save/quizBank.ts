@@ -149,6 +149,39 @@ export async function getFailurePatterns(categoryKey: string): Promise<string[]>
   } catch { return []; }
 }
 
+// ── 서버 문제은행 재사용 (migration 020) ────────────────────────────────
+
+export interface ServerBankPuzzle {
+  answer: string;
+  acceptable: string[];
+  hints: string[];
+  maxHints: number;
+}
+
+/**
+ * 서버 quiz_bank에서 검증된 문제를 하나 뽑아온다.
+ * 적중하면 AI 호출 없이 그대로 출제 가능(0크레딧) — 저장된 힌트 세트는
+ * 전부 생성 당시 검증 파이프라인을 통과한 것들이다.
+ */
+export async function pickServerBankPuzzle(
+  categoryKey: string,
+  difficulty: string,
+  excludeAnswers: string[],
+): Promise<ServerBankPuzzle | null> {
+  if (!categoryKey) return null;
+  try {
+    const { data, error } = await rpc.rpc('pick_quiz_bank_puzzle', {
+      p_category_key: categoryKey,
+      p_difficulty: difficulty,
+      p_exclude_keys: excludeAnswers.map(normAnswerKey).filter(Boolean),
+    }) as { data: { answer: string; acceptable: string[]; hints: string[]; max_hints: number }[] | null; error: unknown };
+    if (error || !data || data.length === 0) return null;
+    const r = data[0];
+    if (!r.answer || !Array.isArray(r.hints) || r.hints.length === 0) return null;
+    return { answer: r.answer, acceptable: r.acceptable ?? [], hints: r.hints, maxHints: r.max_hints || r.hints.length };
+  } catch { return null; }
+}
+
 /** 이용자 문제 신고 (2회 이상 → 서버에서 banned). */
 export async function reportQuizProblem(
   answer: string,
