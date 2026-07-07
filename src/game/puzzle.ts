@@ -407,9 +407,9 @@ export function lintHints(puzzle: Puzzle, categoryLabel: string, categoryKey = '
     return s.toLowerCase().replace(/[\s·~!@#$%^&*()_+\-=[\]{};:'",.<>/?\\|`'""（）【】]/g, '').trim();
   }
   const issues: string[] = [];
+  void categoryLabel; // 카테고리명 노출은 스포일러가 아니라 힌트 품질 이슈라 더 이상 검사하지 않음(호환용으로 파라미터만 유지)
   const ansKey  = nk(puzzle.answer);
   const baseKey = nk(baseName(puzzle.answer));
-  const catKey  = nk(categoryLabel);
   // 정답 구성 토큰 (3자 이상만 — 짧은 단어 오탐 방지)
   const ansTokens = puzzle.answer.split(/[\s·]/).map(nk).filter(t => t.length >= 3);
   // 고사성어: 4글자를 반씩 쪼개 직역하다 음절이 새는 사례가 잦아, 2글자 연속 조각까지 검사
@@ -433,12 +433,7 @@ export function lintHints(puzzle: Puzzle, categoryLabel: string, categoryKey = '
       issues.push(`힌트 ${i + 1}: 정답 음절 일부 노출`);
     }
 
-    // ② 카테고리 이름 (첫 2개 힌트만, 명백한 경우만)
-    if (i < 2 && catKey.length >= 3 && hk.includes(catKey)) {
-      issues.push(`힌트 ${i + 1}: 카테고리명 직접 노출`);
-    }
-
-    // ③ 중복 힌트
+    // ② 중복 힌트
     if (seenHints.has(hk)) issues.push(`힌트 ${i + 1}: 중복 힌트`);
     seenHints.add(hk);
   });
