@@ -207,7 +207,14 @@ export default function App() {
     let genWiki = false, genLint = false, genVerify = false, genVerifyProblem = '';
 
     for (let attempt = 0; ; attempt++) {
-      const banned = [...baseExclusions, ...extraBanned];
+      // exclusions.current를 매 시도마다 다시 읽는다 — 프리페치 등 동시에 도는 다른
+      // generatePuzzle() 호출이 그 사이 정답을 하나 확정했을 수 있어(경쟁 상태),
+      // 루프 진입 전 한 번만 스냅샷 뜨면 그 갱신을 못 보고 같은 답이 중복 출제된다.
+      const liveExclusions = [...new Set([
+        ...relatedLabels.flatMap(label => exclusions.current[label] ?? []),
+        ...chronicFailures,
+      ])];
+      const banned = [...new Set([...liveExclusions, ...baseExclusions, ...extraBanned])];
       let cand: Puzzle;
       let candAxes: GenAxes | null = null;
 
