@@ -337,7 +337,7 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
       <div className="panel" style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <div className="panel-title">
           <span>◆ {round ? `라운드 ${round.roundNum}/${MP_TOTAL_ROUNDS}` : '준비 중…'}</span>
-          <span style={{ fontSize: 11 }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label}</span>
+          <span style={{ fontSize: 11 }}>{CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label} · {DIFFICULTIES.find(d => d.key === room.difficulty)?.label}</span>
         </div>
 
         {/* 문제 출제 중 로딩바 — 라운드 종료 후엔 mp-round-result 내부 로딩바로 대체 */}

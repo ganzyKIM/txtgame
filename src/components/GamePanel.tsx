@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameState, GameResult, ExamMode } from '../game/types';
 import { CENTER_QUESTIONS } from '../game/types';
 import { computeScore, runGrade } from '../game/scoring';
+import { DIFFICULTIES } from '../game/puzzle';
 
 interface Props {
   state: GameState;
@@ -83,7 +84,7 @@ export default function GamePanel({ state, judging, appealing, result, generatin
         {/* 왼쪽: 힌트 */}
         <section className="panel game-left">
           <div className="panel-title">
-            ◆ 힌트 <span className="mini" style={{ color: '#fff' }}>{puzzle.category}</span>
+            ◆ 힌트 <span className="mini" style={{ color: '#fff' }}>{puzzle.category} · {DIFFICULTIES.find(d => d.key === state.difficulty)?.label ?? state.difficulty}</span>
           </div>
 
           {isCenter && (

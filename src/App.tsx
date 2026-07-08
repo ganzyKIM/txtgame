@@ -7,7 +7,7 @@ import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import { proxyGenerateText } from './api/proxy';
-import { buildSetupPrompt, parsePuzzle, CATEGORIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
+import { buildSetupPrompt, parsePuzzle, CATEGORIES, DIFFICULTIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia, anyTrue } from './game/wiki';
 import { checkNamuWiki } from './game/namu';
 import { loadBank, addToBank, updateBankStats, recordAppealUpheld, getDifficultyCalibration, normAnswerKey, type AnswerBank } from './game/answerBank';
@@ -680,7 +680,7 @@ export default function App() {
 
   const statusText =
     mode === 'soup'  ? '🐢 바다거북 수프'
-    : mode === 'multi' ? (mpRoom ? `◆ 대합전 중 · ${mpRoom.category_label}` : '◆ 대합전 대기실')
+    : mode === 'multi' ? (mpRoom ? `◆ 대합전 중 · ${mpRoom.category_label} · ${DIFFICULTIES.find(d => d.key === mpRoom.difficulty)?.label ?? mpRoom.difficulty}` : '◆ 대합전 대기실')
     : game.phase === 'setup' ? '준비됨 ♡'
     : game.phase === 'playing' ? `진행 중 · 힌트 ${game.revealedCount}/${game.puzzle?.maxHints}`
     : game.phase === 'won' ? '클리어! ♡'
