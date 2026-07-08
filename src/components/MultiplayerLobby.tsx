@@ -13,6 +13,7 @@ export interface JoinedRoom {
 }
 
 interface LobbyChatEntry { user_id: string; nickname: string; message: string; ts: number }
+interface LobbyPresence { user_id: string; nickname: string }
 
 interface Props {
   myUserId: string;
@@ -41,14 +42,27 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
   const chatEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  // 지금 이 로비 화면에 있는 유저 목록 — Presence는 채널 연결이 끊기면
+  // (탭 닫기·다른 화면 이동 등) 자동으로 정리되므로 별도 하트비트/DB 불필요.
+  const [presentUsers, setPresentUsers] = useState<LobbyPresence[]>([]);
+
   useEffect(() => {
-    const ch = supabase.channel('mp:lobby', { config: { broadcast: { self: true } } });
+    const ch = supabase.channel('mp:lobby', { config: { broadcast: { self: true }, presence: { key: myUserId } } });
     channelRef.current = ch;
-    ch.on('broadcast', { event: 'chat' }, ({ payload }) => {
-      setChat(prev => [...prev, payload as LobbyChatEntry].slice(-50));
-    }).subscribe();
+    ch
+      .on('broadcast', { event: 'chat' }, ({ payload }) => {
+        setChat(prev => [...prev, payload as LobbyChatEntry].slice(-50));
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = ch.presenceState<LobbyPresence>();
+        const users = Object.values(state).map(entries => entries[0]).filter(Boolean);
+        setPresentUsers(users);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') void ch.track({ user_id: myUserId, nickname: myNickname });
+      });
     return () => { void supabase.removeChannel(ch); };
-  }, []);
+  }, [myUserId, myNickname]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
 
@@ -115,6 +129,15 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
       <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
         <div className="panel-title">
           <span>◆ 대합전 — 대기실</span>
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <span>👥 지금 대기실에 있음 ({presentUsers.length}):</span>
+          {presentUsers.map(u => (
+            <span key={u.user_id} className="raised" style={{ padding: '1px 6px', fontSize: 10, color: u.user_id === myUserId ? 'var(--magenta-d)' : 'var(--ink)' }}>
+              {u.nickname}{u.user_id === myUserId ? ' (나)' : ''}
+            </span>
+          ))}
         </div>
 
         {showCreate ? (
