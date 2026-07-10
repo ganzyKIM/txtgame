@@ -39,7 +39,7 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
   // 기록은 남기지 않고 실시간 브로드캐스트만(가벼운 잡담용, 굳이 DB에 남길 필요 없음).
   const [chat, setChat] = useState<LobbyChatEntry[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   // 지금 이 로비 화면에 있는 유저 목록 — Presence는 채널 연결이 끊기면
@@ -64,7 +64,10 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
     return () => { void supabase.removeChannel(ch); };
   }, [myUserId, myNickname]);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
+  useEffect(() => {
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chat]);
 
   function handleSendChat() {
     const m = chatInput.trim();
@@ -192,13 +195,12 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
         </div>
 
         {/* 대기실 공용 채팅 — 아직 방에 안 들어간 사람들끼리도 잡담 가능 */}
-        <div className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
+        <div ref={chatContainerRef} className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
           {chat.map((c, i) => (
             <div key={i} style={{ color: c.user_id === myUserId ? 'var(--magenta-d)' : 'var(--ink)' }}>
               <b>{c.nickname}</b>: {c.message}
             </div>
           ))}
-          <div ref={chatEndRef} />
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           <input className="sunken" value={chatInput} onChange={e => setChatInput(e.target.value)}

@@ -40,8 +40,8 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hintCountdown, setHintCountdown] = useState(7);
   const [nextRoundCountdown, setNextRoundCountdown] = useState(0);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const wrongGuessEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const wrongGuessContainerRef = useRef<HTMLDivElement>(null);
   const advancedRef = useRef(false);
   const prefetchRef = useRef<Puzzle | null>(null);
   const prefetchingRef = useRef(false);
@@ -123,9 +123,18 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finalScores]);
 
-  // auto-scroll chat
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat]);
-  useEffect(() => { wrongGuessEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [wrongGuesses]);
+  // auto-scroll chat — scrollIntoView는 다른 영역(카운트다운 등)이 잦게 리렌더되며
+  // 레이아웃이 흔들릴 때 스크롤 애니메이션이 중간에 끊겨 바닥까지 안 내려가는 경우가
+  // 있었다. 컨테이너의 scrollTop을 직접 맨 끝으로 지정하면 애니메이션 없이 즉시
+  // 확정되므로 항상 새 메시지가 보인다.
+  useEffect(() => {
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chat]);
+  useEffect(() => {
+    const el = wrongGuessContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [wrongGuesses]);
 
   // 힌트 카운트다운 (힌트가 바뀔 때마다 7→0)
   useEffect(() => {
@@ -297,9 +306,8 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
               placeholder="채팅…" style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
             <button className="btn btn-xs" onClick={() => void handleChatOrGuess()}>전송</button>
           </div>
-          <div className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
+          <div ref={chatContainerRef} className="sunken" style={{ maxHeight: 100, overflowY: 'auto', padding: 4, fontSize: 11 }}>
             {chat.map((c, i) => <div key={i}><b>{c.nickname}</b>: {c.message}</div>)}
-            <div ref={chatEndRef} />
           </div>
         </div>
       </div>
@@ -383,14 +391,13 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
 
         {/* 다른 플레이어 오답 기록 */}
         {round && !generating && !round.ended && allWrongGuesses.length > 0 && (
-          <div className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
+          <div ref={wrongGuessContainerRef} className="sunken" style={{ padding: '3px 6px', maxHeight: 72, overflowY: 'auto' }}>
             {allWrongGuesses.slice(-8).map((wg, i) => (
               <div key={i} className="mp-wrong-entry">
                 <span className="mp-wrong-x">✗</span>
                 <b>{wg.nickname}</b>: {wg.guess}
               </div>
             ))}
-            <div ref={wrongGuessEndRef} />
           </div>
         )}
 
@@ -463,13 +470,12 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
         {/* 채팅 */}
         <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0 }}>
           <div className="panel-title">◆ 채팅</div>
-          <div className="sunken" style={{ flex: 1, overflowY: 'auto', padding: 4, fontSize: 11 }}>
+          <div ref={chatContainerRef} className="sunken" style={{ flex: 1, overflowY: 'auto', padding: 4, fontSize: 11 }}>
             {chat.map((c, i) => (
               <div key={i} style={{ color: c.user_id === myUserId ? 'var(--magenta-d)' : 'var(--ink)' }}>
                 <b>{c.nickname}</b>: {c.message}
               </div>
             ))}
-            <div ref={chatEndRef} />
           </div>
           {submitError && <div style={{ fontSize: 10, color: '#c03060' }}>{submitError}</div>}
           {genError && <div style={{ fontSize: 10, color: '#c03060' }}>{genError}</div>}
