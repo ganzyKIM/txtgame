@@ -91,6 +91,10 @@ export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props
   }, []);
 
   useEffect(() => {
+    // pg_cron 없이도 방치된 방이 확실히 정리되도록, 대기실을 열 때마다
+    // (fire-and-forget) 오래된 방을 청소한다 — 대기실은 자주 열리는
+    // 화면이라 크론보다 오히려 더 자주 정리된다.
+    void rpc.rpc('mp_cleanup_stale_rooms').catch(() => { /* 무시 */ });
     void loadRooms();
     const t = window.setInterval(() => void loadRooms(), 5000);
     return () => window.clearInterval(t);
