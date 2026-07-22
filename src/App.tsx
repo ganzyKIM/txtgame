@@ -17,7 +17,7 @@ import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import DialogHost from './components/DialogHost';
-import { showConfirm } from './lib/dialog';
+import { showConfirm, showPrompt } from './lib/dialog';
 import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
 import MultiplayerView from './components/MultiplayerView';
 import type { MultiplayerViewHandle } from './components/MultiplayerView';
@@ -47,6 +47,18 @@ function addExclusion(map: Record<string, string[]>, category: string, answer: s
   const updated = { ...map, [category]: [...prev.slice(-(MAX_PER_CATEGORY - toAdd.length)), ...toAdd] };
   try { localStorage.setItem(EXCLUSION_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
   return updated;
+}
+
+// ── 멀티 닉네임 (localStorage 영속화) ──────────────────────────────
+const NICKNAME_KEY = 'txtgame_mp_nickname_v1';
+const NICKNAME_MAX_LEN = 16;
+
+function loadSavedNickname(): string | null {
+  try { return localStorage.getItem(NICKNAME_KEY); } catch { return null; }
+}
+
+function saveNickname(name: string) {
+  try { localStorage.setItem(NICKNAME_KEY, name); } catch { /* ignore */ }
 }
 
 /** 프리페치 캐시 키 — 퍼즐 내용에 영향 주는 설정이 같으면 미리 만들어둔 문제를 재사용 */
@@ -81,6 +93,8 @@ export default function App() {
   const [minimized, setMinimized] = useState(false);
   // 사회인모드(보스키) — 게임 상태는 그대로 두고 화면만 업무용으로 위장
   const [officeMode, setOfficeMode] = useState(false);
+  // 멀티에서 보일 닉네임 — 직접 정한 게 있으면 그걸, 없으면 이메일 앞부분
+  const [customNickname, setCustomNickname] = useState<string | null>(() => loadSavedNickname());
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
   const [mode, setMode] = useState<'quiz' | 'soup' | 'multi'>('quiz');
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
@@ -676,7 +690,27 @@ export default function App() {
   }
   if (!user) return <LoginScreen />;
 
-  const myNickname = user?.email?.split('@')[0] ?? 'player';
+  const myNickname = customNickname?.trim() || (user?.email?.split('@')[0] ?? 'player');
+
+  // 멀티 진입 전 닉네임을 정하게 한다 — 이전에 정한 게 있으면 기본값으로 채워두고 수정만 하면 됨.
+  // 취소하면 멀티에 들어가지 않는다(닉네임 없이 들어가는 경로를 만들지 않기 위함).
+  async function handleEnterMulti() {
+    const name = await showPrompt({
+      title: '대합전 닉네임',
+      message: '멀티에서 다른 사람에게 보일 닉네임을 정해줘! (최대 16자)',
+      defaultValue: myNickname,
+      maxLength: NICKNAME_MAX_LEN,
+      confirmLabel: '입장',
+      cancelLabel: '취소',
+    });
+    if (name === null) return;
+    const trimmed = name.trim().slice(0, NICKNAME_MAX_LEN);
+    if (!trimmed) return;
+    setCustomNickname(trimmed);
+    saveNickname(trimmed);
+    setMode('multi');
+    setMpRoom(null);
+  }
 
   const statusText =
     mode === 'soup'  ? '🐢 바다거북 수프'
@@ -712,7 +746,7 @@ export default function App() {
           hideConsole={mode === 'multi'}
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}
-          onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => { setMode('multi'); setMpRoom(null); } : undefined}
+          onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => void handleEnterMulti() : undefined}
           onHome={
             mode === 'multi' ? () => {
               void showConfirm('대합전을 나가시겠어요?').then((ok) => {

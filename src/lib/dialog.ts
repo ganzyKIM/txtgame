@@ -23,9 +23,20 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 
+export interface PromptOptions {
+  title?: string;
+  message: string;
+  defaultValue?: string;
+  placeholder?: string;
+  maxLength?: number;
+  confirmLabel?: string;
+  cancelLabel?: string;
+}
+
 type DialogState =
   | { kind: 'alert'; opts: Required<AlertOptions>; resolve: () => void }
   | { kind: 'confirm'; opts: Required<ConfirmOptions>; resolve: (ok: boolean) => void }
+  | { kind: 'prompt'; opts: Required<PromptOptions>; resolve: (value: string | null) => void }
   | null;
 
 let state: DialogState = null;
@@ -73,6 +84,27 @@ export function showConfirm(opts: string | ConfirmOptions): Promise<boolean> {
       kind: 'confirm',
       opts: normalized,
       resolve: (ok: boolean) => { state = null; emit(); resolve(ok); },
+    };
+    emit();
+  });
+}
+
+/** 텍스트 입력 다이얼로그. 취소하면 null, 확인하면 trim된 문자열을 반환한다. */
+export function showPrompt(opts: PromptOptions): Promise<string | null> {
+  const normalized: Required<PromptOptions> = {
+    title: opts.title ?? '입력',
+    message: opts.message,
+    defaultValue: opts.defaultValue ?? '',
+    placeholder: opts.placeholder ?? '',
+    maxLength: opts.maxLength ?? 200,
+    confirmLabel: opts.confirmLabel ?? '확인',
+    cancelLabel: opts.cancelLabel ?? '취소',
+  };
+  return new Promise((resolve) => {
+    state = {
+      kind: 'prompt',
+      opts: normalized,
+      resolve: (value: string | null) => { state = null; emit(); resolve(value); },
     };
     emit();
   });

@@ -278,6 +278,8 @@ html.is-mac .console{
 .dialog-body{padding:16px;gap:14px;}
 .dialog-message{font-size:13px;line-height:1.6;white-space:pre-wrap;}
 .dialog-actions{display:flex;justify-content:flex-end;gap:6px;}
+.dialog-prompt-input{width:100%;box-sizing:border-box;}
+.dialog-prompt-counter{font-size:10px;color:var(--ink-soft);text-align:right;}
 
 /* ── 상태바 ── */
 .statusbar{display:flex;justify-content:space-between;align-items:center;gap:8px;
