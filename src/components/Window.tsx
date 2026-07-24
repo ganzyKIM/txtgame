@@ -14,6 +14,8 @@ interface Props {
   onHome?: () => void;
   /** 멀티플레이 진입 버튼 */
   onMultiplay?: () => void;
+  /** 제공되면 메뉴바에 "족보" 버튼 노출(홀덤 규칙/족보 다이얼로그) */
+  onShowRules?: () => void;
   /** true면 하단 로그창 숨김 (멀티플레이: 정답 노출 방지) */
   hideConsole?: boolean;
   /** true면 #pane에 멀티플레이 배경 이미지 적용 */
@@ -31,7 +33,7 @@ interface Props {
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, hideConsole, multiBackground,
+  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, onShowRules, hideConsole, multiBackground,
   officeMode, onEnterOffice, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
@@ -85,6 +87,11 @@ export default function Window({
           {onMultiplay && (
             <button className="menu-btn" onClick={onMultiplay} title="멀티플레이 대합전">
               <span className="menu-icon">◆</span> 멀티
+            </button>
+          )}
+          {onShowRules && (
+            <button className="menu-btn" onClick={onShowRules} title="홀덤 규칙 · 족보">
+              <span className="menu-icon">❓</span> 족보
             </button>
           )}
           <span className="menu-spacer" />

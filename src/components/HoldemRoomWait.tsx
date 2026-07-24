@@ -9,7 +9,6 @@ import { parseCard, rankLabel } from '../game/poker/deck';
 import { evaluate7, HAND_CATEGORY_LABEL } from '../game/poker/handRank';
 import { HAND_CATEGORY, type Card, type HandValue, type Rank } from '../game/poker/types';
 import { PixelCard, ChipStack, SeatAvatar, HumanAvatar } from './pokerUI';
-import HoldemRulesModal from './HoldemRulesModal';
 
 interface Seat {
   seat_index: number;
@@ -134,7 +133,6 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
   const [rebuying, setRebuying] = useState(false);
   const [handError, setHandError] = useState<string | null>(null);
   const [raiseAmount, setRaiseAmount] = useState(0);
-  const [rulesOpen, setRulesOpen] = useState(false);
 
   const loadSeats = useCallback(async () => {
     const { data } = await supabase
@@ -498,9 +496,7 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
                   {ph.board.map((c, i) => <PixelCard key={i} card={c} />)}
                   {Array.from({ length: 5 - ph.board.length }).map((_, i) => <PixelCard key={`e${i}`} />)}
                   <div className="holdem-pot">팟 {potNow}</div>
-                  <button className="btn btn-xs" style={{ marginLeft: 'auto' }} onClick={() => setRulesOpen(true)}>❓ 족보</button>
                 </div>
-                {rulesOpen && <HoldemRulesModal onClose={() => setRulesOpen(false)} />}
 
                 {mySeat !== null && myPlayer ? (
                   <div className="holdem-seat-group">

@@ -7,7 +7,6 @@ import { evaluate7, HAND_CATEGORY_LABEL } from '../game/poker/handRank';
 import { HAND_CATEGORY, type HandValue, type Rank } from '../game/poker/types';
 import type { Form, MascotHandle } from './Mascot';
 import { PixelCard, ChipStack, SeatAvatar } from './pokerUI';
-import HoldemRulesModal from './HoldemRulesModal';
 
 /** 족보 이름 + 핵심 랭크(어떤 숫자로 만들어졌는지) — "투페어 (Q, 2)" 같은 식 */
 function handSummary(hv: HandValue): string {
@@ -107,7 +106,6 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
   const [raiseAmount, setRaiseAmount] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [botSpeech, setBotSpeech] = useState<Record<number, string>>({});
-  const [rulesOpen, setRulesOpen] = useState(false);
   const botTimer = useRef<number | null>(null);
   const lastReactedHandEnd = useRef<HandState | null>(null);
 
@@ -313,9 +311,7 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
           {hand.board.map((c, i) => <PixelCard key={i} card={c} />)}
           {Array.from({ length: 5 - hand.board.length }).map((_, i) => <PixelCard key={`e${i}`} />)}
           <div className="holdem-pot">팟 {potNow}</div>
-          <button className="btn btn-xs" style={{ marginLeft: 'auto' }} onClick={() => setRulesOpen(true)}>❓ 족보</button>
         </div>
-        {rulesOpen && <HoldemRulesModal onClose={() => setRulesOpen(false)} />}
 
         <div className="holdem-seat-group">
           <div className={`holdem-seat holdem-me${myTurn ? ' is-turn' : ''}${me.folded ? ' is-folded' : ''}`}>

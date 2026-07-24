@@ -20,6 +20,7 @@ import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle } from './save/quizBank';
 import StatsModal from './components/StatsModal';
+import HoldemRulesModal from './components/HoldemRulesModal';
 import DialogHost from './components/DialogHost';
 import { showConfirm, showPrompt } from './lib/dialog';
 import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
@@ -96,6 +97,7 @@ export default function App() {
   const [appealing, setAppealing] = useState(false);
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
+  const [holdemRulesOpen, setHoldemRulesOpen] = useState(false);
   // 접속하면 퀴즈가 바로 뜨는 대신 데스크탑(아이콘 화면)부터 보여준다
   const [minimized, setMinimized] = useState(true);
   // 사회인모드(보스키) — 게임 상태는 그대로 두고 화면만 업무용으로 위장
@@ -801,6 +803,7 @@ export default function App() {
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}
           onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => void handleEnterMulti() : undefined}
+          onShowRules={mode === 'holdem' || mode === 'holdem-multi' ? () => setHoldemRulesOpen(true) : undefined}
           onHome={
             mode === 'multi' ? () => {
               void showConfirm('대합전을 나가시겠어요?').then((ok) => {
@@ -926,6 +929,9 @@ export default function App() {
       <Mascot ref={mascot} />
       {statsOpen && user && (
         <StatsModal userId={user.id} onClose={() => setStatsOpen(false)} />
+      )}
+      {holdemRulesOpen && (
+        <HoldemRulesModal onClose={() => setHoldemRulesOpen(false)} />
       )}
       <DialogHost />
     </>
