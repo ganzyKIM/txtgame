@@ -582,6 +582,209 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 .soup-action-row .btn{flex:1;}
 .soup-hint-btn:disabled{opacity:.4;}
 
+/* ── 설득게임 ─────────────────────────────────────────────────── */
+.persuade-title{margin:0 0 8px;font-size:18px;color:var(--magenta-d);text-align:center;}
+
+/* 스테이지 선택 */
+.persuade-stage-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.persuade-stage-btn{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  padding:8px 10px;font-family:inherit;
+  background:linear-gradient(var(--pink-2),var(--pink-3));color:var(--ink);
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+}
+.persuade-stage-btn:hover{background:linear-gradient(var(--pink-1),var(--pink-2));}
+.persuade-stage-btn:active{border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);transform:translateY(1px);}
+.persuade-stage-thumb{width:44px;height:44px;object-fit:cover;object-position:50% 0%;flex:none;image-rendering:auto;}
+.persuade-stage-text{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.persuade-stage-text b{font-size:13px;color:var(--magenta-d);}
+.persuade-stage-text small{font-size:10px;color:var(--ink-soft);line-height:1.5;}
+
+/* 캐릭터 + 게이지 (패널 상단 고정) */
+.persuade-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;}
+/* 원본 스프라이트는 400x658 전신 일러스트라, 통째로 넣으면(contain) 작은 박스 안에
+   전신이 조그맣게 쪼그라든다. 얼굴+상반신만 보이도록 상단 40%만 잘라 보여준다
+   (object-position을 위쪽에 고정 + 가로세로 비율을 가로로 넓게 잡아 세로를 크롭). */
+.persuade-char{
+  flex:none;width:150px;aspect-ratio:3/2;overflow:hidden;
+  background:var(--pink-0);
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.persuade-char-img{
+  display:block;width:100%;height:100%;object-fit:cover;object-position:50% 0%;
+  animation:persuadeFace .3s ease-out;
+}
+@keyframes persuadeFace{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+
+.persuade-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.persuade-gauge-label{display:flex;align-items:baseline;gap:6px;font-size:11px;color:var(--ink-soft);}
+.persuade-gauge-num{font-size:18px;font-weight:bold;color:var(--magenta-d);}
+.persuade-gauge-state{margin-left:auto;font-size:11px;color:var(--ink);}
+.persuade-gauge-track{
+  position:relative;height:16px;overflow:hidden;background:#1a0024;
+  border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);
+}
+.persuade-gauge-fill{
+  height:100%;background:linear-gradient(90deg,#ff44c8,#ff9ad8);
+  transition:width .45s cubic-bezier(.4,0,.2,1);
+}
+.persuade-situation{
+  flex:1;min-height:0;overflow:auto;font-size:11px;line-height:1.6;color:var(--ink);
+  background:#fff;padding:6px 8px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+
+/* 캐릭터 대사 (soup-a 기반, 판정 배지가 없는 형태) */
+.soup-a.persuade-say{line-height:1.6;}
+.soup-a.persuade-say.is-cheat{border-color:#c23a6a;}
+.persuade-cheat-badge{
+  flex:none;font-size:10px;font-weight:bold;color:#fff;background:#c23a6a;padding:1px 6px;
+}
+
+/* 데스크탑 아이콘 이미지 자리 (전용 아이콘 준비 전 임시) */
+.desktop-icon-placeholder{
+  display:flex;align-items:center;justify-content:center;font-size:64px;
+  background:rgba(255,255,255,.18);border:2px dashed rgba(255,255,255,.55);
+}
+
+@media (max-width:640px){
+  .persuade-char{width:110px;}
+}
+
+/* ── 텍사스 홀덤 ───────────────────────────────────────────────── */
+/* 실제 도트(픽셀) 이미지 파일은 아직 없음 — 기존 베벨 UI 언어(하드 보더,
+   그라디언트 없는 각진 박스)로 "픽셀/레트로" 느낌을 낸 임시 카드.
+   나중에 진짜 도트 아트가 생기면 .pcard 안에 <img>로 교체하면 됨. */
+/* 패널 타이틀바를 안 쓰고(창 상단에 이미 "텍사스 홀덤"이 표시됨) 그만큼 아낀
+   세로 공간을 전부 캐릭터 크기·여백에 재투자한다. 스크롤이 생기면 안 되므로
+   각 블록의 여백·폰트를 이 목표에 맞춰 계속 타이트하게 잡았다. */
+/* overflow-y만 auto로 주면 overflow-x가 암묵적으로 auto가 되어(스펙 규칙),
+   말풍선처럼 폭이 들쭉날쭉한 요소가 스크롤바를 깜빡이며 화면을 흔든다.
+   가로 스크롤은 애초에 필요 없으니 명시적으로 막는다. */
+.holdem-panel{gap:3px;padding:5px;overflow-x:hidden;overflow-y:auto;}
+.pcard{
+  width:36px;height:50px;flex:none;
+  background:#fff;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:bold;font-size:13px;line-height:1.15;user-select:none;
+}
+.pcard-lg{width:42px;height:58px;font-size:15px;}
+.pcard-red{color:#c8285a;}
+.pcard-black{color:#1a1a1a;}
+.pcard-suit{font-size:0.95em;}
+/* 카드 뒷면은 라이트/다크 모드 상관없이 항상 이 무늬 — .pcard와 .pcard-back이
+   같은 우선순위라 소스 순서가 이겨버리므로, 다크모드 .pcard 배경 규칙보다
+   반드시 뒤에 와야 한다(안 그러면 뒷면이 그냥 회색 판으로 덮여버림). */
+body.mode-ame .pcard{background:#f0e8f4;}
+.pcard-back{
+  background:repeating-linear-gradient(45deg,var(--magenta) 0 4px,#ff9ad8 4px 8px);
+}
+body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4px,#2a0d38 4px 8px);}
+
+.holdem-opponents{display:flex;justify-content:center;gap:24px;margin-top:10px;}
+.holdem-seat-group{display:flex;align-items:flex-end;justify-content:center;gap:6px;}
+
+/* 칩 더미 — 좌석 옆 여유 공간에 쌓으므로 세로 높이 예산을 전혀 안 씀.
+   실제 포커 칩처럼 살짝씩 겹쳐 쌓고, 3색을 번갈아 링처럼 표현한다. */
+.chipstack{display:flex;flex-direction:column;align-items:center;width:26px;min-height:8px;}
+.chip{
+  width:24px;height:7px;margin-top:-3px;flex:none;border-radius:2px;
+  border:1px solid var(--bevel-dk2);
+  box-shadow:0 1px 0 rgba(255,255,255,.4) inset;
+}
+.chip:first-child{margin-top:0;}
+/* 칩은 라이트/다크 모드 상관없이 항상 보라색 — 다른 UI가 테마를 갈아입어도
+   "돈(칩)"이라는 정체성은 하나로 고정해두는 편이 헷갈리지 않는다 */
+.chip-t0{background:linear-gradient(180deg,#a060c0,#6a2090);}
+.chip-t1{background:linear-gradient(180deg,#c090e0,#8a40b0);}
+.chip-t2{background:linear-gradient(180deg,#8a40b0,#5a1878);}
+/* width를 min-width가 아니라 고정값으로 — 베팅액·올인 표시처럼 매 턴 글자
+   수가 바뀌는 텍스트 때문에 박스 자체가 넓어지면 좌석 줄 전체가 좌우로
+   밀리며 화면이 움찔거린다. 폭을 고정하고, 넘치는 텍스트는 말줄임으로 막는다. */
+.holdem-seat{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;width:158px;
+  background:var(--pink-1);
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+}
+.holdem-seat.is-turn{border-color:#e6b800 var(--bevel-dk2) var(--bevel-dk2) #e6b800; box-shadow:0 0 0 1px #e6b800;}
+.holdem-seat.is-folded{opacity:.5;}
+/* 캐릭터를 최대한 크게 — 나머지 UI는 전부 이 크기를 지키기 위해 압축했다 */
+.holdem-seat-avatar{width:130px;height:88px;flex:none;overflow:hidden;background:var(--pink-0);}
+.holdem-seat-avatar img,.holdem-seat-avatar canvas{width:100%;height:100%;object-fit:cover;object-position:50% 0%;display:block;}
+/* 멀티 플레이어 좌석 — 캐릭터 스프라이트가 없는 사람 좌석은 닉네임 이니셜 원으로 대신한다 */
+.holdem-human-avatar{display:flex;align-items:center;justify-content:center;background:var(--magenta-d);}
+.holdem-human-avatar span{font-size:32px;font-weight:bold;color:#fff;}
+.holdem-seat-name{
+  width:100%;font-size:11px;font-weight:bold;color:var(--ink);text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.holdem-seat-cards{display:flex;gap:3px;}
+
+.holdem-dealer-badge{
+  position:absolute;top:-8px;right:-8px;z-index:2;
+  width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:bold;color:#5a4000;background:#ffd700;
+  border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
+}
+
+/* 캐릭터 말풍선 — 세로 공간을 차지하지 않도록 좌석 카드 위에 겹쳐서 띄운다 */
+.holdem-speech{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);z-index:2;
+  text-align:center;font-size:11px;line-height:1.4;color:var(--ink);
+  max-width:180px;width:max-content;
+  background:#fff;padding:4px 9px;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+  animation:holdemSpeechPop .2s ease-out;
+}
+@keyframes holdemSpeechPop{from{opacity:.3;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* 공용 카드 자리 — 실제 포커 테이블 펠트처럼: 초텐쨩(기본)은 그린 펠트,
+   아메(다크모드)는 보라 펠트로 갈아입는다. 나머지 UI는 각진 베벨을 유지하지만
+   여기만큼은 "테이블 위에 카드가 놓인" 느낌을 살리려 둥글게 뒀다. */
+.holdem-board{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  margin:3px 0;padding:6px 12px;
+  background:radial-gradient(ellipse at center, #1f8a56 0%, #0f5c36 100%);
+  border:3px solid #7a5230;border-radius:20px;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);
+}
+.holdem-pot{margin-left:6px;font-size:12px;font-weight:bold;color:#ffe680;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.5);}
+body.mode-ame .holdem-board{
+  background:radial-gradient(ellipse at center, #3a1a52 0%, #1e0d2c 100%);
+  border-color:#4a3020;
+}
+
+.holdem-me{background:var(--pink-2);}
+.holdem-me.is-turn{border-color:#e6b800 var(--bevel-dk2) var(--bevel-dk2) #e6b800; box-shadow:0 0 0 1px #e6b800;}
+
+.holdem-actions{display:flex;flex-direction:column;gap:3px;margin-top:2px;align-items:center;}
+.holdem-actions-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;}
+.holdem-raise-row{display:flex;gap:6px;align-items:center;justify-content:center;}
+.holdem-raise-amount{
+  min-width:52px;text-align:center;font-size:12px;font-weight:bold;color:var(--magenta-d);
+  padding:2px 7px;background:#fff;
+  border:2px solid;border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+
+.holdem-showdown{font-size:10px;line-height:1.4;color:var(--ink-soft);margin-top:2px;}
+/* 결과 박스는 다른 게임과 공유하는 .soup-result라 여백이 넉넉한데, 홀덤은
+   스크롤 없이 한 화면에 다 담아야 해서 이 화면에서만 압축한다 */
+.holdem-panel .soup-result{padding:6px 8px;margin-top:0;}
+.holdem-panel .soup-result-head{margin-bottom:2px;}
+
+body.mode-ame .holdem-seat{background:#251630;}
+body.mode-ame .holdem-me{background:#2e1a38;}
+body.mode-ame .holdem-speech{background:#160d1e;color:#ecd8f8;border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .holdem-raise-amount{background:#160d1e;color:#ecd8f8;border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+
+@media (max-width:640px){
+  .holdem-seat{width:128px;padding:5px;}
+  .holdem-seat-avatar{width:118px;height:96px;}
+  .holdem-opponents{gap:8px;}
+}
+
 /* ── 멀티플레이 배경 이미지 (body 레벨, 일반 배경과 동일 패턴) ── */
 
 /* ── 멀티플레이 ─────────────────────────────────────────────── */
@@ -900,6 +1103,18 @@ body.mode-ame.bg-battle{
     url('/back/battle_ame.webp') center/cover no-repeat fixed;
   background-attachment:fixed;
 }
+body.bg-casino{
+  background:
+    linear-gradient(rgba(255,255,255,.35),rgba(255,255,255,.35)),
+    url('/back/casino_choten.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
+body.mode-ame.bg-casino{
+  background:
+    linear-gradient(rgba(20,5,30,.45),rgba(20,5,30,.45)),
+    url('/back/casino_ame.webp') center/cover no-repeat fixed;
+  background-attachment:fixed;
+}
 
 /* ════════════════════════════════════════════════════════════════════
    아메 다크 모드 (body.mode-ame)
@@ -921,6 +1136,10 @@ body.mode-ame.is-minimized{
 }
 
 /* ── 데스크탑 아이콘 ── */
+.desktop-toolbar{
+  position:fixed; top:14px; right:16px; z-index:2;
+  display:flex; gap:8px; align-items:center;
+}
 .desktop-icons{
   position:fixed; left:50%; top:45%; transform:translate(-50%,-50%);
   display:flex; gap:48px; align-items:flex-start;
@@ -1023,6 +1242,13 @@ body.mode-ame .soup-result-head{color:#7ab0d0;}
 body.mode-ame .soup-result.revealed .soup-result-head{color:#c23a6a;}
 body.mode-ame .soup-solution{background:#120810; color:#ecd8f8; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
 body.mode-ame .soup-busy-bar{background:#08030f; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+/* 설득게임 — 나머지(로그·말풍선·결과)는 soup-* 클래스를 재사용하므로 위 규칙이 그대로 적용된다 */
+body.mode-ame .persuade-title{color:#7ab0d0;}
+body.mode-ame .persuade-char{border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .persuade-situation{background:#120810; color:#ecd8f8; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .persuade-gauge-track{background:#08030f; border-color:#3a1a50 var(--bevel-lt) var(--bevel-lt) #3a1a50;}
+body.mode-ame .persuade-gauge-fill{background:linear-gradient(90deg,#8a2060,#d080b8);}
+body.mode-ame .persuade-stage-btn:hover{background:linear-gradient(#251630,#2e1a38);}
 
 /* ════════════════════════════════════════════════════════════════════
    사회인모드 (보스키) — 실제 화면(children)은 그대로 두고 배색만 갈아입힌다.

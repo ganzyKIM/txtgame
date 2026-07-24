@@ -6,6 +6,10 @@ import Mascot, { type MascotHandle } from './components/Mascot';
 import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
+import PersuadeGame from './components/PersuadeGame';
+import HoldemGame, { type HoldemGameHandle } from './components/HoldemGame';
+import HoldemLobby, { type JoinedPokerRoom } from './components/HoldemLobby';
+import HoldemRoomWait, { type HoldemRoomWaitHandle } from './components/HoldemRoomWait';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, DIFFICULTIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia, anyTrue } from './game/wiki';
@@ -82,6 +86,8 @@ export default function App() {
   const { user, profile, loading: authLoading, signOut, applyBalance } = useAuth();
   const mascot = useRef<MascotHandle>(null);
   const mpViewRef = useRef<MultiplayerViewHandle>(null);
+  const holdemRef = useRef<HoldemGameHandle>(null);
+  const holdemWaitRef = useRef<HoldemRoomWaitHandle>(null);
 
   const [game, setGame] = useState<GameState>(emptyGame);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -90,13 +96,15 @@ export default function App() {
   const [appealing, setAppealing] = useState(false);
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  // 접속하면 퀴즈가 바로 뜨는 대신 데스크탑(아이콘 화면)부터 보여준다
+  const [minimized, setMinimized] = useState(true);
   // 사회인모드(보스키) — 게임 상태는 그대로 두고 화면만 업무용으로 위장
   const [officeMode, setOfficeMode] = useState(false);
   // 멀티에서 보일 닉네임 — 직접 정한 게 있으면 그걸, 없으면 이메일 앞부분
   const [customNickname, setCustomNickname] = useState<string | null>(() => loadSavedNickname());
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
-  const [mode, setMode] = useState<'quiz' | 'soup' | 'multi'>('quiz');
+  const [mode, setMode] = useState<'quiz' | 'soup' | 'multi' | 'persuade' | 'holdem' | 'holdem-multi'>('quiz');
+  const [holdemRoom, setHoldemRoom] = useState<JoinedPokerRoom | null>(null);
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
   // 센터시험(10문제 루틴)에서 완료한 문제들의 점수 (length = 완료 문제 수)
   const [runScores, setRunScores] = useState<number[]>([]);
@@ -130,10 +138,12 @@ export default function App() {
 
   // 카테고리 배경 클래스 — 퀴즈 진행 중일 때만 활성화, 수프/첫화면/로그인은 back 유지
   useEffect(() => {
-    const BG_CLASSES = ['bg-garden', 'bg-kitchen', 'bg-lib', 'bg-battle'] as const;
+    const BG_CLASSES = ['bg-garden', 'bg-kitchen', 'bg-lib', 'bg-battle', 'bg-casino'] as const;
     BG_CLASSES.forEach((c) => document.body.classList.remove(c));
     let bg: string | undefined;
-    if (mode === 'multi') {
+    if (mode === 'holdem' || mode === 'holdem-multi') {
+      bg = 'casino';
+    } else if (mode === 'multi') {
       bg = CATEGORIES.find(c => c.key === mpRoom?.category_key)?.bg ?? lastConfig?.categoryBg;
     } else if (mode === 'quiz' && game.phase !== 'setup') {
       bg = lastConfig?.categoryBg;
@@ -712,8 +722,30 @@ export default function App() {
     setMpRoom(null);
   }
 
+  // 홀덤 멀티도 퀴즈 멀티와 동일한 규칙: 진입 전 닉네임을 정하게 하고, 취소하면 들어가지 않는다.
+  async function handleEnterHoldemMulti() {
+    const name = await showPrompt({
+      title: '홀덤 닉네임',
+      message: '멀티에서 다른 사람에게 보일 닉네임을 정해줘! (최대 16자)',
+      defaultValue: myNickname,
+      maxLength: NICKNAME_MAX_LEN,
+      confirmLabel: '입장',
+      cancelLabel: '취소',
+    });
+    if (name === null) return;
+    const trimmed = name.trim().slice(0, NICKNAME_MAX_LEN);
+    if (!trimmed) return;
+    setCustomNickname(trimmed);
+    saveNickname(trimmed);
+    setMode('holdem-multi');
+    setHoldemRoom(null);
+  }
+
   const statusText =
     mode === 'soup'  ? '🐢 바다거북 수프'
+    : mode === 'persuade' ? '💬 천사쨩 설득하기'
+    : mode === 'holdem' ? '🃏 텍사스 홀덤'
+    : mode === 'holdem-multi' ? (holdemRoom ? `🃏 ${holdemRoom.hostNickname}의 테이블` : '🃏 텍사스 홀덤 · 멀티 대기실')
     : mode === 'multi' ? (mpRoom ? `◆ 대합전 중 · ${mpRoom.category_label} · ${DIFFICULTIES.find(d => d.key === mpRoom.difficulty)?.label ?? mpRoom.difficulty}` : '◆ 대합전 대기실')
     : game.phase === 'setup' ? '준비됨 ♡'
     : game.phase === 'playing' ? `진행 중 · 힌트 ${game.revealedCount}/${game.puzzle?.maxHints}`
@@ -723,16 +755,38 @@ export default function App() {
   return (
     <>
       {minimized ? (
-        <div className="desktop-icons">
+        <>
+          <div className="desktop-toolbar">
+            <button
+              className="mascot-transform"
+              onClick={handleTransformOrExitOffice}
+              title={officeMode ? '원래대로' : '변신!'}
+            >
+              {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
+            </button>
+            {!officeMode && (
+              <button className="menu-btn" onClick={handleEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
+                <span className="menu-icon">🗂️</span>
+                <span className="menu-label-full">사회인모드</span>
+                <span className="menu-label-short">사회인</span>
+              </button>
+            )}
+          </div>
+          <div className="desktop-icons">
           <div className="desktop-icon" onClick={() => { setMode('quiz'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_neko.png" alt="퀴즈대합전" draggable={false} />
             <span className="desktop-icon-label">✞퀴즈대합전✞</span>
+          </div>
+          <div className="desktop-icon" onClick={() => { setMode('holdem'); setMinimized(false); }}>
+            <img className="desktop-icon-img" src="/icon_poker.webp" alt="텍사스 홀덤" draggable={false} />
+            <span className="desktop-icon-label">🃏 텍사스 홀덤</span>
           </div>
           <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
             <span className="desktop-icon-label">🐢 바다거북수프 <small style={{fontSize:'10px',opacity:.8}}>(beta)</small></span>
           </div>
-        </div>
+          </div>
+        </>
       ) : (
         <Window
           credits={profile?.credits ?? null}
@@ -743,7 +797,7 @@ export default function App() {
           onOpenStats={() => setStatsOpen(true)}
           onMinimize={handleMinimize}
           onClose={handleClose}
-          hideConsole={mode === 'multi'}
+          hideConsole={mode === 'multi' || mode === 'holdem' || mode === 'holdem-multi'}
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}
           onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => void handleEnterMulti() : undefined}
@@ -753,6 +807,15 @@ export default function App() {
                 if (!ok) return;
                 void mpViewRef.current?.leaveRoom();
                 setMode('quiz'); setMpRoom(null);
+              });
+            }
+            // 홀덤의 "처음으로"는 카테고리 화면이 아니라 홀덤 자체의 첫 화면(구매 화면)으로
+            : mode === 'holdem' ? () => holdemRef.current?.goHome()
+            : mode === 'holdem-multi' ? () => {
+              void showConfirm('테이블을 나가시겠어요?').then((ok) => {
+                if (!ok) return;
+                void holdemWaitRef.current?.leaveRoom();
+                setMode('holdem'); setHoldemRoom(null);
               });
             }
             // 출제 중(busy)에도 "처음으로"가 떠서 취소할 수 있어야 함(멀티 버튼 대신)
@@ -777,6 +840,40 @@ export default function App() {
                 myUserId={user.id}
                 myNickname={myNickname}
                 onJoin={(room) => setMpRoom(room)}
+              />
+            )
+          ) : mode === 'persuade' ? (
+            <PersuadeGame
+              mascot={mascot}
+              push={push}
+              applyBalance={applyBalance}
+              onExit={() => setMode('quiz')}
+            />
+          ) : mode === 'holdem' ? (
+            <HoldemGame
+              ref={holdemRef}
+              mascot={mascot}
+              push={push}
+              applyBalance={applyBalance}
+              onGoMulti={() => void handleEnterHoldemMulti()}
+            />
+          ) : mode === 'holdem-multi' ? (
+            holdemRoom ? (
+              <HoldemRoomWait
+                ref={holdemWaitRef}
+                room={holdemRoom}
+                myUserId={user.id}
+                mascot={mascot}
+                applyBalance={applyBalance}
+                onLeave={() => setHoldemRoom(null)}
+              />
+            ) : (
+              <HoldemLobby
+                myUserId={user.id}
+                myNickname={myNickname}
+                mascot={mascot}
+                onJoin={(room) => setHoldemRoom(room)}
+                onExit={() => setMode('holdem')}
               />
             )
           ) : mode === 'soup' ? (
