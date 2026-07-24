@@ -68,7 +68,6 @@ export interface HoldemRoomWaitHandle {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc = supabase as any;
 const MAX_SEATS = 4;
-const SPEECH_MS = 4500;
 
 function handSummary(hv: HandValue): string {
   const label = HAND_CATEGORY_LABEL[hv.category];
@@ -134,8 +133,6 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
   const [rebuying, setRebuying] = useState(false);
   const [handError, setHandError] = useState<string | null>(null);
   const [raiseAmount, setRaiseAmount] = useState(0);
-  const [seatSpeech, setSeatSpeech] = useState<Record<number, string>>({});
-  const seatSpeechTimers = useRef<Record<number, number>>({});
 
   const loadSeats = useCallback(async () => {
     const { data } = await supabase
@@ -358,19 +355,6 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
     if (el) el.scrollTop = el.scrollHeight;
   }, [chat]);
 
-  // 새 채팅이 도착하면 보낸 사람 좌석 위에 말풍선으로 잠깐 띄운다(초텐/아메 대사와 같은 방식)
-  useEffect(() => {
-    const last = chat[chat.length - 1];
-    if (!last) return;
-    const seat = seatsRef.current.findIndex((s) => s?.user_id === last.user_id);
-    if (seat === -1) return;
-    setSeatSpeech((s) => ({ ...s, [seat]: last.message }));
-    if (seatSpeechTimers.current[seat]) window.clearTimeout(seatSpeechTimers.current[seat]);
-    seatSpeechTimers.current[seat] = window.setTimeout(() => {
-      setSeatSpeech((s) => { const next = { ...s }; delete next[seat]; return next; });
-    }, SPEECH_MS);
-  }, [chat]);
-
   async function dealNextHand() {
     setDealing(true); setHandError(null);
     try {
@@ -438,11 +422,12 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
   // 상단 "처음으로" 버튼(App.tsx)에서도 같은 나가기 경로를 타도록 노출
   useImperativeHandle(ref, () => ({ leaveRoom }), [room.id]);
 
-  function sendChat() {
+  async function sendChat() {
     const m = chatInput.trim();
     if (!m) return;
     setChatInput('');
-    void rpc.rpc('poker_send_chat', { p_room_id: room.id, p_message: m });
+    const { error: err } = await rpc.rpc('poker_send_chat', { p_room_id: room.id, p_message: m });
+    if (err) setHandError(`채팅 전송 실패: ${err.message}`);
   }
 
 
@@ -484,7 +469,6 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
                       <div key={seat} className="holdem-seat-group">
                         <div className={`holdem-seat${isToAct ? ' is-turn' : ''}${snap.folded ? ' is-folded' : ''}`}>
                           {ph.dealerReal === seat && <span className="holdem-dealer-badge">D</span>}
-                          {seatSpeech[seat] && <div className="holdem-speech">{seatSpeech[seat]}</div>}
                           {info.is_bot && info.bot_form ? (
                             <SeatAvatar src={`/char/${info.bot_form}_${botFace(info.bot_form, snap, isToAct, finished, won)}.png`} />
                           ) : (
@@ -515,7 +499,6 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
                   <div className="holdem-seat-group">
                     <div className={`holdem-seat holdem-me${myTurn ? ' is-turn' : ''}${myPlayer.folded ? ' is-folded' : ''}`}>
                       {ph.dealerReal === mySeat && <span className="holdem-dealer-badge">D</span>}
-                      {seatSpeech[mySeat] && <div className="holdem-speech">{seatSpeech[mySeat]}</div>}
                       <div className="holdem-seat-name">
                         {seats[mySeat]?.nickname} · 칩 {myPlayer.stack}{myPlayer.allIn && !finished ? ' (올인)' : ''}
                         {myPlayer.betThisStreet > 0 ? ` · 베팅 ${myPlayer.betThisStreet}` : ''}
@@ -615,7 +598,7 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
                   <input className="sunken" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendChat(); }}
                     placeholder="채팅…" style={{ flex: 1, fontSize: 11, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
-                  <button className="btn btn-xs" onClick={sendChat}>전송</button>
+                  <button className="btn btn-xs" onClick={() => void sendChat()}>전송</button>
                 </div>
               </>
             );
@@ -678,7 +661,7 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
           <input className="sunken" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendChat(); }}
             placeholder="채팅…" style={{ flex: 1, fontSize: 12, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
-          <button className="btn btn-xs" onClick={sendChat}>전송</button>
+          <button className="btn btn-xs" onClick={() => void sendChat()}>전송</button>
         </div>
 
         <div style={{ display: 'flex', gap: 6 }}>
