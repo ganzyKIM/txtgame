@@ -246,7 +246,6 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
               </button>
               <button className="btn" onClick={onGoMulti}>👥 멀티로 하기</button>
             </div>
-            <button className="btn" style={{ marginTop: 6 }} onClick={resetToIntro}>↩ 카테고리로</button>
           </div>
         </div>
       </div>
@@ -374,7 +373,7 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
             )}
             <div className="restart-btns">
               <button className="btn btn-primary" onClick={() => startNextHand(hand)}>▶ 다음 핸드</button>
-              <button className="btn" onClick={resetToIntro}>↩ 카테고리로</button>
+              <button className="btn" onClick={resetToIntro}>↩ 첫화면으로</button>
             </div>
           </div>
         )}

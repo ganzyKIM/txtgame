@@ -10,6 +10,7 @@ import PersuadeGame from './components/PersuadeGame';
 import HoldemGame, { type HoldemGameHandle } from './components/HoldemGame';
 import HoldemLobby, { type JoinedPokerRoom } from './components/HoldemLobby';
 import HoldemRoomWait, { type HoldemRoomWaitHandle } from './components/HoldemRoomWait';
+import GomokuGame, { type GomokuGameHandle } from './components/GomokuGame';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, DIFFICULTIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
 import { checkWikipedia, anyTrue } from './game/wiki';
@@ -89,6 +90,7 @@ export default function App() {
   const mpViewRef = useRef<MultiplayerViewHandle>(null);
   const holdemRef = useRef<HoldemGameHandle>(null);
   const holdemWaitRef = useRef<HoldemRoomWaitHandle>(null);
+  const gomokuRef = useRef<GomokuGameHandle>(null);
 
   const [game, setGame] = useState<GameState>(emptyGame);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -105,7 +107,7 @@ export default function App() {
   // 멀티에서 보일 닉네임 — 직접 정한 게 있으면 그걸, 없으면 이메일 앞부분
   const [customNickname, setCustomNickname] = useState<string | null>(() => loadSavedNickname());
   const [lastConfig, setLastConfig] = useState<StartConfig | null>(null);
-  const [mode, setMode] = useState<'quiz' | 'soup' | 'multi' | 'persuade' | 'holdem' | 'holdem-multi'>('quiz');
+  const [mode, setMode] = useState<'quiz' | 'soup' | 'multi' | 'persuade' | 'holdem' | 'holdem-multi' | 'gomoku'>('quiz');
   const [holdemRoom, setHoldemRoom] = useState<JoinedPokerRoom | null>(null);
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
   // 센터시험(10문제 루틴)에서 완료한 문제들의 점수 (length = 완료 문제 수)
@@ -746,6 +748,7 @@ export default function App() {
   const statusText =
     mode === 'soup'  ? '🐢 바다거북 수프'
     : mode === 'persuade' ? '💬 천사쨩 설득하기'
+    : mode === 'gomoku' ? '⚫ 오목'
     : mode === 'holdem' ? '🃏 텍사스 홀덤'
     : mode === 'holdem-multi' ? (holdemRoom ? `🃏 ${holdemRoom.hostNickname}의 테이블` : '🃏 텍사스 홀덤 · 멀티 대기실')
     : mode === 'multi' ? (mpRoom ? `◆ 대합전 중 · ${mpRoom.category_label} · ${DIFFICULTIES.find(d => d.key === mpRoom.difficulty)?.label ?? mpRoom.difficulty}` : '◆ 대합전 대기실')
@@ -783,6 +786,11 @@ export default function App() {
             <img className="desktop-icon-img" src="/icon_poker.webp" alt="텍사스 홀덤" draggable={false} />
             <span className="desktop-icon-label">🃏 텍사스 홀덤</span>
           </div>
+          <div className="desktop-icon" onClick={() => { setMode('gomoku'); setMinimized(false); }}>
+            {/* 전용 아이콘이 아직 없어서 이모지 자리표시자 (.desktop-icon-placeholder) */}
+            <div className="desktop-icon-img desktop-icon-placeholder">⚫</div>
+            <span className="desktop-icon-label">⚫ 오목</span>
+          </div>
           <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
             <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
             <span className="desktop-icon-label">🐢 바다거북수프 <small style={{fontSize:'10px',opacity:.8}}>(beta)</small></span>
@@ -799,7 +807,7 @@ export default function App() {
           onOpenStats={() => setStatsOpen(true)}
           onMinimize={handleMinimize}
           onClose={handleClose}
-          hideConsole={mode === 'multi' || mode === 'holdem' || mode === 'holdem-multi'}
+          hideConsole={mode === 'multi' || mode === 'holdem' || mode === 'holdem-multi' || mode === 'gomoku'}
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}
           onMultiplay={mode === 'quiz' && game.phase === 'setup' && !busy ? () => void handleEnterMulti() : undefined}
@@ -812,8 +820,9 @@ export default function App() {
                 setMode('quiz'); setMpRoom(null);
               });
             }
-            // 홀덤의 "처음으로"는 카테고리 화면이 아니라 홀덤 자체의 첫 화면(구매 화면)으로
+            // 홀덤·오목의 "처음으로"는 카테고리 화면이 아니라 그 게임의 첫 화면으로
             : mode === 'holdem' ? () => holdemRef.current?.goHome()
+            : mode === 'gomoku' ? () => gomokuRef.current?.goHome()
             : mode === 'holdem-multi' ? () => {
               void showConfirm('테이블을 나가시겠어요?').then((ok) => {
                 if (!ok) return;
@@ -852,6 +861,8 @@ export default function App() {
               applyBalance={applyBalance}
               onExit={() => setMode('quiz')}
             />
+          ) : mode === 'gomoku' ? (
+            <GomokuGame ref={gomokuRef} mascot={mascot} push={push} />
           ) : mode === 'holdem' ? (
             <HoldemGame
               ref={holdemRef}

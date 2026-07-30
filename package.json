@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@algorithm.ts/gomoku": "^4.0.5",
     "@supabase/supabase-js": "^2.108.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

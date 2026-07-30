@@ -785,6 +785,114 @@ body.mode-ame .holdem-raise-amount{background:#160d1e;color:#ecd8f8;border-color
   .holdem-opponents{gap:8px;}
 }
 
+/* ── 오목 ───────────────────────────────────────────────────────── */
+/* 15x15 판이 스크롤 없이 한 화면에 들어가야 해서 칸 크기를 --cell 하나로
+   묶어뒀다. 좁은 화면에서는 이 값만 줄이면 전체가 같이 줄어든다. */
+.gomoku-panel{gap:6px;padding:6px;align-items:center;overflow-x:hidden;overflow-y:auto;}
+.gomoku-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;max-width:372px;font-size:11px;
+}
+.gomoku-status{font-weight:bold;color:var(--magenta-d);}
+.gomoku-meta{color:var(--ink-soft);font-size:10px;}
+
+.gomoku-board{
+  --cell:24px;
+  flex:none;
+  display:grid;
+  grid-template-columns:repeat(15, var(--cell));
+  grid-template-rows:repeat(15, var(--cell));
+  background:#e8c88a;
+  border:3px solid #7a5230;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+}
+.gomoku-cell{
+  position:relative;
+  width:var(--cell);height:var(--cell);
+  padding:0;margin:0;background:transparent;cursor:pointer;
+  border:0;
+  border-top:1px solid rgba(90,60,20,.5);
+  border-left:1px solid rgba(90,60,20,.5);
+}
+.gomoku-cell:disabled{cursor:default;}
+/* 화점 — 실제 바둑판처럼 위치를 가늠하게 해준다 */
+.gomoku-cell.is-star::before{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:5px;height:5px;border-radius:50%;background:rgba(90,60,20,.75);
+}
+/* 빈 칸에 올리면 놓일 자리를 미리 보여준다 */
+.gomoku-board:not(.is-locked) .gomoku-cell:not(:disabled):hover::after{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:calc(var(--cell) - 9px);height:calc(var(--cell) - 9px);
+  border-radius:50%;background:rgba(20,20,30,.3);
+}
+.gomoku-stone{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:calc(var(--cell) - 4px);height:calc(var(--cell) - 4px);
+  border-radius:50%;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+.gomoku-cell.has-black .gomoku-stone{
+  background:radial-gradient(circle at 34% 28%, #70707f 0%, #23232e 55%, #0b0b12 100%);
+}
+.gomoku-cell.has-white .gomoku-stone{
+  background:radial-gradient(circle at 34% 28%, #ffffff 0%, #ececf2 55%, #c2c2d0 100%);
+}
+/* 마지막 착수 / 승리 라인 강조 */
+.gomoku-cell.is-last .gomoku-stone{outline:2px solid var(--magenta);outline-offset:-1px;}
+.gomoku-cell.is-win .gomoku-stone{
+  outline:2px solid #ffd700;outline-offset:-1px;
+  box-shadow:0 0 8px 2px rgba(255,215,0,.75);
+}
+
+/* 금수(렌주) 표시 — 흑이 둘 수 없는 자리에 ✕. 눌러보면 캐릭터가 이유를 알려준다 */
+.gomoku-cell.is-forbidden::after{
+  content:'';position:absolute;left:50%;top:50%;
+  width:calc(var(--cell) - 10px);height:2px;
+  background:#d02020;
+  transform:translate(-50%,-50%) rotate(45deg);
+  box-shadow:0 0 0 1px rgba(255,255,255,.5);
+}
+.gomoku-cell.is-forbidden::before{
+  content:'';position:absolute;left:50%;top:50%;
+  width:calc(var(--cell) - 10px);height:2px;
+  background:#d02020;
+  border-radius:0;
+  transform:translate(-50%,-50%) rotate(-45deg);
+  box-shadow:0 0 0 1px rgba(255,255,255,.5);
+}
+/* 금수 칸은 hover 미리보기(회색 돌)를 띄우지 않는다 — ✕만 보여야 의미가 분명하다 */
+.gomoku-board:not(.is-locked) .gomoku-cell.is-forbidden:not(:disabled):hover::after{
+  width:calc(var(--cell) - 10px);height:2px;border-radius:0;
+  background:#ff3030;
+}
+
+.gomoku-actions{display:flex;gap:6px;justify-content:center;}
+
+/* 난이도 고르기 — 이름만으론 감이 안 와서 한 줄 설명을 함께 보여준다 */
+.gomoku-diff-pick{display:flex;gap:6px;margin:10px 0 4px;}
+.gomoku-diff-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:7px 6px;text-align:center;line-height:1.25;
+}
+.gomoku-diff-btn small{font-size:9px;color:var(--ink-soft);}
+.gomoku-diff-btn.is-picked{
+  background:linear-gradient(var(--magenta),var(--magenta-d));color:#fff;
+  border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+}
+.gomoku-diff-btn.is-picked small{color:rgba(255,255,255,.9);}
+
+body.mode-ame .gomoku-board{background:#4a3a5c;border-color:#2e2038;}
+body.mode-ame .gomoku-cell{border-top-color:rgba(255,255,255,.18);border-left-color:rgba(255,255,255,.18);}
+body.mode-ame .gomoku-cell.is-star::before{background:rgba(255,255,255,.45);}
+body.mode-ame .gomoku-board:not(.is-locked) .gomoku-cell:not(:disabled):hover::after{background:rgba(255,255,255,.3);}
+
+@media (max-width:640px){
+  .gomoku-board{--cell:20px;}
+  .gomoku-bar{max-width:316px;}
+  .gomoku-diff-pick{flex-direction:column;}
+}
+
 /* ── 멀티플레이 배경 이미지 (body 레벨, 일반 배경과 동일 패턴) ── */
 
 /* ── 멀티플레이 ─────────────────────────────────────────────── */
