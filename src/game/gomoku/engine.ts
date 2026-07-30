@@ -1,29 +1,29 @@
 /* ════════════════════════════════════════════════════════════════════
-   오목(고모쿠) 엔진 — 순수 함수 모듈
+   오목(렌주) 엔진 — 순수 함수 모듈
 
    ── AI는 왜 직접 안 짰나 ────────────────────────────────────────
    홀덤은 규칙(족보·사이드팟)이 프로젝트 고유 요구에 맞물려 있어서 직접
    구현했지만, 오목 탐색은 이미 잘 풀린 문제라 검증된 라이브러리
    `@algorithm.ts/gomoku`(MIT, minimax + alpha-beta)를 쓴다. LLM은 쓰지
-   않는다 — 전부 정해진 탐색 로직이라 응답이 즉시 나오고 비용이 0이다.
+   않는다 — 전부 정해진 탐색 로직이라 비용이 0이다.
+
+   라이브러리가 안 주는 것만 이 파일이 얹는다:
+     1. 승리 판정 — 승자 API가 없다
+     2. 렌주 금수(흑 전용 삼삼·사사·장목)
+     3. 난이도 등급 — 깊이만 낮추면 여전히 4목을 다 막아 초보가 못 이긴다
+     4. 상황 분석 — 캐릭터 대사 트리거용 위협/차단 감지
+
+   ── 색과 역할을 분리한 이유 ─────────────────────────────────────
+   Player(0=흑/선공, 1=백)는 **색**이고, 누가 사람인지는 state.humanSeat이
+   따로 갖는다. 싱글에서 흑백을 번갈아 잡기 때문에 "사람=흑"으로 굳히면
+   안 된다. 렌주 금수는 언제나 **흑**에게 걸리므로, AI가 흑일 때는 AI의
+   착수도 금수를 피해야 한다(chooseAiMove가 처리).
 
    ── 왜 워커가 필요한가 (실측) ───────────────────────────────────
-   탐색은 동기 실행이다. 대부분의 수는 중앙값 1ms로 즉시 끝나지만 승부처에
-   들어가면 꼬리가 매우 길다. hard 자기대국 808수 측정 결과:
-     deepDepth=16 → p95 2.4s / p99 6.6s / 최악 12.3s
-     deepDepth=12 → p95 1.7s / p99 5.6s / 최악  9.2s
-     deepDepth=10 → p95 1.0s / p99 3.0s / 최악  5.2s
-   메인 스레드에서 이걸 돌리면 그 시간 동안 리페인트·입력이 전부 멈춰
-   탭이 죽은 것처럼 보인다. 그래서 탐색은 aiWorker.ts로 내보내고(aiClient.ts
-   경유), 여기에 더해 hard의 deepDepth를 낮춰 대기 자체도 줄였다.
-
-   ── 이 파일이 라이브러리 위에 얹는 것 ──────────────────────────
-   1. 승리 판정 — 라이브러리가 승자 API를 노출하지 않아 직접 구현.
-   2. 난이도 — 탐색 깊이/후보 수 + "실수율(blunder)". 깊이만 낮춰도
-      여전히 4목을 다 막아버려서 초보가 이길 수 없다. 확률적으로 최선수
-      대신 근처의 그럴듯한 수를 두게 해서 사람이 이길 틈을 만든다.
-      실측 차단 실패율: easy 36% / normal 12% / hard 0%.
-   3. 상황 분석 — 캐릭터 대사를 상황에 맞게 띄우기 위한 위협/차단 감지.
+   탐색은 동기 실행이다. 대부분의 수는 즉시 끝나지만 승부처에서 꼬리가
+   길어(진심 난이도 최악 12초) 메인 스레드에서 돌리면 그 시간 동안
+   리페인트·입력이 멈춰 탭이 죽은 것처럼 보인다. 그래서 탐색은
+   aiWorker.ts로 내보낸다(aiClient.ts 경유).
    ════════════════════════════════════════════════════════════════════ */
 
 import { GomokuSolution, createScoreMap, createGomokuSearcher } from '@algorithm.ts/gomoku';
@@ -31,10 +31,14 @@ import { GomokuSolution, createScoreMap, createGomokuSearcher } from '@algorithm
 export const BOARD_SIZE = 15;
 export const WIN_LEN = 5;
 
-/** 0 = 사람(흑, 선공), 1 = 상대 캐릭터(백, 후공). 흑이 선공 유리를 갖는 정석 배치. */
+/** 색. 0=흑(선공, 렌주 금수 대상), 1=백(제약 없음) */
 export type Player = 0 | 1;
-export const HUMAN: Player = 0;
-export const AI: Player = 1;
+export const BLACK: Player = 0;
+export const WHITE: Player = 1;
+
+export function opponentOf(p: Player): Player {
+  return p === BLACK ? WHITE : BLACK;
+}
 
 /** -1 = 빈 칸 */
 export type Cell = Player | -1;
@@ -61,13 +65,20 @@ export interface Move { r: number; c: number; player: Player }
 
 export interface GomokuState {
   board: Board;
-  /** 다음에 둘 사람. 게임이 끝나면 null */
+  /** 다음에 둘 색. 게임이 끝나면 null */
   toAct: Player | null;
   moves: Move[];
   winner: Player | 'draw' | null;
   /** 이긴 5목의 좌표들 (UI 하이라이트용) */
   winLine: [number, number][] | null;
   lastMove: { r: number; c: number } | null;
+  /** 사람이 잡은 색. 싱글에서 판마다 번갈아 바뀐다 */
+  humanSeat: Player;
+}
+
+/** 이 판에서 AI가 잡은 색 */
+export function aiSeatOf(state: GomokuState): Player {
+  return opponentOf(state.humanSeat);
 }
 
 /** 가로·세로·대각 2방향. 반대 방향은 부호를 뒤집어 함께 본다. */
@@ -85,14 +96,16 @@ function cloneBoard(board: Board): Board {
   return board.map((row) => [...row]);
 }
 
-export function initGame(): GomokuState {
+/** 새 대국. humanSeat으로 사람이 흑/백 중 무엇을 잡을지 정한다. */
+export function initGame(humanSeat: Player = BLACK): GomokuState {
   return {
     board: createBoard(),
-    toAct: HUMAN,
+    toAct: BLACK, // 오목은 언제나 흑 선공
     moves: [],
     winner: null,
     winLine: null,
     lastMove: null,
+    humanSeat,
   };
 }
 
@@ -130,9 +143,48 @@ export function findWinLine(board: Board, r: number, c: number, player: Player):
   return null;
 }
 
+/**
+ * 빈 칸 (r,c)에 player가 두면 어떤 위협이 생기는지.
+ *
+ * [단순화] 끊긴 3(예: ●_●●)은 실제로는 열린3급으로 위험하지만 여기서는
+ * 약하게 평가한다. 이 함수는 **대사 트리거 판단에만** 쓰이고 AI의 실제
+ * 강함은 라이브러리 탐색이 담당하므로, 이 근사가 기력에 영향을 주지 않는다.
+ */
+export function threatAt(board: Board, r: number, c: number, player: Player): Threat {
+  if (!inBounds(r, c) || board[r][c] !== -1) return 'none';
+  let best: Threat = 'none';
+  const rank: Record<Threat, number> = { none: 0, three: 1, openThree: 2, four: 3, win: 4 };
+  for (const [dr, dc] of DIRS) {
+    board[r][c] = player;
+    const { count, open } = lineStats(board, r, c, dr, dc, player);
+    board[r][c] = -1;
+
+    let t: Threat = 'none';
+    if (count >= WIN_LEN) t = 'win';
+    else if (count === 4 && open >= 1) t = 'four';
+    else if (count === 3 && open === 2) t = 'openThree';
+    else if (count === 3) t = 'three';
+
+    if (rank[t] > rank[best]) best = t;
+  }
+  return best;
+}
+
+/** player가 두면 4목 이상이 되는(=반드시 막아야 하는) 빈 칸들의 "r,c" 키 집합 */
+export function criticalCells(board: Board, player: Player): Set<string> {
+  const out = new Set<string>();
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] !== -1) continue;
+      const t = threatAt(board, r, c, player);
+      if (t === 'win' || t === 'four') out.add(`${r},${c}`);
+    }
+  }
+  return out;
+}
+
 /* ── 렌주 금수 (흑에게만 적용) ───────────────────────────────────
    흑이 선공 유리를 갖기 때문에 렌주 룰은 흑만 아래 세 수를 금지한다.
-   백은 아무 제약이 없다.
      · 장목(overline) : 6목 이상
      · 사사(doubleFour) : 한 수로 4를 둘 이상 동시에
      · 삼삼(doubleThree): 한 수로 열린3을 둘 이상 동시에
@@ -140,12 +192,8 @@ export function findWinLine(board: Board, r: number, c: number, player: Player):
 
    [단순화] 정식 렌주에는 "그 3을 4로 키우는 수가 그 자체로 금수라서
    실제로는 3이 아닌 경우"를 재귀적으로 걸러내는 규칙이 있는데, 여기서는
-   그 재귀 판정까지는 하지 않는다(대부분의 캐주얼 구현과 동일). 실전에서
-   차이가 나는 국면은 매우 드물다.
+   그 재귀 판정까지는 하지 않는다(대부분의 캐주얼 구현과 동일).
    ──────────────────────────────────────────────────────────────── */
-
-/** 렌주에서 제약을 받는 쪽 = 흑 = 사람 */
-const BLACK: Player = HUMAN;
 
 export type Forbidden = 'overline' | 'doubleFour' | 'doubleThree';
 
@@ -158,7 +206,6 @@ export const FORBIDDEN_LABEL: Record<Forbidden, string> = {
 /** 판 밖은 'wall' — 상대 돌과 같은 "막힌" 취급 */
 type LineCell = Cell | 'wall';
 
-/** 한 방향으로 중심에서 ±RADIUS 만큼 뽑은 한 줄. 중심 인덱스는 항상 RADIUS */
 const RADIUS = 5;
 const CENTER = RADIUS;
 
@@ -172,7 +219,6 @@ function extractLine(board: Board, r: number, c: number, dr: number, dc: number)
   return out;
 }
 
-/** idx를 포함하는 연속 구간 [lo, hi] (양쪽 모두 player인 칸까지) */
 function runBounds(line: LineCell[], idx: number, player: Player): [number, number] {
   let lo = idx;
   let hi = idx;
@@ -188,8 +234,8 @@ function runLength(line: LineCell[], idx: number, player: Player): number {
 
 /**
  * 이 줄에서 "한 수 더 놓으면 정확히 5목이 되는" 빈 칸들.
- * 단, 그 5목이 중심(방금 놓은 돌)을 포함해야 한다 — 창 안의 무관한
- * 돌 뭉치가 만드는 5는 이 수의 위협이 아니기 때문.
+ * 그 5목이 중심(방금 놓은 돌)을 포함해야 한다 — 창 안의 무관한 돌 뭉치가
+ * 만드는 5는 이 수의 위협이 아니다.
  */
 function fiveSpots(line: LineCell[], player: Player): number[] {
   const spots: number[] = [];
@@ -199,7 +245,7 @@ function fiveSpots(line: LineCell[], player: Player): number[] {
     copy[i] = player;
     if (runLength(copy, i, player) !== WIN_LEN) continue;
     const [lo, hi] = runBounds(copy, i, player);
-    if (CENTER < lo || CENTER > hi) continue; // 중심을 안 지나는 5는 무관
+    if (CENTER < lo || CENTER > hi) continue;
     spots.push(i);
   }
   return spots;
@@ -230,7 +276,6 @@ function isOpenThreeDir(line: LineCell[], player: Player): boolean {
     if (line[i] !== -1) continue;
     const copy = [...line];
     copy[i] = player;
-    // 새 돌이 우리 돌과 이어져 4를 이뤄야 한다(무관한 뭉치 배제)
     if (runLength(copy, CENTER, player) !== 4) continue;
     if (isOpenFourDir(copy, player)) return true;
   }
@@ -283,47 +328,6 @@ export function forbiddenPoints(board: Board): Map<string, Forbidden> {
   return out;
 }
 
-/**
- * 빈 칸 (r,c)에 player가 두면 어떤 위협이 생기는지.
- *
- * [단순화] 끊긴 3(예: ●_●●)은 실제로는 열린3급으로 위험하지만 여기서는
- * 약하게 평가한다. 이 함수는 **대사 트리거 판단에만** 쓰이고 AI의 실제
- * 강함은 라이브러리 탐색이 담당하므로, 이 근사가 기력에 영향을 주지 않는다.
- */
-export function threatAt(board: Board, r: number, c: number, player: Player): Threat {
-  if (!inBounds(r, c) || board[r][c] !== -1) return 'none';
-  let best: Threat = 'none';
-  const rank: Record<Threat, number> = { none: 0, three: 1, openThree: 2, four: 3, win: 4 };
-  for (const [dr, dc] of DIRS) {
-    // 놓았다고 가정하고 세기 위해 임시로 채운다
-    board[r][c] = player;
-    const { count, open } = lineStats(board, r, c, dr, dc, player);
-    board[r][c] = -1;
-
-    let t: Threat = 'none';
-    if (count >= WIN_LEN) t = 'win';
-    else if (count === 4 && open >= 1) t = 'four';
-    else if (count === 3 && open === 2) t = 'openThree';
-    else if (count === 3) t = 'three';
-
-    if (rank[t] > rank[best]) best = t;
-  }
-  return best;
-}
-
-/** player가 두면 4목 이상이 되는(=반드시 막아야 하는) 빈 칸들의 "r,c" 키 집합 */
-export function criticalCells(board: Board, player: Player): Set<string> {
-  const out = new Set<string>();
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[r][c] !== -1) continue;
-      const t = threatAt(board, r, c, player);
-      if (t === 'win' || t === 'four') out.add(`${r},${c}`);
-    }
-  }
-  return out;
-}
-
 export interface ApplyResult {
   ok: boolean;
   state: GomokuState;
@@ -344,9 +348,10 @@ export function applyMove(state: GomokuState, r: number, c: number): ApplyResult
   if (state.board[r][c] !== -1) return { ok: false, state, error: '이미 돌이 있는 자리' };
 
   const player = state.toAct;
-  const opponent: Player = player === 0 ? 1 : 0;
+  const opponent = opponentOf(player);
+  const aiSeat = aiSeatOf(state);
 
-  // [렌주] 흑의 금수는 아예 두지 못하게 막는다.
+  // [렌주] 흑의 금수는 아예 두지 못하게 막는다 — 사람이든 AI든 흑이면 적용.
   // 정식 렌주는 금수를 두면 그 즉시 패배지만, 캐주얼 플레이에서 모르고 클릭했다가
   // 지면 납득이 안 되므로 "둘 수 없다"고 알려주고 되돌리는 쪽을 택했다.
   if (player === BLACK) {
@@ -368,6 +373,7 @@ export function applyMove(state: GomokuState, r: number, c: number): ApplyResult
   const boardFull = board.every((row) => row.every((cell) => cell !== -1));
 
   const next: GomokuState = {
+    ...state,
     board,
     toAct: winLine || boardFull ? null : opponent,
     moves: [...state.moves, { r, c, player }],
@@ -376,15 +382,16 @@ export function applyMove(state: GomokuState, r: number, c: number): ApplyResult
     lastMove: { r, c },
   };
 
+  const moverIsAi = player === aiSeat;
   let situation: Situation;
   if (winLine) {
-    situation = player === AI ? 'win' : 'lose';
+    situation = moverIsAi ? 'win' : 'lose';
   } else if (boardFull) {
     situation = 'draw';
   } else if (threat === 'win' || threat === 'four' || threat === 'openThree') {
-    situation = player === AI ? 'ai_threat' : 'player_threat';
+    situation = moverIsAi ? 'ai_threat' : 'player_threat';
   } else if (wasBlock) {
-    situation = player === AI ? 'ai_block' : 'player_block';
+    situation = moverIsAi ? 'ai_block' : 'player_block';
   } else {
     situation = 'calm';
   }
@@ -416,54 +423,56 @@ export interface DifficultyPreset {
   deepDepth: number;
   /** 이 확률로 최선수를 버리고 근처의 그럴듯한 수를 둔다 (사람이 이길 틈) */
   blunder: number;
+  /**
+   * 탐색이 즉시 끝나도 최소 이만큼은 뜸을 들인다.
+   * 오목은 수 대부분이 1ms 안에 끝나서 그대로 두면 "생각도 안 하고 착 착 놓는"
+   * 느낌이 든다. 실제로 고민하는 것처럼 보이도록 난이도별로 여유를 준다.
+   */
+  ponderMs: number;
   hint: string;
 }
 
 /**
- * hard는 라이브러리 기본 설정과 같은 탐색 구성이다(잘 튜닝돼 있음).
- * easy/normal은 단계를 덜어내 얕게 보게 만들고, 거기에 실수율을 더했다.
- * 승률·실수율 실측치는 파일 상단 주석 참고.
+ * 진심은 라이브러리 기본값과 같은 탐색 구성이다(잘 튜닝돼 있음).
+ * 살살/보통은 단계를 덜어내 얕게 보게 만들고, 거기에 실수율을 더했다.
+ * 승률·실수율 실측치는 docs/gomoku-plan.md 참고.
  */
 export const DIFFICULTIES: Record<Difficulty, DifficultyPreset> = {
   easy: {
     label: '살살',
-    narrow: [{ depth: 2, candidates: 4, promotion: 'two' }],
-    deepDepth: 2,
+    narrow: [{ depth: 2, candidates: 6, promotion: 'two' }],
+    deepDepth: 6,
     blunder: 0.35,
+    ponderMs: 700,
     hint: '얕게 보고 자주 실수해. 오목 처음이면 이걸로.',
   },
   normal: {
     label: '보통',
     narrow: [
       { depth: 2, candidates: 8, promotion: 'two' },
-      { depth: 4, candidates: 4, promotion: 'three' },
+      { depth: 4, candidates: 6, promotion: 'three' },
     ],
-    deepDepth: 6,
+    deepDepth: 12,
     blunder: 0.12,
+    ponderMs: 1000,
     hint: '기본기는 있지만 가끔 빈틈을 보여.',
   },
   hard: {
     label: '진심',
     narrow: [
       { depth: 2, candidates: 8, promotion: 'two' },
-      { depth: 4, candidates: 4, promotion: 'three' },
-      { depth: 8, candidates: 2, promotion: 'threeOpen' },
+      { depth: 4, candidates: 6, promotion: 'three' },
+      { depth: 8, candidates: 4, promotion: 'threeOpen' },
     ],
-    // 라이브러리 기본값은 16인데 그러면 한 수 최악이 12초까지 뛴다.
-    // 10으로 낮추면 최악 5초/p95 1초로 줄고 기력 차이는 체감되지 않는다
-    // (8까지 더 낮춰도 4.7초로 거의 같아서, 강함을 남기는 쪽을 택했다).
-    deepDepth: 10,
+    // 라이브러리 기본값과 동일한 최대 깊이. 승부처에서 한 수에 수 초가 걸릴 수
+    // 있지만 탐색이 워커에서 돌아 UI는 멈추지 않는다.
+    deepDepth: 16,
     blunder: 0,
+    ponderMs: 1300,
     hint: '실수 없이 다 막고 함정도 판다. 각오해.',
   },
 };
 
-/**
- * 라이브러리 탐색기를 프리셋대로 조립한다.
- * GomokuSolution은 내부 상태를 갖지만, 우리는 매 수마다 새로 만들고
- * init()으로 현재 판을 먹인다 — 이러면 이 모듈 전체가 순수 함수로 유지된다
- * (숨은 인스턴스 상태 없음). 판 하나 만드는 비용은 실측상 무시할 수준.
- */
 function buildSolution(preset: DifficultyPreset): GomokuSolution {
   const scoreMap = createScoreMap(WIN_LEN);
   // con[연속 돌 수][열린 끝 수] — 유도식은 라이브러리 기본 설정과 동일하게 맞췄다
@@ -520,50 +529,86 @@ function nearbyEmptyCells(board: Board): [number, number][] {
 }
 
 /**
+ * 라이브러리에 현재 판을 먹이고 최선수를 받는다.
+ *
+ * excluded에 든 칸은 "상대 돌이 이미 놓여 있다"고 속여서 후보에서 제외한다.
+ * AI가 흑일 때 금수 자리를 골랐을 때 다음 후보를 뽑기 위한 장치다. 라이브러리에
+ * 특정 칸을 배제하는 API가 없어서 쓰는 우회책이고, 가짜 돌이 평가를 약간
+ * 왜곡하지만 어차피 그 칸은 흑이 쓸 수 없으므로 실전 영향은 작다.
+ */
+function searchBestMove(
+  state: GomokuState,
+  preset: DifficultyPreset,
+  seat: Player,
+  excluded: [number, number][],
+): [number, number] {
+  const solution = buildSolution(preset);
+  const pieces = state.moves.map((m) => ({ r: m.r, c: m.c, p: m.player }));
+  const fake = opponentOf(seat);
+  for (const [r, c] of excluded) pieces.push({ r, c, p: fake });
+  solution.init(pieces);
+  return solution.minimaxSearch(seat);
+}
+
+/**
  * AI의 다음 수를 고른다. rng를 주입할 수 있어 테스트에서 결정적으로 검증 가능.
- * state.toAct가 AI일 때만 호출할 것 (아니면 null 반환).
+ * AI 차례가 아니면 null.
  */
 export function chooseAiMove(
   state: GomokuState,
   difficulty: Difficulty,
   rng: () => number = Math.random,
 ): { r: number; c: number } | null {
-  if (state.toAct !== AI) return null;
+  const seat = aiSeatOf(state);
+  if (state.toAct !== seat) return null;
   const preset = DIFFICULTIES[difficulty];
+  const mustAvoidForbidden = seat === BLACK;
 
-  // 첫 수(빈 판)면 중앙 근처 — 탐색을 돌릴 필요도 없고 정석이다
+  // 빈 판이면 중앙 — 탐색할 필요도 없고 정석이다
   if (state.moves.length === 0) {
     const mid = Math.floor(BOARD_SIZE / 2);
     return { r: mid, c: mid };
   }
 
-  const solution = buildSolution(preset);
-  solution.init(state.moves.map((m) => ({ r: m.r, c: m.c, p: m.player })));
-  const [br, bc] = solution.minimaxSearch(AI);
+  const isPlayable = (r: number, c: number) =>
+    inBounds(r, c) && state.board[r][c] === -1 &&
+    !(mustAvoidForbidden && checkForbidden(state.board, r, c));
 
-  let move: [number, number] | null =
-    inBounds(br, bc) && state.board[br][bc] === -1 ? [br, bc] : null;
+  // 금수를 고르면 그 칸을 배제하고 다시 탐색 (AI가 흑일 때만 발생)
+  let move: [number, number] | null = null;
+  const excluded: [number, number][] = [];
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const [br, bc] = searchBestMove(state, preset, seat, excluded);
+    if (!inBounds(br, bc) || state.board[br][bc] !== -1) break;
+    if (mustAvoidForbidden && checkForbidden(state.board, br, bc)) {
+      excluded.push([br, bc]);
+      continue;
+    }
+    move = [br, bc];
+    break;
+  }
 
   // 실수: 확률적으로 최선수를 버린다. 단, "지금 두면 바로 이기는 수"는
   // 절대 버리지 않는다 — 다 이긴 판을 놓치면 실수가 아니라 버그처럼 보인다.
   if (move && preset.blunder > 0 && rng() < preset.blunder) {
-    const isWinningNow = threatAt(state.board, move[0], move[1], AI) === 'win';
+    const isWinningNow = threatAt(state.board, move[0], move[1], seat) === 'win';
     if (!isWinningNow) {
-      const cands = nearbyEmptyCells(state.board);
+      const cands = nearbyEmptyCells(state.board).filter(([r, c]) => isPlayable(r, c));
       if (cands.length > 0) move = cands[Math.floor(rng() * cands.length)];
     }
   }
 
-  // 탐색이 이상한 값을 주는 방어 케이스 (판이 거의 꽉 찬 상황 등)
+  // 탐색이 이상한 값을 주거나 전부 금수인 방어 케이스
   if (!move) {
-    const cands = nearbyEmptyCells(state.board);
-    if (cands.length === 0) {
+    const cands = nearbyEmptyCells(state.board).filter(([r, c]) => isPlayable(r, c));
+    if (cands.length > 0) {
+      move = cands[Math.floor(rng() * cands.length)];
+    } else {
       for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) if (state.board[r][c] === -1) return { r, c };
+        for (let c = 0; c < BOARD_SIZE; c++) if (isPlayable(r, c)) return { r, c };
       }
       return null;
     }
-    move = cands[Math.floor(rng() * cands.length)];
   }
 
   return { r: move[0], c: move[1] };

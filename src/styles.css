@@ -869,6 +869,14 @@ body.mode-ame .holdem-raise-amount{background:#160d1e;color:#ecd8f8;border-color
 
 .gomoku-actions{display:flex;gap:6px;justify-content:center;}
 
+/* 멀티 — 제한시간 표시. 5초 이하면 빨갛게 깜빡여 촉박함을 알린다 */
+.gomoku-clock{color:var(--magenta-d);}
+.gomoku-clock.is-low{color:#d02020;animation:gomokuClockBlink .8s steps(2,end) infinite;}
+@keyframes gomokuClockBlink{50%{opacity:.35;}}
+
+/* 멀티 방 만들기 줄 — 제한시간 세그먼트 + 버튼 */
+.gomoku-create-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
 /* 난이도 고르기 — 이름만으론 감이 안 와서 한 줄 설명을 함께 보여준다 */
 .gomoku-diff-pick{display:flex;gap:6px;margin:10px 0 4px;}
 .gomoku-diff-btn{

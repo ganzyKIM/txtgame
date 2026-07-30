@@ -10,12 +10,14 @@
    워커가 applyMove로 판을 재구성한다.
    ════════════════════════════════════════════════════════════════════ */
 
-import { initGame, applyMove, chooseAiMove, type Difficulty, type Move } from './engine';
+import { initGame, applyMove, chooseAiMove, type Difficulty, type Move, type Player } from './engine';
 
 export interface AiRequest {
   id: number;
   moves: Move[];
   difficulty: Difficulty;
+  /** 사람이 잡은 색 — AI가 흑인지 백인지 결정하므로 반드시 넘겨야 한다 */
+  humanSeat: Player;
 }
 
 export interface AiResponse {
@@ -24,9 +26,9 @@ export interface AiResponse {
 }
 
 self.onmessage = (e: MessageEvent<AiRequest>) => {
-  const { id, moves, difficulty } = e.data;
+  const { id, moves, difficulty, humanSeat } = e.data;
 
-  let state = initGame();
+  let state = initGame(humanSeat);
   for (const m of moves) {
     const res = applyMove(state, m.r, m.c);
     if (!res.ok) break;

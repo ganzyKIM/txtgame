@@ -63,7 +63,7 @@ export function requestAiMove(
   if (!w) return Promise.resolve(chooseAiMove(state, difficulty));
 
   const id = ++seq;
-  const request: AiRequest = { id, moves: state.moves, difficulty };
+  const request: AiRequest = { id, moves: state.moves, difficulty, humanSeat: state.humanSeat };
   return new Promise((resolve) => {
     pending.set(id, (move) => {
       // 워커가 죽어서 undefined로 깨어난 경우 동기 계산으로 만회

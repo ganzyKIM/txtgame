@@ -1,10 +1,11 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type RefObject } from 'react';
 import {
-  HUMAN, AI, DIFFICULTIES,
-  initGame, applyMove, forbiddenPoints,
-  type Difficulty, type Forbidden, type GomokuState, type Situation,
+  BLACK, DIFFICULTIES,
+  initGame, applyMove, forbiddenPoints, aiSeatOf, opponentOf,
+  type Difficulty, type Forbidden, type GomokuState, type Player, type Situation,
 } from '../game/gomoku/engine';
 import { requestAiMove, warmUpAiWorker, terminateAiWorker } from '../game/gomoku/aiClient';
+import GomokuBoard from './GomokuBoard';
 import type { LineKind, MascotHandle } from './Mascot';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -18,6 +19,7 @@ import type { LineKind, MascotHandle } from './Mascot';
 interface Props {
   mascot: RefObject<MascotHandle | null>;
   push: (line: string) => void;
+  onGoMulti: () => void;
 }
 
 export interface GomokuGameHandle {
@@ -42,28 +44,18 @@ const SITUATION_LINE: Record<Situation, LineKind> = {
 const CALM_CHATTER_RATE = 0.28;
 /** 사람이 이만큼 안 두면 재촉 대사 */
 const LONG_THINK_MS = 20000;
-/** 탐색이 1ms에 끝나도 즉시 두면 기계 같아서 최소 이만큼은 뜸을 들인다 */
-const MIN_THINK_MS = 420;
 
-/** 화점(별점) — 실제 바둑판처럼 위치 감각을 주는 표시 */
-const STAR_POINTS = new Set(['3,3', '3,11', '11,3', '11,11', '7,7']);
-
-/** 금수 칸에 마우스를 올렸을 때 뜨는 설명 */
-const FORBIDDEN_TITLE: Record<Forbidden, string> = {
-  overline:    '금수: 장목(6목 이상)',
-  doubleFour:  '금수: 사사(4-4)',
-  doubleThree: '금수: 삼삼(3-3)',
-};
-
-const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mascot, push }, ref) {
+const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mascot, push, onGoMulti }, ref) {
   const [phase, setPhase] = useState<'intro' | 'playing'>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [state, setState] = useState<GomokuState>(() => initGame());
+  const [state, setState] = useState<GomokuState>(() => initGame(BLACK));
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 같은 국면에 대해 AI 요청이 두 번 나가지 않게 하는 표식 (착수 수를 토큰으로 씀)
   const aiRequestedAt = useRef(-1);
+  // 판마다 흑백을 번갈아 잡는다 — 흑(선공)이 유리하니 한쪽만 계속 잡으면 불공평하다
+  const nextHumanSeat = useRef<Player>(BLACK);
 
   // 첫 수에서 워커 로딩 지연이 보이지 않도록 미리 띄우고, 화면을 벗어나면 정리
   useEffect(() => {
@@ -86,13 +78,18 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   }, [mascot]);
 
   const startGame = useCallback((diff: Difficulty) => {
+    const humanSeat = nextHumanSeat.current;
+    nextHumanSeat.current = opponentOf(humanSeat); // 다음 판은 색을 바꿔서
     aiRequestedAt.current = -1;
     setDifficulty(diff);
-    setState(initGame());
+    setState(initGame(humanSeat));
     setThinking(false);
     setError(null);
     setPhase('playing');
-    push(`> ⚫ 오목 시작! 상대 난이도: ${DIFFICULTIES[diff].label} (흑=나, 선공)`);
+    push(
+      `> ⚫ 오목 시작! 난이도 ${DIFFICULTIES[diff].label} · ` +
+      `나=${humanSeat === BLACK ? '흑(선공)' : '백(후공)'}`,
+    );
     mascot.current?.event('omok_intro');
   }, [mascot, push]);
 
@@ -100,15 +97,17 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
     aiRequestedAt.current = -1;
     setThinking(false);
     setError(null);
-    setState(initGame());
+    setState(initGame(nextHumanSeat.current));
     setPhase('intro');
   }, []);
 
   useImperativeHandle(ref, () => ({ goHome }), [goHome]);
 
+  const humanSeat = state.humanSeat;
+
   // ── AI 차례 자동 진행 ────────────────────────────────────────
   useEffect(() => {
-    if (phase !== 'playing' || state.toAct !== AI) return;
+    if (phase !== 'playing' || state.toAct !== aiSeatOf(state)) return;
 
     const token = state.moves.length;
     if (aiRequestedAt.current === token) return; // 이 국면은 이미 요청했음
@@ -117,12 +116,14 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
     let cancelled = false;
     setThinking(true);
     const startedAt = Date.now();
+    const ponderMs = DIFFICULTIES[difficulty].ponderMs;
 
     void (async () => {
       const move = await requestAiMove(state, difficulty);
+      // 탐색이 즉시 끝나도 최소 사고시간은 채운다 (착 착 놓는 느낌 방지)
       const elapsed = Date.now() - startedAt;
-      if (elapsed < MIN_THINK_MS) {
-        await new Promise((r) => window.setTimeout(r, MIN_THINK_MS - elapsed));
+      if (elapsed < ponderMs) {
+        await new Promise((r) => window.setTimeout(r, ponderMs - elapsed));
       }
       if (cancelled) return;
       setThinking(false);
@@ -139,7 +140,7 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
 
   // ── 사람이 너무 오래 고민하면 재촉 ───────────────────────────
   useEffect(() => {
-    if (phase !== 'playing' || state.toAct !== HUMAN) return;
+    if (phase !== 'playing' || state.toAct !== state.humanSeat) return;
     const t = window.setTimeout(() => mascot.current?.event('omok_longthink'), LONG_THINK_MS);
     return () => window.clearTimeout(t);
   }, [phase, state, mascot]);
@@ -147,22 +148,24 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   // ── 대국 종료 로그 ───────────────────────────────────────────
   useEffect(() => {
     if (state.winner === null) return;
-    const msg = state.winner === HUMAN ? '> ⚫ 오목 승리! 내가 이겼어'
-      : state.winner === AI ? '> ⚪ 오목 패배… 다음엔 이기자'
-      : '> ⚫ 오목 무승부 (판이 꽉 찼어)';
+    const msg = state.winner === 'draw' ? '> ⚫ 오목 무승부 (판이 꽉 찼어)'
+      : state.winner === state.humanSeat ? '> ⚫ 오목 승리! 내가 이겼어'
+      : '> ⚪ 오목 패배… 다음엔 이기자';
     push(msg);
-  }, [state.winner, push]);
+  }, [state.winner, state.humanSeat, push]);
 
-  // ── 흑(사람)의 금수 자리 — 판에 ✕로 표시해 미리 알려준다 ──────
+  // ── 금수 자리 — 판에 ✕로 표시해 미리 알려준다 ────────────────
+  // 금수는 흑에게만 걸리므로 사람이 흑일 때만 의미가 있다.
   // 전수 계산이 1ms 수준이라 매 착수마다 다시 구해도 부담이 없다.
   const forbidden = useMemo<Map<string, Forbidden>>(() => {
-    if (phase !== 'playing' || state.toAct !== HUMAN || state.winner !== null) return new Map();
+    if (phase !== 'playing' || state.winner !== null) return new Map();
+    if (state.humanSeat !== BLACK || state.toAct !== BLACK) return new Map();
     return forbiddenPoints(state.board);
   }, [phase, state]);
 
   function handleCellClick(r: number, c: number) {
     if (phase !== 'playing' || thinking) return;
-    if (state.toAct !== HUMAN) return;
+    if (state.toAct !== state.humanSeat) return;
     const res = applyMove(state, r, c);
     if (!res.ok) {
       // 금수는 왜 안 되는지 알려준다. 그 외(이미 돌이 있는 칸 등)는 조용히 무시.
@@ -189,11 +192,14 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
             </p>
             <ul className="soup-rules">
               <li>가로·세로·대각선으로 <b>돌 5개를 먼저 이으면</b> 승리야.</li>
-              <li><b>흑(●)이 나</b>고 선공이야. 상대는 백(○).</li>
+              <li>
+                흑(●)이 선공이고, <b>판마다 흑백을 번갈아</b> 잡아 —
+                이번 판은 <b>{nextHumanSeat.current === BLACK ? '내가 흑(선공)' : '내가 백(후공)'}</b>이야.
+              </li>
               <li>
                 <b>렌주 룰</b>이야 — 선공이 유리한 만큼 <b>흑에게만 금수</b>가 있어.
-                <b>삼삼(3-3)·사사(4-4)·장목(6목 이상)</b>은 둘 수 없고, 판에 ✕로 표시해줄게.
-                (흑은 정확히 5목이어야 이겨. 백은 제약 없음)
+                <b>삼삼(3-3)·사사(4-4)·장목(6목 이상)</b>은 둘 수 없어(흑을 잡은 쪽이 나면 판에 ✕로 표시해줄게).
+                흑은 정확히 5목이어야 이기고, 백은 제약이 없어.
               </li>
               <li>AI는 정해진 탐색 로직으로만 둬 — 크레딧이 들지 않아.</li>
             </ul>
@@ -215,6 +221,7 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
               <button className="btn btn-primary" onClick={() => startGame(difficulty)}>
                 ⚫ {DIFFICULTIES[difficulty].label} 난이도로 시작
               </button>
+              <button className="btn" onClick={onGoMulti}>👥 멀티로 하기</button>
             </div>
           </div>
         </div>
@@ -224,14 +231,14 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
 
   // ── 대국 화면 ────────────────────────────────────────────────
   const finished = state.winner !== null;
-  const winSet = new Set((state.winLine ?? []).map(([r, c]) => `${r},${c}`));
 
+  const myStone = humanSeat === BLACK ? '●' : '○';
   const statusText = finished
-    ? state.winner === HUMAN ? '내가 이겼어! ⚫'
-      : state.winner === AI ? '져버렸어… ⚪'
-      : '무승부야'
+    ? state.winner === 'draw' ? '무승부야'
+      : state.winner === humanSeat ? `내가 이겼어! ${myStone}`
+      : '져버렸어…'
     : thinking ? '상대가 생각하는 중…'
-    : '내 차례 (흑 ●)';
+    : `내 차례 (${humanSeat === BLACK ? '흑' : '백'} ${myStone})`;
 
   return (
     <div className="body">
@@ -239,48 +246,27 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
         <div className="gomoku-bar">
           <span className="gomoku-status">{statusText}</span>
           <span className="gomoku-meta">
-            난이도 <b>{DIFFICULTIES[difficulty].label}</b> · {state.moves.length}수
+            난이도 <b>{DIFFICULTIES[difficulty].label}</b> · 나 <b>{myStone}</b> · {state.moves.length}수
           </span>
         </div>
 
-        <div className={`gomoku-board${thinking || finished ? ' is-locked' : ''}`}>
-          {state.board.map((row, r) => row.map((cell, c) => {
-            const key = `${r},${c}`;
-            const isLast = state.lastMove?.r === r && state.lastMove?.c === c;
-            const banned = forbidden.get(key);
-            const cls = [
-              'gomoku-cell',
-              STAR_POINTS.has(key) ? 'is-star' : '',
-              cell === HUMAN ? 'has-black' : cell === AI ? 'has-white' : '',
-              isLast ? 'is-last' : '',
-              winSet.has(key) ? 'is-win' : '',
-              banned ? 'is-forbidden' : '',
-            ].filter(Boolean).join(' ');
-            return (
-              <button
-                key={key}
-                className={cls}
-                onClick={() => handleCellClick(r, c)}
-                // 금수 자리는 일부러 활성 상태로 둔다 — 눌러봤을 때 왜 안 되는지
-                // 캐릭터가 알려주는 편이 그냥 안 눌리는 것보다 규칙 학습에 좋다
-                disabled={cell !== -1 || thinking || finished}
-                title={banned ? FORBIDDEN_TITLE[banned] : undefined}
-                aria-label={`${r + 1}행 ${c + 1}열${banned ? ' (금수)' : ''}`}
-              >
-                {cell !== -1 && <span className="gomoku-stone" />}
-              </button>
-            );
-          }))}
-        </div>
+        <GomokuBoard
+          board={state.board}
+          lastMove={state.lastMove}
+          winLine={state.winLine}
+          forbidden={forbidden}
+          locked={thinking || finished || state.toAct !== state.humanSeat}
+          onCellClick={handleCellClick}
+        />
 
         {error && <div style={{ fontSize: 11, color: '#c03060' }}>{error}</div>}
 
         {finished ? (
           <div className="soup-result">
             <div className="soup-result-head">
-              {state.winner === HUMAN ? '🎉 승리! 5개를 먼저 이었어'
-                : state.winner === AI ? '💧 패배… 상대가 5개를 이었어'
-                : '⊙ 무승부 — 둘 곳이 없어졌어'}
+              {state.winner === 'draw' ? '⊙ 무승부 — 둘 곳이 없어졌어'
+                : state.winner === humanSeat ? '🎉 승리! 5개를 먼저 이었어'
+                : '💧 패배… 상대가 5개를 이었어'}
             </div>
             <div className="restart-btns">
               <button className="btn btn-primary" onClick={() => startGame(difficulty)}>▶ 한 판 더</button>
