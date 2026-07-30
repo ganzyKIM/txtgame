@@ -1,12 +1,16 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type RefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  BLACK, createBoard, findWinLine, forbiddenPoints, checkForbidden, FORBIDDEN_LABEL,
-  type Board, type Forbidden, type Player,
+  BLACK, createBoard, findWinLine, forbiddenPoints, checkForbidden, FORBIDDEN_LABEL, opponentOf,
+  type Board, type Forbidden, type GomokuState, type Player,
 } from '../game/gomoku/engine';
+import { requestAiMove, warmUpAiWorker, terminateAiWorker } from '../game/gomoku/aiClient';
 import GomokuBoard from './GomokuBoard';
 import type { JoinedGomokuRoom } from './GomokuLobby';
 import type { MascotHandle } from './Mascot';
+
+/** 봇은 테스트 목적이라 난이도 선택 없이 고정 — 필요해지면 나중에 노출 */
+const BOT_DIFFICULTY = 'normal' as const;
 
 /* ════════════════════════════════════════════════════════════════════
    오목 멀티 — 대기실 + 대국 화면
@@ -21,9 +25,11 @@ import type { MascotHandle } from './Mascot';
 
 interface Seat {
   seat_index: number;
-  user_id: string;
+  user_id: string | null;
   nickname: string;
   is_host: boolean;
+  is_bot: boolean;
+  bot_form: 'choten' | 'ame' | null;
 }
 
 interface RoomRow {
@@ -73,11 +79,20 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
   const [nowTick, setNowTick] = useState(() => Date.now());
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const timeoutClaimedFor = useRef<string | null>(null);
+  // 호스트가 봇 턴을 대신 둘 때, 같은 국면에 대해 두 번 요청하지 않게 하는 표식
+  const botRequestedAt = useRef(-1);
+
+  // 봇이 있으면 호스트 브라우저가 탐색을 돌린다 — 첫 봇 턴에서 워커 로딩 지연이
+  // 안 보이도록 미리 띄워두고, 화면을 벗어나면 정리
+  useEffect(() => {
+    warmUpAiWorker();
+    return () => terminateAiWorker();
+  }, []);
 
   const loadSeats = useCallback(async () => {
     const { data } = await supabase
       .from('gomoku_members')
-      .select('seat_index, user_id, nickname, is_host')
+      .select('seat_index, user_id, nickname, is_host, is_bot, bot_form')
       .eq('room_id', room.id)
       .is('left_at', null)
       .order('seat_index');
@@ -206,6 +221,60 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
     })();
   }, [roomRow?.status, remainingMs, mySeat, toAct, moves.length, room.id, loadRoom]);
 
+  // ── 봇 턴 자동 진행 (호스트만) ─────────────────────────────────
+  // 봇은 세션이 없어서 스스로 gomoku_place를 못 부른다. 호스트 브라우저가
+  // 싱글과 같은 엔진(chooseAiMove)으로 수를 계산해 gomoku_place_as_bot으로
+  // 대신 제출한다. 렌주 금수 회피도 엔진이 이미 처리해준다(engine.ts 참고).
+  useEffect(() => {
+    if (roomRow?.status !== 'playing' || !isHost) return;
+    const botSeat = toAct;
+    const seatInfo = seats[botSeat];
+    if (!seatInfo?.is_bot || !seatInfo.bot_form) return;
+
+    const token = moves.length;
+    if (botRequestedAt.current === token) return; // 이 국면은 이미 요청했음
+    botRequestedAt.current = token;
+
+    let cancelled = false;
+    const botState: GomokuState = {
+      board,
+      toAct: botSeat,
+      moves: moves.map((m) => ({ r: m.r, c: m.c, player: m.seat_index as Player })),
+      winner: null,
+      winLine: null,
+      lastMove,
+      humanSeat: opponentOf(botSeat),
+    };
+
+    void (async () => {
+      const move = await requestAiMove(botState, BOT_DIFFICULTY);
+      if (cancelled || !move) return;
+      const { data, error: err } = await rpc.rpc('gomoku_place_as_bot', {
+        p_room_id: room.id, p_seat: botSeat, p_r: move.r, p_c: move.c,
+      });
+      if (err || !data?.ok) setError(data?.error ?? err?.message ?? '봇 착수 실패');
+      void loadMoves(); void loadRoom();
+    })();
+
+    return () => { cancelled = true; };
+  }, [roomRow?.status, isHost, toAct, seats, moves, board, lastMove, room.id, loadMoves, loadRoom]);
+
+  async function addBot(form: 'choten' | 'ame') {
+    setBusy(true); setError(null);
+    const { data, error: err } = await rpc.rpc('gomoku_add_bot', { p_room_id: room.id, p_form: form });
+    if (err || !data?.ok) setError(data?.error ?? err?.message ?? '봇 추가 실패');
+    void loadSeats();
+    setBusy(false);
+  }
+
+  async function removeBot(seatIndex: number) {
+    setBusy(true); setError(null);
+    const { error: err } = await rpc.rpc('gomoku_remove_bot', { p_room_id: room.id, p_seat: seatIndex });
+    if (err) setError(err.message ?? '봇 제거 실패');
+    void loadSeats();
+    setBusy(false);
+  }
+
   async function handleCellClick(r: number, c: number) {
     if (!isMyTurn || busy) return;
     if (board[r][c] !== -1) return;
@@ -255,19 +324,20 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
 
   useImperativeHandle(ref, () => ({ leaveRoom }), [leaveRoom]);
 
-  function sendChat() {
+  async function sendChat() {
     const m = chatInput.trim();
     if (!m) return;
     setChatInput('');
-    void rpc.rpc('gomoku_send_chat', { p_room_id: room.id, p_message: m });
+    const { error: err } = await rpc.rpc('gomoku_send_chat', { p_room_id: room.id, p_message: m });
+    if (err) setError(`채팅 전송 실패: ${err.message}`);
   }
 
   const chatBar = (
     <div style={{ display: 'flex', gap: 4 }}>
       <input className="sunken" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendChat(); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void sendChat(); }}
         placeholder="채팅…" style={{ flex: 1, fontSize: 11, padding: '3px 6px', background: 'var(--win-bg)', color: 'var(--ink)' }} />
-      <button className="btn btn-xs" onClick={sendChat}>전송</button>
+      <button className="btn btn-xs" onClick={() => void sendChat()}>전송</button>
     </div>
   );
 
@@ -299,11 +369,25 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
                 <div key={i} className="raised" style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 11, color: 'var(--ink-soft)', width: 74 }}>{SEAT_LABEL[i]}</span>
                   {s ? (
-                    <span style={{ flex: 1, fontSize: 12 }}>
-                      {s.nickname}{s.user_id === myUserId ? ' (나)' : ''}{s.is_host ? ' 👑' : ''}
-                    </span>
+                    <>
+                      <span style={{ flex: 1, fontSize: 12 }}>
+                        {s.is_bot ? (s.bot_form === 'choten' ? '🌸 ' : '🖤 ') : ''}{s.nickname}
+                        {s.user_id === myUserId ? ' (나)' : ''}{s.is_host ? ' 👑' : ''}
+                      </span>
+                      {isHost && s.is_bot && (
+                        <button className="btn btn-xs btn-warn" disabled={busy} onClick={() => void removeBot(i)}>빼기</button>
+                      )}
+                    </>
                   ) : (
-                    <span style={{ flex: 1, fontSize: 11, color: 'var(--ink-soft)' }}>상대를 기다리는 중…</span>
+                    <>
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--ink-soft)' }}>상대를 기다리는 중…</span>
+                      {isHost && (
+                        <>
+                          <button className="btn btn-xs" disabled={busy} onClick={() => void addBot('choten')}>+초텐쨩</button>
+                          <button className="btn btn-xs" disabled={busy} onClick={() => void addBot('ame')}>+아메</button>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               );
