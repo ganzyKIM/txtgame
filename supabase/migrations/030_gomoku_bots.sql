@@ -163,7 +163,7 @@ begin
   end if;
   return public.gomoku_place_internal(p_room_id, p_seat, p_r, p_c);
 end; $$;
-grant execute on function public.gomoku_place_as_bot(uuid,int,int) to authenticated;
+grant execute on function public.gomoku_place_as_bot(uuid,int,int,int) to authenticated;
 
 -- ============================================================
 -- gomoku_leave_room 재정의: 봇만 남고 사람이 없으면 방을 정리한다.
