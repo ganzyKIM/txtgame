@@ -42,6 +42,27 @@ const rpc = supabase as any;
 /** 제한시간 선택지 — 요청대로 10초 단위 */
 const TURN_SECONDS_CHOICES = [10, 20, 30, 60, 120] as const;
 
+/**
+ * 초대 링크(?gomoku_room=<id>)로 들어왔을 때 App.tsx가 호출한다.
+ * 방 목록 화면을 거치지 않고 방 정보 조회 + 참가를 한 번에 처리한다.
+ */
+export async function joinGomokuRoomById(
+  roomId: string, nickname: string,
+): Promise<{ ok: true; room: JoinedGomokuRoom } | { ok: false; error: string }> {
+  const { data: roomData, error: roomErr } = await supabase
+    .from('gomoku_rooms')
+    .select('id, host_id, host_nickname')
+    .eq('id', roomId)
+    .maybeSingle();
+  const roomRow = roomData as { id: string; host_id: string; host_nickname: string } | null;
+  if (roomErr || !roomRow) return { ok: false, error: '방을 찾을 수 없어 (이미 끝났거나 삭제됐을 수 있어)' };
+
+  const { data, error: err } = await rpc.rpc('gomoku_join_room', { p_room_id: roomId, p_nickname: nickname });
+  if (err || !data?.ok) return { ok: false, error: data?.error ?? err?.message ?? '참가 실패' };
+
+  return { ok: true, room: { id: roomRow.id, hostId: roomRow.host_id, hostNickname: roomRow.host_nickname } };
+}
+
 export default function GomokuLobby({ myUserId, myNickname, mascot, onJoin, onExit }: Props) {
   // 사람과 두는 화면이라 떠다니는 마스코트는 치운다(홀덤 멀티와 동일)
   useEffect(() => {

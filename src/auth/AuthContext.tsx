@@ -71,7 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      // 현재 URL(예: 초대 링크의 ?gomoku_room=... 쿼리)을 그대로 유지해야
+      // 로그인 후에도 어떤 방에 들어가려던 건지 알 수 있다.
+      options: { redirectTo: window.location.href },
     });
   }
 

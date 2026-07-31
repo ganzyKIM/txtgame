@@ -11,7 +11,7 @@ import HoldemGame, { type HoldemGameHandle } from './components/HoldemGame';
 import HoldemLobby, { type JoinedPokerRoom } from './components/HoldemLobby';
 import HoldemRoomWait, { type HoldemRoomWaitHandle } from './components/HoldemRoomWait';
 import GomokuGame, { type GomokuGameHandle } from './components/GomokuGame';
-import GomokuLobby, { type JoinedGomokuRoom } from './components/GomokuLobby';
+import GomokuLobby, { type JoinedGomokuRoom, joinGomokuRoomById } from './components/GomokuLobby';
 import GomokuRoom, { type GomokuRoomHandle } from './components/GomokuRoom';
 import { proxyGenerateText } from './api/proxy';
 import { buildSetupPrompt, parsePuzzle, CATEGORIES, DIFFICULTIES, baseName, collidesWithRecent, lintHints, buildHintOnlyPrompt, parseHintOnly, pickGenAxes, PROMPT_VERSION, type GenAxes } from './game/puzzle';
@@ -114,6 +114,9 @@ export default function App() {
   const [holdemRoom, setHoldemRoom] = useState<JoinedPokerRoom | null>(null);
   const [gomokuRoom, setGomokuRoom] = useState<JoinedGomokuRoom | null>(null);
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
+  // 멀티에서 보일 닉네임 — 직접 정한 게 있으면 그걸, 없으면 이메일 앞부분.
+  // (초대 링크 자동 참가 이펙트가 로그인 직후부터 필요해서 이 위치에 둔다)
+  const myNickname = customNickname?.trim() || (user?.email?.split('@')[0] ?? 'player');
   // 센터시험(10문제 루틴)에서 완료한 문제들의 점수 (length = 완료 문제 수)
   const [runScores, setRunScores] = useState<number[]>([]);
   // 현재 판의 출제 모드 (마지막 시작 설정에서 파생)
@@ -166,6 +169,43 @@ export default function App() {
       window.setTimeout(() => mascot.current?.event('idle'), 900);
     }
   }, [authLoading, user]);
+
+  // 오목 초대 링크(?gomoku_room=<id>)로 들어온 경우 — 로그인 확인 즉시 자동으로 그 방에 참가한다.
+  // (구글 로그인이 필요했다면 AuthContext가 redirectTo로 이 쿼리스트링을 그대로 보존해서 돌아온다)
+  const inviteHandled = useRef(false);
+  useEffect(() => {
+    if (authLoading || !user || inviteHandled.current) return;
+    const roomId = new URLSearchParams(window.location.search).get('gomoku_room');
+    if (!roomId) return;
+    inviteHandled.current = true;
+
+    // 새로고침해도 다시 자동 참가를 시도하지 않도록 쿼리스트링을 지운다
+    const url = new URL(window.location.href);
+    url.searchParams.delete('gomoku_room');
+    window.history.replaceState({}, '', url.toString());
+
+    void (async () => {
+      const name = await showPrompt({
+        title: '오목 닉네임',
+        message: '초대받은 방에 들어가기 전에 닉네임을 정해줘! (최대 16자)',
+        defaultValue: myNickname,
+        maxLength: NICKNAME_MAX_LEN,
+        confirmLabel: '입장',
+        cancelLabel: '취소',
+      });
+      if (name === null) return;
+      const trimmed = name.trim().slice(0, NICKNAME_MAX_LEN);
+      if (!trimmed) return;
+      setCustomNickname(trimmed);
+      saveNickname(trimmed);
+
+      const result = await joinGomokuRoomById(roomId, trimmed);
+      if (!result.ok) { push(`> 초대받은 방에 들어가지 못했어: ${result.error}`); return; }
+      setMode('gomoku-multi');
+      setGomokuRoom(result.room);
+      setMinimized(false);
+    })();
+  }, [authLoading, user, myNickname]);
 
   function push(line: string) {
     setLog((l) => [...l, line].slice(-50));
@@ -707,8 +747,6 @@ export default function App() {
     return <div className="login-wrap"><div className="login-card"><div className="login-body">불러오는 중… ♡</div></div></div>;
   }
   if (!user) return <LoginScreen />;
-
-  const myNickname = customNickname?.trim() || (user?.email?.split('@')[0] ?? 'player');
 
   // 멀티 진입 전 닉네임을 정하게 한다 — 이전에 정한 게 있으면 기본값으로 채워두고 수정만 하면 됨.
   // 취소하면 멀티에 들어가지 않는다(닉네임 없이 들어가는 경로를 만들지 않기 위함).

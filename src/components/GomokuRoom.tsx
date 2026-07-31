@@ -74,6 +74,7 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
   const [chatInput, setChatInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
   // 1초마다 갱신되는 표시용 시계 (남은 시간 계산 트리거)
   const [nowTick, setNowTick] = useState(() => Date.now());
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -330,6 +331,27 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
     setBusy(false);
   }
 
+  // 이 방으로 바로 들어오는 초대 링크 — App.tsx가 ?gomoku_room=<id>를 읽어 자동 참가시킨다.
+  async function shareInviteLink() {
+    const url = `${window.location.origin}/?gomoku_room=${room.id}`;
+    const shareData = { title: '오목 한 판 하자!', text: `${room.hostNickname}의 오목 대국에 초대할게~`, url };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData) !== false) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      // 공유 시트를 사용자가 취소한 경우 등 — 클립보드 복사로 대체 시도
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setInviteFeedback('링크를 복사했어! 친구에게 보내줘~');
+    } catch {
+      setInviteFeedback(url); // 클립보드 접근도 막혀있으면 최소한 화면에라도 보여준다
+    }
+    window.setTimeout(() => setInviteFeedback(null), 4000);
+  }
+
   async function handleCellClick(r: number, c: number) {
     if (!isMyTurn || busy) return;
     if (board[r][c] !== -1) return;
@@ -416,6 +438,13 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
             <span>◆ {room.hostNickname}의 대국</span>
             <span className="soup-hint-counter">한 수 {roomRow?.turn_seconds ?? '?'}초</span>
           </div>
+
+          {filled < 2 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-xs" onClick={() => void shareInviteLink()}>🔗 초대 링크 보내기</button>
+              {inviteFeedback && <span style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{inviteFeedback}</span>}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {[0, 1].map((i) => {
