@@ -811,8 +811,7 @@ export default function App() {
             <span className="desktop-icon-label">🃏 텍사스 홀덤</span>
           </div>
           <div className="desktop-icon" onClick={() => { setMode('gomoku'); setMinimized(false); }}>
-            {/* 전용 아이콘이 아직 없어서 이모지 자리표시자 (.desktop-icon-placeholder) */}
-            <div className="desktop-icon-img desktop-icon-placeholder">⚫</div>
+            <img className="desktop-icon-img" src="/icon_gomoku.png" alt="오목" draggable={false} />
             <span className="desktop-icon-label">⚫ 오목</span>
           </div>
           <div className="desktop-icon" onClick={() => { setMode('soup'); setMinimized(false); }}>
