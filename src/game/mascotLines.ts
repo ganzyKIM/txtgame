@@ -20,9 +20,13 @@ export type LineKind =
   | 'soup_intro' | 'soup_yes' | 'soup_no' | 'soup_irrelevant' | 'soup_solve' | 'soup_reveal' | 'soup_hint'
   | 'mp_lobby' | 'mp_start' | 'mp_round' | 'mp_correct' | 'mp_rival_correct' | 'mp_timeout' | 'mp_lasthint'
   | 'mp_loading' | 'mp_win' | 'mp_rank' | 'mp_allgiveup'
-  // 오목 — 이름은 전부 "상대 캐릭터 시점"이다 (ai_* = 캐릭터 자신)
+  // 오목(싱글) — 이름은 전부 "상대 캐릭터 시점"이다 (ai_* = 캐릭터 자신)
   | 'omok_intro' | 'omok_ai_threat' | 'omok_ai_block' | 'omok_player_threat' | 'omok_player_block'
   | 'omok_calm' | 'omok_win' | 'omok_lose' | 'omok_draw' | 'omok_longthink' | 'omok_forbidden'
+  // 오목(멀티) — 여긴 캐릭터가 대국자가 아니라 P를 응원하는 관전자다.
+  // omok_mp_threat/block = P(나)가 만든 상황, opp_* = 상대(사람/봇)가 만든 상황
+  | 'omok_mp_lobby' | 'omok_mp_start' | 'omok_mp_threat' | 'omok_mp_opp_threat'
+  | 'omok_mp_block' | 'omok_mp_opp_block' | 'omok_mp_win' | 'omok_mp_lose' | 'omok_mp_draw'
   | 'office_exit';
 
 export const FORMS: Record<Form, { img: string; name: string; cls: string }> = {
@@ -71,6 +75,15 @@ export const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     omok_draw:          '/char/choten_vape.png',
     omok_longthink:     '/char/choten_vape.png',
     omok_forbidden:     '/char/choten_angry.png',
+    omok_mp_lobby:      '/char/choten_default.png',
+    omok_mp_start:      '/char/choten_peace.png',
+    omok_mp_threat:     '/char/choten_peace.png',
+    omok_mp_opp_threat: '/char/choten_angry.png',
+    omok_mp_block:      '/char/choten_dere.png',
+    omok_mp_opp_block:  '/char/choten_vape.png',
+    omok_mp_win:        '/char/choten_dere.png',
+    omok_mp_lose:       '/char/choten_angry.png',
+    omok_mp_draw:       '/char/choten_vape.png',
     office_exit:        '/char/choten_angry.png',
   },
   ame: {
@@ -113,6 +126,15 @@ export const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
     omok_draw:          '/char/ame_drug.png',
     omok_longthink:     '/char/ame_smoking.png',
     omok_forbidden:     '/char/ame_yandere.png',
+    omok_mp_lobby:      '/char/ame_default.png',
+    omok_mp_start:      '/char/ame_smoking.png',
+    omok_mp_threat:     '/char/ame_smoking.png',
+    omok_mp_opp_threat: '/char/ame_yandere.png',
+    omok_mp_block:      '/char/ame_dere.png',
+    omok_mp_opp_block:  '/char/ame_smoking.png',
+    omok_mp_win:        '/char/ame_dere.png',
+    omok_mp_lose:       '/char/ame_yandere.png',
+    omok_mp_draw:       '/char/ame_drug.png',
     office_exit:        '/char/ame_yandere.png',
   },
 };
@@ -483,6 +505,68 @@ export const LINES: Record<Form, Record<LineKind, string[]>> = {
       '금수금수! 초텐쨩이 알려줬으니 고마워해♡',
       '흑은 유리한 만큼 제약도 있는 거야~♡',
     ],
+    omok_mp_lobby: [
+      '오목 대국이다~! 초텐쨩이 P 응원할게!♡',
+      '상대 기다리는 중~ 긴장돼?♡',
+      '이번엔 진짜 사람이랑 두는 거야! 초텐쨩은 무조건 P 편~♡',
+      '두근두근~ 상대는 어떤 사람일까?♡',
+      '자리 잡았어? 초텐쨩이 옆에서 볼게~♡',
+    ],
+    omok_mp_start: [
+      '대국 시작~!! 초텐쨩이 끝까지 응원할게, 파이팅!♡',
+      '드디어 시작이야! P 잘하는 거 보여줘~♡',
+      '흑이 먼저야! 침착하게 가자~♡',
+      '시작됐다~! 초텐쨩 심장 두근두근♡',
+      '자, 승부야! 초텐쨩은 무조건 P 편이야♡',
+    ],
+    omok_mp_threat: [
+      '오오 좋은 자리야!! P 잘하는데?!♡',
+      '이거 위협수 아니야?! 초텐쨩 신났어!!♡',
+      '상대 표정 봐봐, 당황한 것 같아!♡',
+      '역시 P!! 초텐쨩이 다 뿌듯해♡',
+      '이 흐름 좋아! 계속 밀어붙여~♡',
+    ],
+    omok_mp_opp_threat: [
+      '으앗?! 상대가 위험한 수를 뒀어!! P 조심해!!',
+      '헉… 저기 막아야 할 것 같은데?!♡',
+      '상대 좀 하는데…?! 초텐쨩 긴장했어!!',
+      '위험해위험해!! P 정신 차려!!♡',
+      '으으 초텐쨩 손에 땀나… 잘 막아줘!!',
+    ],
+    omok_mp_block: [
+      '막았다!! P 눈치 진짜 빠르다!!♡',
+      '나이스 수비~!! 초텐쨩 박수쳐!!♡',
+      '휴~ 위기 넘겼다! 잘했어 P!♡',
+      '역시!! 그거 막을 줄 알았어~♡',
+      '상대 표정 일그러졌어!! 잘 막았어!!♡',
+    ],
+    omok_mp_opp_block: [
+      '아… 막혔다! 아쉬워라~',
+      '에엥 거기서 막네… 상대도 만만치 않아♡',
+      '으윽 다음 기회 노리자!! 아직 안 끝났어!♡',
+      '아까워라~ 그래도 P 아직 여유있어!♡',
+      '괜찮아괜찮아~ 다른 자리 찾아보자!♡',
+    ],
+    omok_mp_win: [
+      '이겼다이겼다!!! P 최고야!!♡♡ 초텐쨩이 젤 신나!!',
+      '승리~!! 역시 우리 P!! 대단해!!♡',
+      '오목왕이다!! 초텐쨩 완전 자랑스러워♡',
+      '끝났다!! P 승리!! 축하해줄게~!!♡',
+      '이겼어이겼어!! 오늘은 P의 날이야!!♡',
+    ],
+    omok_mp_lose: [
+      '으아앙 졌어…! 그래도 잘 싸웠어 P!!♡',
+      '아쉽다… 다음엔 꼭 이기자! 초텐쨩이 응원할게♡',
+      '분해… 상대가 좀 하네! 그래도 재밌었지?♡',
+      '졌지만 멋졌어!! 초텐쨩은 계속 P 편이야!!♡',
+      '으윽 아쉬워라… 한 판 더 하자!!♡',
+    ],
+    omok_mp_draw: [
+      '판이 꽉 찼어! 무승부야~ 둘 다 잘했어!♡',
+      '비겼다! 이런 결과도 있네~♡',
+      '무승부! 아무도 안 진 거니까 됐어♡',
+      '둘 다 만만치 않았어~ 다음엔 승부 내자!♡',
+    ],
     office_exit: [
       '뭐야뭐야, 나 숨기고 있었어?! 부끄러웠던 거야?! ...그래도 다시 만나서 좋아♡',
       '혹시 초텐쨩 창피해서 감췄던 거야?! 삐질 거야!! ...근데 반가운 건 반가운 거♡',
@@ -787,6 +871,60 @@ export const LINES: Record<Form, Record<LineKind, string[]>> = {
       '…욕심났어? 안 돼.',
       '…규칙은 지켜. 다른 데 둬.',
       '…삼삼이야. 흑한테는 금지된 수.',
+    ],
+    omok_mp_lobby: [
+      '…대국이야. 상대가 사람이라니, 좀 다르네.',
+      '기다리는 중이야. …긴장 안 해.',
+      '…진짜 사람이랑 두는 거야? 흥미롭네.',
+      '…자리 잡아. 옆에서 볼게.',
+      '…상대가 누구든, 너 편이야.',
+    ],
+    omok_mp_start: [
+      '…시작한다. 침착하게 가.',
+      '흑이 먼저야. …방심하지 마.',
+      '…시작이야. 지켜볼게.',
+      '…간다. 집중해.',
+    ],
+    omok_mp_threat: [
+      '…좋은 자리네. 제법이야.',
+      '위협수야. …상대 표정 봐, 흔들리고 있어.',
+      '…나쁘지 않아. 계속 밀어붙여.',
+      '…잘하고 있어. 조금 놀랐어.',
+    ],
+    omok_mp_opp_threat: [
+      '…저기, 위험해. 조심해.',
+      '상대가 좀 하네. …막아야 해.',
+      '…거기 막지 않으면 곤란해져.',
+      '…긴장되네. 잘 막아.',
+    ],
+    omok_mp_block: [
+      '…막았네. 눈치 빠르다.',
+      '나이스야. …인정할게.',
+      '…위기 넘겼어. 잘했어.',
+      '…그거 막을 줄 알았어.',
+    ],
+    omok_mp_opp_block: [
+      '…막혔네. 아쉽다.',
+      '거기서 막을 줄이야. …상대도 만만치 않네.',
+      '…다음 기회 노려. 아직 안 끝났어.',
+      '…괜찮아. 여유 있어.',
+    ],
+    omok_mp_win: [
+      '…이겼어. 잘했어, 진짜로.',
+      '승리네. …솔직히 기뻐.',
+      '…네가 이겼어. 자랑스러워.',
+      '…끝났어. 축하해.',
+    ],
+    omok_mp_lose: [
+      '…졌어. 그래도 잘 싸웠어.',
+      '아쉽네. …다음엔 이기자.',
+      '…분해. 상대가 좀 했어.',
+      '…졌지만, 나쁘지 않았어.',
+    ],
+    omok_mp_draw: [
+      '…무승부. 판이 꽉 찼어.',
+      '비겼네. …둘 다 잘했어.',
+      '…아무도 안 졌어. 그럼 됐어.',
     ],
     office_exit: [
       '…숨겼던 거야? 부끄러웠어? …흥, 그래도 돌아왔네.',

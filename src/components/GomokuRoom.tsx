@@ -1,13 +1,13 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type RefObject } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  BLACK, createBoard, findWinLine, forbiddenPoints, checkForbidden, FORBIDDEN_LABEL, opponentOf,
+  BLACK, createBoard, findWinLine, forbiddenPoints, checkForbidden, FORBIDDEN_LABEL, opponentOf, applyMove,
   type Board, type Forbidden, type GomokuState, type Player,
 } from '../game/gomoku/engine';
 import { requestAiMove, warmUpAiWorker, terminateAiWorker } from '../game/gomoku/aiClient';
 import GomokuBoard from './GomokuBoard';
 import type { JoinedGomokuRoom } from './GomokuLobby';
-import type { MascotHandle } from './Mascot';
+import type { MascotHandle, LineKind } from './Mascot';
 
 /** 봇은 테스트 목적이라 난이도 선택 없이 고정 — 필요해지면 나중에 노출 */
 const BOT_DIFFICULTY = 'normal' as const;
@@ -61,11 +61,10 @@ const rpc = supabase as any;
 const SEAT_LABEL: Record<number, string> = { 0: '흑 ● (선공)', 1: '백 ○ (후공)' };
 
 const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ room, myUserId, mascot, onLeave }, ref) {
-  // 사람과 두는 화면이라 떠다니는 마스코트는 치운다
+  // 퀴즈대합전 멀티와 같은 방식 — 마스코트는 대국자가 아니라 P를 응원하는
+  // 관전자로 화면에 남아있고, 국면이 바뀔 때마다 상황에 맞는 대사를 한다.
   useEffect(() => {
-    const m = mascot.current;
-    m?.banish();
-    return () => { m?.summon(); };
+    mascot.current?.event('omok_mp_lobby');
   }, [mascot]);
 
   const [seats, setSeats] = useState<(Seat | null)[]>([null, null]);
@@ -81,6 +80,9 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
   const timeoutClaimedFor = useRef<string | null>(null);
   // 호스트가 봇 턴을 대신 둘 때, 같은 국면에 대해 두 번 요청하지 않게 하는 표식
   const botRequestedAt = useRef(-1);
+  // 마스코트 대사 트리거용 — 이전 대국 상태 / 이미 반응한 착수 수
+  const prevStatusRef = useRef<RoomRow['status'] | undefined>(undefined);
+  const mascotMoveBaseline = useRef<number | null>(null);
 
   // 봇이 있으면 호스트 브라우저가 탐색을 돌린다 — 첫 봇 턴에서 워커 로딩 지연이
   // 안 보이도록 미리 띄워두고, 화면을 벗어나면 정리
@@ -178,6 +180,59 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
   const finished = roomRow?.status === 'finished';
   const isHost = roomRow?.host_id === myUserId;
   const lastMove = moves.length > 0 ? { r: moves[moves.length - 1].r, c: moves[moves.length - 1].c } : null;
+
+  // 대국 시작 / 종료(승·패·무) — 상태 전이 시 한 번씩만 반응한다
+  useEffect(() => {
+    const status = roomRow?.status;
+    if (status === undefined) return;
+    const prev = prevStatusRef.current;
+    if (prev === 'waiting' && status === 'playing') {
+      mascot.current?.event('omok_mp_start');
+    }
+    if (prev !== undefined && prev !== 'finished' && status === 'finished' && roomRow && mySeat !== null) {
+      if (roomRow.result === 'draw') mascot.current?.event('omok_mp_draw');
+      else if (roomRow.winner_seat === mySeat) mascot.current?.event('omok_mp_win');
+      else if (roomRow.winner_seat !== null) mascot.current?.event('omok_mp_lose');
+    }
+    prevStatusRef.current = status;
+  }, [roomRow, mySeat, mascot]);
+
+  // 위협수/차단 — 새로 들어온 착수마다 P(나) 기준으로 상황을 판단해 반응한다.
+  // 처음 로드 시점의 과거 기보는 흘려보내고, 그 이후 새로 도착한 수에만 반응한다.
+  useEffect(() => {
+    if (mascotMoveBaseline.current === null || mySeat === null) {
+      mascotMoveBaseline.current = moves.length;
+      return;
+    }
+    const n = moves.length;
+    if (n <= mascotMoveBaseline.current) { mascotMoveBaseline.current = n; return; }
+    mascotMoveBaseline.current = n;
+
+    const last = moves[n - 1];
+    const before = createBoard();
+    for (let i = 0; i < n - 1; i++) { const m = moves[i]; before[m.r][m.c] = m.seat_index as Player; }
+    const stateBefore: GomokuState = {
+      board: before,
+      toAct: ((n - 1) % 2) as Player,
+      moves: moves.slice(0, n - 1).map((m) => ({ r: m.r, c: m.c, player: m.seat_index as Player })),
+      winner: null,
+      winLine: null,
+      lastMove: n > 1 ? { r: moves[n - 2].r, c: moves[n - 2].c } : null,
+      // "AI" 개념을 상대가 아니라 나(mySeat)로 뒤집어서 재사용한다 —
+      // 그래야 situation이 "내가 만든 위협/차단" 기준으로 나온다.
+      humanSeat: opponentOf(mySeat),
+    };
+    const res = applyMove(stateBefore, last.r, last.c);
+    if (!res.ok || !res.situation) return;
+
+    const kind: LineKind | null =
+      res.situation === 'ai_threat' ? 'omok_mp_threat' :
+      res.situation === 'player_threat' ? 'omok_mp_opp_threat' :
+      res.situation === 'ai_block' ? 'omok_mp_block' :
+      res.situation === 'player_block' ? 'omok_mp_opp_block' :
+      null; // calm/win/lose/draw는 여기서 다루지 않는다 (승패는 상태 전이 쪽에서 처리)
+    if (kind) mascot.current?.event(kind);
+  }, [moves, mySeat, mascot]);
 
   // 승리 라인 — 서버가 승자만 알려주므로 마지막 착수로 라인을 되찾는다
   const winLine = useMemo(() => {
