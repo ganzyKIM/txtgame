@@ -417,6 +417,28 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
     setBusy(false);
   }
 
+  // 이 방으로 바로 들어오는 초대 링크 — App.tsx가 ?holdem_room=<id>를 읽어 자동 참가시킨다.
+  const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
+  async function shareInviteLink() {
+    const url = `${window.location.origin}/?holdem_room=${room.id}`;
+    const shareData = { title: '홀덤 한 판 하자!', text: `${room.hostNickname}의 홀덤 테이블에 초대할게~`, url };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData) !== false) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      // 공유 시트를 사용자가 취소한 경우 등 — 클립보드 복사로 대체 시도
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setInviteFeedback('링크를 복사했어! 친구에게 보내줘~');
+    } catch {
+      setInviteFeedback(url);
+    }
+    window.setTimeout(() => setInviteFeedback(null), 4000);
+  }
+
   async function leaveRoom() {
     try { await rpc.rpc('poker_leave_room', { p_room_id: room.id }); } catch { /* 무시 */ }
     onLeave();
@@ -619,6 +641,13 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
           <span>◆ {room.hostNickname}의 테이블</span>
           <span className="soup-hint-counter">{status === 'waiting' ? '대기 중' : '종료'}</span>
         </div>
+
+        {status === 'waiting' && seats.filter(Boolean).length < MAX_SEATS && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-xs" onClick={() => void shareInviteLink()}>🔗 초대 링크 보내기</button>
+            {inviteFeedback && <span style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{inviteFeedback}</span>}
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {seats.map((s, i) => (

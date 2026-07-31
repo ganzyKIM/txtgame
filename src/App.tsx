@@ -8,7 +8,7 @@ import GamePanel from './components/GamePanel';
 import SoupGame from './components/SoupGame';
 import PersuadeGame from './components/PersuadeGame';
 import HoldemGame, { type HoldemGameHandle } from './components/HoldemGame';
-import HoldemLobby, { type JoinedPokerRoom } from './components/HoldemLobby';
+import HoldemLobby, { type JoinedPokerRoom, joinHoldemRoomById } from './components/HoldemLobby';
 import HoldemRoomWait, { type HoldemRoomWaitHandle } from './components/HoldemRoomWait';
 import GomokuGame, { type GomokuGameHandle } from './components/GomokuGame';
 import GomokuLobby, { type JoinedGomokuRoom, joinGomokuRoomById } from './components/GomokuLobby';
@@ -26,7 +26,7 @@ import StatsModal from './components/StatsModal';
 import HoldemRulesModal from './components/HoldemRulesModal';
 import DialogHost from './components/DialogHost';
 import { showConfirm, showPrompt } from './lib/dialog';
-import MultiplayerLobby, { type JoinedRoom } from './components/MultiplayerLobby';
+import MultiplayerLobby, { type JoinedRoom, joinMpRoomById } from './components/MultiplayerLobby';
 import MultiplayerView from './components/MultiplayerView';
 import type { MultiplayerViewHandle } from './components/MultiplayerView';
 import type { GameResult, GameState, Puzzle, ExamMode } from './game/types';
@@ -170,23 +170,31 @@ export default function App() {
     }
   }, [authLoading, user]);
 
-  // 오목 초대 링크(?gomoku_room=<id>)로 들어온 경우 — 로그인 확인 즉시 자동으로 그 방에 참가한다.
-  // (구글 로그인이 필요했다면 AuthContext가 redirectTo로 이 쿼리스트링을 그대로 보존해서 돌아온다)
+  // 멀티 초대 링크(?gomoku_room=/?holdem_room=/?multi_room=<id>)로 들어온 경우 —
+  // 로그인 확인 즉시 자동으로 그 방에 참가한다. (구글 로그인이 필요했다면 AuthContext가
+  // redirectTo로 이 쿼리스트링을 그대로 보존해서 돌아온다)
   const inviteHandled = useRef(false);
   useEffect(() => {
     if (authLoading || !user || inviteHandled.current) return;
-    const roomId = new URLSearchParams(window.location.search).get('gomoku_room');
-    if (!roomId) return;
+    const params = new URLSearchParams(window.location.search);
+    const invite =
+      params.has('gomoku_room') ? { param: 'gomoku_room', kind: 'gomoku' as const, id: params.get('gomoku_room')! } :
+      params.has('holdem_room') ? { param: 'holdem_room', kind: 'holdem' as const, id: params.get('holdem_room')! } :
+      params.has('multi_room') ? { param: 'multi_room', kind: 'multi' as const, id: params.get('multi_room')! } :
+      null;
+    if (!invite) return;
     inviteHandled.current = true;
 
     // 새로고침해도 다시 자동 참가를 시도하지 않도록 쿼리스트링을 지운다
     const url = new URL(window.location.href);
-    url.searchParams.delete('gomoku_room');
+    url.searchParams.delete(invite.param);
     window.history.replaceState({}, '', url.toString());
+
+    const NICKNAME_PROMPT_TITLE = { gomoku: '오목 닉네임', holdem: '홀덤 닉네임', multi: '대합전 닉네임' };
 
     void (async () => {
       const name = await showPrompt({
-        title: '오목 닉네임',
+        title: NICKNAME_PROMPT_TITLE[invite.kind],
         message: '초대받은 방에 들어가기 전에 닉네임을 정해줘! (최대 16자)',
         defaultValue: myNickname,
         maxLength: NICKNAME_MAX_LEN,
@@ -199,10 +207,19 @@ export default function App() {
       setCustomNickname(trimmed);
       saveNickname(trimmed);
 
-      const result = await joinGomokuRoomById(roomId, trimmed);
-      if (!result.ok) { push(`> 초대받은 방에 들어가지 못했어: ${result.error}`); return; }
-      setMode('gomoku-multi');
-      setGomokuRoom(result.room);
+      if (invite.kind === 'gomoku') {
+        const result = await joinGomokuRoomById(invite.id, trimmed);
+        if (!result.ok) { push(`> 초대받은 방에 들어가지 못했어: ${result.error}`); return; }
+        setMode('gomoku-multi'); setGomokuRoom(result.room);
+      } else if (invite.kind === 'holdem') {
+        const result = await joinHoldemRoomById(invite.id, trimmed);
+        if (!result.ok) { push(`> 초대받은 방에 들어가지 못했어: ${result.error}`); return; }
+        setMode('holdem-multi'); setHoldemRoom(result.room);
+      } else {
+        const result = await joinMpRoomById(invite.id, trimmed);
+        if (!result.ok) { push(`> 초대받은 방에 들어가지 못했어: ${result.error}`); return; }
+        setMode('multi'); setMpRoom(result.room);
+      }
       setMinimized(false);
     })();
   }, [authLoading, user, myNickname]);

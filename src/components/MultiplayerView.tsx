@@ -40,6 +40,7 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hintCountdown, setHintCountdown] = useState(7);
   const [nextRoundCountdown, setNextRoundCountdown] = useState(0);
+  const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const wrongGuessContainerRef = useRef<HTMLDivElement>(null);
   const advancedRef = useRef(false);
@@ -228,6 +229,27 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.roundNum]);
 
+  // 이 방으로 바로 들어오는 초대 링크 — App.tsx가 ?multi_room=<id>를 읽어 자동 참가시킨다.
+  async function shareInviteLink() {
+    const url = `${window.location.origin}/?multi_room=${room.id}`;
+    const shareData = { title: '퀴즈대합전 하자!', text: `${room.category_label} 대합전에 초대할게~`, url };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData) !== false) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      // 공유 시트를 사용자가 취소한 경우 등 — 클립보드 복사로 대체 시도
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setInviteFeedback('링크를 복사했어! 친구에게 보내줘~');
+    } catch {
+      setInviteFeedback(url);
+    }
+    window.setTimeout(() => setInviteFeedback(null), 4000);
+  }
+
   async function handleStartGame() {
     setGenerating(true); setGenError(null);
     try {
@@ -268,6 +290,13 @@ const MultiplayerView = forwardRef<MultiplayerViewHandle, Props>(function Multip
             <span>◆ 대합전 대기실 — {CATEGORIES.find(c => c.key === room.category_key)?.emoji} {room.category_label} / {DIFFICULTIES.find(d => d.key === room.difficulty)?.label}</span>
             <button className="btn btn-xs btn-warn" onClick={async () => { await leaveRoom(); onLeave(); }}>나가기</button>
           </div>
+
+          {members.length < 10 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-xs" onClick={() => void shareInviteLink()}>🔗 초대 링크 보내기</button>
+              {inviteFeedback && <span style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{inviteFeedback}</span>}
+            </div>
+          )}
 
           <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginBottom: 4 }}>참가자 ({members.length}/{10})</div>
           <div className="sunken" style={{ padding: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>

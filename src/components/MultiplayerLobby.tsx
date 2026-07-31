@@ -24,6 +24,37 @@ interface Props {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc = supabase as any;
 
+/**
+ * 초대 링크(?multi_room=<id>)로 들어왔을 때 App.tsx가 호출한다.
+ * 방 정보 조회 + 참가를 한 번에 처리한다.
+ */
+export async function joinMpRoomById(
+  roomId: string, nickname: string,
+): Promise<{ ok: true; room: JoinedRoom } | { ok: false; error: string }> {
+  const { data, error: roomErr } = await supabase
+    .from('mp_rooms')
+    .select('id, category_key, category_label, category_prompt, difficulty, host_id, host_nickname')
+    .eq('id', roomId)
+    .maybeSingle();
+  const roomRow = data as {
+    id: string; category_key: string; category_label: string; category_prompt: string;
+    difficulty: Difficulty; host_id: string; host_nickname: string;
+  } | null;
+  if (roomErr || !roomRow) return { ok: false, error: '방을 찾을 수 없어 (이미 끝났거나 삭제됐을 수 있어)' };
+
+  const { data: joinData, error: err } = await rpc.rpc('mp_join_room', { p_room_id: roomId, p_nickname: nickname });
+  if (err || !joinData?.ok) return { ok: false, error: joinData?.error ?? err?.message ?? '참가 실패' };
+
+  return {
+    ok: true,
+    room: {
+      id: roomRow.id, category_key: roomRow.category_key, category_label: roomRow.category_label,
+      category_prompt: roomRow.category_prompt, difficulty: roomRow.difficulty,
+      host_id: roomRow.host_id, host_nickname: roomRow.host_nickname,
+    },
+  };
+}
+
 export default function MultiplayerLobby({ myUserId, myNickname, onJoin }: Props) {
   const [rooms, setRooms] = useState<(MpRoom & { mp_members?: { user_id: string }[] })[]>([]);
   const [loading, setLoading] = useState(true);
