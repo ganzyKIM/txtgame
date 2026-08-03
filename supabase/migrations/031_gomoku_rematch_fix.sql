@@ -17,9 +17,9 @@
 --   (각 행은 자기 자신의 값만으로 0↔1을 뒤집으므로 2를 거치지 않음).
 -- ============================================================
 
-alter table public.gomoku_members drop constraint gomoku_members_pkey;
+alter table public.gomoku_members drop constraint if exists gomoku_members_pkey;
 alter table public.gomoku_members add constraint gomoku_members_pkey
-  primary key (room_id, seat_index) deferrable initial immediate;
+  primary key (room_id, seat_index) deferrable initially immediate;
 
 create or replace function public.gomoku_rematch(
   p_room_id uuid
