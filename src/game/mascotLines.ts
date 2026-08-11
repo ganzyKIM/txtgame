@@ -139,6 +139,74 @@ export const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
   },
 };
 
+/* ── 의상(costume) ───────────────────────────────────────────────
+   오목 화면에서는 두 캐릭터가 기모노 차림으로만 등장한다. 기모노는 표정이
+   4종(기본/경멸/흡연/기쁨)뿐이라 LineKind를 그 4종에 접어서 매핑한다.
+   매핑에 없는 LineKind(퀴즈용 대사 등)는 기본 표정으로 떨어진다. */
+
+export type Costume = 'kimono';
+type KimonoFace = 'base' | 'contempt' | 'smoke' | 'joy';
+
+const COSTUME_IMAGES: Record<Costume, Record<Form, Record<KimonoFace, string>>> = {
+  kimono: {
+    choten: {
+      base:     '/char/choten_kimono.png',
+      contempt: '/char/choten_kimono_contempt.png',
+      smoke:    '/char/choten_kimono_vape.png',
+      joy:      '/char/choten_kimono_joy.png',
+    },
+    ame: {
+      base:     '/char/ame_kimono.png',
+      contempt: '/char/ame_kimono_contempt.png',
+      smoke:    '/char/ame_kimono_smoke.png',
+      joy:      '/char/ame_kimono_joy.png',
+    },
+  },
+};
+
+/** 상황(LineKind) → 기모노 4표정 중 무엇으로 보여줄지 */
+const KIMONO_FACE: Partial<Record<LineKind, KimonoFace>> = {
+  // 싱글 — 마스코트가 곧 대국 상대다
+  omok_intro:         'base',
+  omok_ai_threat:     'contempt',   // 자기가 몰아붙일 때 = 의기양양
+  omok_ai_block:      'contempt',
+  omok_player_threat: 'base',
+  omok_player_block:  'base',
+  omok_calm:          'smoke',      // 별일 없는 수 = 심드렁
+  omok_win:           'joy',
+  omok_lose:          'base',
+  omok_draw:          'base',
+  omok_longthink:     'smoke',      // 사람이 오래 고민할 때 = 지루함
+  omok_forbidden:     'contempt',   // 금수라고 지적할 때
+  // 멀티 — 마스코트는 대국자가 아니라 P를 응원하는 관전자다
+  omok_mp_lobby:      'base',
+  omok_mp_start:      'joy',
+  omok_mp_threat:     'joy',        // P가 잘하는 중
+  omok_mp_opp_threat: 'contempt',   // 상대를 노려봄
+  omok_mp_block:      'joy',
+  omok_mp_opp_block:  'smoke',
+  omok_mp_win:        'joy',
+  omok_mp_lose:       'smoke',
+  omok_mp_draw:       'base',
+};
+
+/** 의상이 걸려 있으면 그 옷의 이미지를, 아니면 기본 이미지를 돌려준다 */
+export function lineImage(form: Form, kind: LineKind, costume: Costume | null): string {
+  if (costume) return COSTUME_IMAGES[costume][form][KIMONO_FACE[kind] ?? 'base'];
+  return LINE_IMAGES[form][kind];
+}
+
+/** 의상 차림일 때의 기본(무표정) 이미지 — 변신 직후 등에 쓴다 */
+export function costumeBaseImage(form: Form, costume: Costume): string {
+  return COSTUME_IMAGES[costume][form].base;
+}
+
+/** 의상 차림에서 마스코트를 눌렀을 때 보여줄 이미지 후보 */
+export function costumeTouchImages(form: Form, costume: Costume): string[] {
+  const set = COSTUME_IMAGES[costume][form];
+  return [set.base, set.smoke, set.joy, set.contempt];
+}
+
 /** 터치(클릭) 시 대사별로 다른 이미지를 보여주기 위한 idle 전용 변형 */
 export const IDLE_VARIANTS: Record<Form, { text: string; img: string }[]> = {
   choten: [

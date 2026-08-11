@@ -64,7 +64,10 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
   // 퀴즈대합전 멀티와 같은 방식 — 마스코트는 대국자가 아니라 P를 응원하는
   // 관전자로 화면에 남아있고, 국면이 바뀔 때마다 상황에 맞는 대사를 한다.
   useEffect(() => {
-    mascot.current?.event('omok_mp_lobby');
+    const m = mascot.current;
+    m?.setCostume('kimono');       // 오목 화면에서는 기모노 차림으로만 나온다
+    m?.event('omok_mp_lobby');
+    return () => m?.setCostume(null);
   }, [mascot]);
 
   const [seats, setSeats] = useState<(Seat | null)[]>([null, null]);

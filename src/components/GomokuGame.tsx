@@ -64,11 +64,13 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   }, []);
 
   // 오목 화면에서는 마스코트가 상대이므로, 가만히 있을 때 나오는 대사도
-  // 퀴즈용("퀴즈 하자")이 아니라 오목용으로 바꿔둔다
+  // 퀴즈용("퀴즈 하자")이 아니라 오목용으로 바꿔둔다.
+  // 복장도 오목 전용 기모노로 갈아입힌다.
   useEffect(() => {
     const m = mascot.current;
     m?.setIdleKind('omok_longthink');
-    return () => m?.setIdleKind(null);
+    m?.setCostume('kimono');
+    return () => { m?.setIdleKind(null); m?.setCostume(null); };
   }, [mascot]);
 
   const fireSituation = useCallback((situation: Situation | undefined) => {

@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
-  FORMS, LINE_IMAGES, LINES, IDLE_VARIANTS, TRANSFORM_LINE, pickLine,
-  type Form, type LineKind,
+  FORMS, LINES, IDLE_VARIANTS, TRANSFORM_LINE, pickLine,
+  lineImage, costumeBaseImage, costumeTouchImages,
+  type Form, type LineKind, type Costume,
 } from '../game/mascotLines';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -13,7 +14,7 @@ import {
    ════════════════════════════════════════════════════════════════════ */
 
 // 기존 import 경로(./Mascot)를 쓰는 파일들이 많아 타입은 여기서 그대로 재수출한다
-export type { Form, LineKind };
+export type { Form, LineKind, Costume };
 
 export interface MascotHandle {
   say: (text: string, holdMs?: number) => void;
@@ -29,6 +30,11 @@ export interface MascotHandle {
    * 화면을 벗어날 때 null로 되돌릴 것.
    */
   setIdleKind: (kind: LineKind | null) => void;
+  /**
+   * 마스코트에게 의상을 입힌다. 오목 화면에서는 두 캐릭터가 기모노 차림으로만
+   * 나와야 해서 쓴다. 화면을 벗어날 때 null로 되돌릴 것.
+   */
+  setCostume: (costume: Costume | null) => void;
 }
 
 const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
@@ -40,12 +46,13 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   const bubbleTimer   = useRef<number | null>(null);
   const idleTimer     = useRef<number | null>(null);
   const idleKindRef   = useRef<LineKind>('idle');
+  const costumeRef    = useRef<Costume | null>(null);
 
   const [renderTick, setRenderTick] = useState(0);
 
   function setImg(kind: LineKind) {
     if (imgRef.current) {
-      imgRef.current.src = LINE_IMAGES[formRef.current][kind];
+      imgRef.current.src = lineImage(formRef.current, kind, costumeRef.current);
     }
   }
 
@@ -79,7 +86,11 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
 
   function setForm(name: Form) {
     formRef.current = name;
-    if (imgRef.current) imgRef.current.src = FORMS[name].img;
+    if (imgRef.current) {
+      imgRef.current.src = costumeRef.current
+        ? costumeBaseImage(name, costumeRef.current)
+        : FORMS[name].img;
+    }
     document.body.classList.toggle('mode-ame', name === 'ame');
     setRenderTick((n) => n + 1);
   }
@@ -126,6 +137,15 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
     say, event, summon, banish, transform,
     isSummoned: () => summonedRef.current,
     setIdleKind: (kind: LineKind | null) => { idleKindRef.current = kind ?? 'idle'; },
+    setCostume: (costume: Costume | null) => {
+      costumeRef.current = costume;
+      // 지금 떠 있는 그림도 바로 갈아입힌다 (다음 대사까지 기다리지 않게)
+      if (imgRef.current) {
+        imgRef.current.src = costume
+          ? costumeBaseImage(formRef.current, costume)
+          : FORMS[formRef.current].img;
+      }
+    },
   }));
 
   // 마운트 시 자동 강림
@@ -187,7 +207,16 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
       if (!moved && !root.classList.contains('transforming') && summonedRef.current) {
         const variants = IDLE_VARIANTS[formRef.current];
         const v = variants[Math.floor(Math.random() * variants.length)];
-        if (imgRef.current) imgRef.current.src = v.img;
+        // 대사는 그대로 쓰되, 의상 차림이면 그림만 그 옷 것으로 바꾼다
+        if (imgRef.current) {
+          const costume = costumeRef.current;
+          if (costume) {
+            const imgs = costumeTouchImages(formRef.current, costume);
+            imgRef.current.src = imgs[Math.floor(Math.random() * imgs.length)];
+          } else {
+            imgRef.current.src = v.img;
+          }
+        }
         say(v.text);
         bumpIdle();
       }
