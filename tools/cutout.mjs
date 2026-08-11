@@ -70,7 +70,70 @@ function cutBackground(data, w, h) {
       if (data[i + 3] !== 0 && near(i)) { data[i + 3] = 0; cut++; }
     }
   }
-  return { cut, bg, isGreenScreen };
+  // ── ② 남은 배경 얼룩 제거 ───────────────────────────────────
+  // 캐릭터에 드롭섀도우가 걸려 있으면 배경색이 그림자와 섞여, 원래 배경색과는
+  // 꽤 다른 "어두운 초록" 얼룩이 머리카락 사이 등에 남는다. 색 거리로는 못 잡지만
+  // **배경 채널이 나머지 두 채널을 압도한다**는 성질은 그대로라 그걸로 잡는다.
+  // (캐릭터 팔레트에 그 원색이 없을 때만 안전하므로 크로마키일 때만 적용)
+  const domCh = bg.indexOf(Math.max(...bg));
+  if (isGreenScreen) {
+    for (let p = 0; p < w * h; p++) {
+      const i = p * 4;
+      if (data[i + 3] === 0) continue;
+      const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
+      // 배경 채널이 다른 두 채널보다 크게 높으면 배경이 섞인 픽셀로 본다
+      if (data[i + domCh] > Math.max(...others) * 1.45 + 18) { data[i + 3] = 0; cut++; }
+    }
+  }
+
+  // ── ③ 작은 섬 제거 ─────────────────────────────────────────
+  // 제미나이 워터마크(우하단 ✦)처럼 배경색과 살짝 달라 살아남은 조각을 지운다.
+  const minIsland = Math.max(64, Math.round(w * h * 0.0004));
+  const compId = new Int32Array(w * h).fill(-1);
+  for (let p0 = 0; p0 < w * h; p0++) {
+    if (data[p0 * 4 + 3] === 0 || compId[p0] !== -1) continue;
+    const cells = [p0]; compId[p0] = p0;
+    for (let qi = 0; qi < cells.length; qi++) {
+      const q = cells[qi], qx = q % w, qy = (q / w) | 0;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nx = qx + dx, ny = qy + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const np = ny * w + nx;
+        if (data[np * 4 + 3] === 0 || compId[np] !== -1) continue;
+        compId[np] = p0; cells.push(np);
+      }
+    }
+    if (cells.length < minIsland) for (const q of cells) { data[q * 4 + 3] = 0; cut++; }
+  }
+
+  // ── ④ 가장자리 스필 보정 ────────────────────────────────────
+  // 경계 픽셀은 배경색이 옅게 섞여 색 테두리가 남는다. 알파 경계에서 안쪽으로
+  // 몇 겹만 배경 채널을 눌러 준다(안쪽 색조는 건드리지 않는다).
+  const SPILL_BAND = 3;
+  let despilled = 0;
+  for (let pass = 0; pass < SPILL_BAND; pass++) {
+    const alphaSnap = Uint8Array.from({ length: w * h }, (_, p) => data[p * 4 + 3]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const p = y * w + x;
+      if (alphaSnap[p] === 0) continue;
+      let edge = false;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) { edge = true; break; }
+        if (alphaSnap[ny * w + nx] === 0) { edge = true; break; }
+      }
+      if (!edge) continue;
+      const i = p * 4;
+      const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
+      // 상한을 "나머지 두 채널의 최댓값"으로만 잡는다. 평균까지 끌어내리면
+      // 초텐쨩의 민트(초록이 원래 높은 색)가 파랗게 변한다 — 실제로 그랬다.
+      const cap = Math.max(...others);
+      if (data[i + domCh] > cap) { data[i + domCh] = cap; despilled++; }
+      // 다음 패스가 한 겹 더 안쪽을 보도록 임시로 경계 표시를 옮긴다
+      if (pass < SPILL_BAND - 1) alphaSnap[p] = 0;
+    }
+  }
+  return { cut, bg, isGreenScreen, despilled };
 }
 
 async function cutFile(file) {
@@ -79,7 +142,7 @@ async function cutFile(file) {
   const { width: w, height: h } = await img.metadata();
   const data = await img.raw().toBuffer();
 
-  const { cut, bg, isGreenScreen } = cutBackground(data, w, h);
+  const { cut, bg, isGreenScreen, despilled } = cutBackground(data, w, h);
   const pct = ((cut / (w * h)) * 100).toFixed(1);
 
   // 남은 캐릭터의 실제 경계로 잘라낸 뒤 규격에 맞춰 축소 — 생성물마다 여백이
@@ -101,7 +164,7 @@ async function cutFile(file) {
     .toFile(outPath);
 
   const meta = await sharp(outPath).metadata();
-  console.log(`✅ ${basename(outPath)}  배경 ${pct}% 제거 (bg rgb ${bg.join(",")}${isGreenScreen ? ", 크로마키" : ""}) → ${meta.width}×${meta.height} alpha=${meta.hasAlpha}`);
+  console.log(`✅ ${basename(outPath)}  배경 ${pct}% 제거 (bg rgb ${bg.join(",")}${isGreenScreen ? ", 크로마키" : ""}) → ${meta.width}×${meta.height} alpha=${meta.hasAlpha}, 스필보정 ${despilled}px`);
 }
 
 // --out 의 "값"까지 입력으로 오해하면 결과물을 한 번 더 처리해 이중 리사이즈가 된다
