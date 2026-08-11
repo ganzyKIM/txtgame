@@ -28,12 +28,23 @@ function arg(name) {
 /** 테두리에서 시작하는 flood fill 로 배경 픽셀에 alpha=0 을 찍는다 */
 function cutBackground(data, w, h) {
   const idx = (x, y) => (y * w + x) * 4;
-  // 네 모서리 색의 평균을 배경색으로 잡는다(한 곳이 캐릭터에 닿아도 흔들리지 않게 중앙값 사용)
-  const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => {
-    const i = idx(x, y); return [data[i], data[i + 1], data[i + 2]];
-  });
-  const med = (k) => corners.map((c) => c[k]).sort((a, b) => a - b)[1];
-  const bg = [med(0), med(1), med(2)];
+  // 배경색 = 테두리 픽셀의 최빈색. 네 모서리만 보면 안 된다 — 제미나이는
+  // 이미지를 둥근 모서리로 렌더링해서, 화면 캡처의 코너는 페이지 흰 배경이다.
+  const bucket = new Map();
+  const note = (x, y) => {
+    const i = idx(x, y);
+    const key = `${data[i] >> 3},${data[i + 1] >> 3},${data[i + 2] >> 3}`;
+    const e = bucket.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+    e.n++; e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2];
+    bucket.set(key, e);
+  };
+  // 테두리에서 살짝 안쪽(4px)을 훑는다. 맨 가장자리는 둥근 모서리·안티에일리어싱
+  // 때문에 배경과 페이지가 섞인 중간색이라 최빈색이 엉뚱하게 잡힌다.
+  const IN = Math.min(4, Math.floor(Math.min(w, h) / 4));
+  for (let x = IN; x < w - IN; x++) { note(x, IN); note(x, h - 1 - IN); }
+  for (let y = IN; y < h - IN; y++) { note(IN, y); note(w - 1 - IN, y); }
+  const top = [...bucket.values()].sort((a, b) => b.n - a.n)[0];
+  const bg = [Math.round(top.r / top.n), Math.round(top.g / top.n), Math.round(top.b / top.n)];
 
   const near = (i) =>
     Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]) <= TOLERANCE * 3;
@@ -140,7 +151,7 @@ function cutBackground(data, w, h) {
    생성물의 그림자는 초록 배경 위에 그려져 있어서 배경을 지우면 같이 사라진다.
    원본 자산(public/char/*.png)을 실측한 값에 맞춰 여기서 다시 만든다:
    근사 검정(21,20,37) / 좌우 5~7px, 아래 8~9px 퍼짐 → blur 6, 아래로 3px. */
-const SHADOW = { blur: 6, dx: 0, dy: 3, opacity: 0.5, color: { r: 21, g: 20, b: 37 } };
+const SHADOW = { blur: 11, dx: 0, dy: 4, opacity: 0.42, color: { r: 21, g: 20, b: 37 } };
 
 async function addDropShadow(pngBuf) {
   const { blur, dx, dy, opacity, color } = SHADOW;
