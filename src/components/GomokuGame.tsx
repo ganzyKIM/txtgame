@@ -20,6 +20,8 @@ interface Props {
   mascot: RefObject<MascotHandle | null>;
   push: (line: string) => void;
   onGoMulti: () => void;
+  /** 지금이 이 게임의 첫 화면인지 알려준다 — 창 상단 "처음으로" 표시 여부 판단용 */
+  onAtHomeChange?: (atHome: boolean) => void;
 }
 
 export interface GomokuGameHandle {
@@ -45,7 +47,7 @@ const CALM_CHATTER_RATE = 0.28;
 /** 사람이 이만큼 안 두면 재촉 대사 */
 const LONG_THINK_MS = 20000;
 
-const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mascot, push, onGoMulti }, ref) {
+const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mascot, push, onGoMulti, onAtHomeChange }, ref) {
   const [phase, setPhase] = useState<'intro' | 'playing'>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [state, setState] = useState<GomokuState>(() => initGame(BLACK));
@@ -104,6 +106,9 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   }, []);
 
   useImperativeHandle(ref, () => ({ goHome }), [goHome]);
+
+  // 난이도 선택 화면(첫 화면)에서는 창 상단 "처음으로"가 필요 없다
+  useEffect(() => { onAtHomeChange?.(phase === 'intro'); }, [phase, onAtHomeChange]);
 
   const humanSeat = state.humanSeat;
 

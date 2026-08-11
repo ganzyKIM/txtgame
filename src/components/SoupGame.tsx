@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type RefObject } from 'react';
 import { proxyGenerateText } from '../api/proxy';
 import {
   buildSoupSetupPrompt, parseSoupPuzzle,
@@ -27,9 +27,18 @@ interface Props {
   push: (line: string) => void;
   applyBalance: (n: number) => void;
   onExit: () => void;
+  /** 지금이 이 게임의 첫 화면인지 알려준다 — 창 상단 "처음으로" 표시 여부 판단용 */
+  onAtHomeChange?: (atHome: boolean) => void;
 }
 
-export default function SoupGame({ tier, userId, mascot, push, applyBalance, onExit }: Props) {
+export interface SoupGameHandle {
+  /** 풀던 수프를 접고 첫(인트로) 화면으로 돌아간다 */
+  goHome: () => void;
+}
+
+const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
+  { tier, userId, mascot, push, applyBalance, onExit, onAtHomeChange }, ref,
+) {
   const [phase, setPhase] = useState<Phase>('intro');
   const [puzzle, setPuzzle] = useState<SoupPuzzle | null>(null);
   const [turns, setTurns] = useState<SoupTurn[]>([]);
@@ -38,6 +47,19 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
   const [busy, setBusy] = useState(false);
   const recentTitles = useRef<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
+
+  // 풀던 판을 버리고 첫 화면으로
+  function goHome() {
+    setPhase('intro');
+    setPuzzle(null);
+    setTurns([]);
+    setHintsUsed(0);
+    setInput('');
+  }
+  useImperativeHandle(ref, () => ({ goHome }), []);
+
+  // 인트로가 이 게임의 첫 화면 — 게임이 시작된 뒤에만 "처음으로"가 뜬다
+  useEffect(() => { onAtHomeChange?.(phase === 'intro'); }, [phase, onAtHomeChange]);
 
   function scrollLog() {
     requestAnimationFrame(() => {
@@ -327,4 +349,6 @@ export default function SoupGame({ tier, userId, mascot, push, applyBalance, onE
       </section>
     </div>
   );
-}
+});
+
+export default SoupGame;

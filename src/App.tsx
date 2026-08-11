@@ -5,7 +5,7 @@ import Window from './components/Window';
 import Mascot, { type MascotHandle } from './components/Mascot';
 import StartScreen, { type StartConfig } from './components/StartScreen';
 import GamePanel from './components/GamePanel';
-import SoupGame from './components/SoupGame';
+import SoupGame, { type SoupGameHandle } from './components/SoupGame';
 import PersuadeGame from './components/PersuadeGame';
 import HoldemGame, { type HoldemGameHandle } from './components/HoldemGame';
 import HoldemLobby, { type JoinedPokerRoom, joinHoldemRoomById } from './components/HoldemLobby';
@@ -94,6 +94,7 @@ export default function App() {
   const holdemWaitRef = useRef<HoldemRoomWaitHandle>(null);
   const gomokuRef = useRef<GomokuGameHandle>(null);
   const gomokuRoomRef = useRef<GomokuRoomHandle>(null);
+  const soupRef = useRef<SoupGameHandle>(null);
 
   const [game, setGame] = useState<GameState>(emptyGame);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -113,6 +114,9 @@ export default function App() {
   const [mode, setMode] = useState<'quiz' | 'soup' | 'multi' | 'persuade' | 'holdem' | 'holdem-multi' | 'gomoku' | 'gomoku-multi'>('quiz');
   const [holdemRoom, setHoldemRoom] = useState<JoinedPokerRoom | null>(null);
   const [gomokuRoom, setGomokuRoom] = useState<JoinedGomokuRoom | null>(null);
+  // 홀덤·오목·수프는 각자 첫 화면이 따로 있다. 그 화면에선 창 상단 "처음으로"가
+  // 갈 곳이 없으니 숨기고, 게임이 시작된 뒤에만 띄운다. 값은 각 게임이 알려준다.
+  const [gameAtHome, setGameAtHome] = useState(true);
   const [mpRoom, setMpRoom] = useState<JoinedRoom | null>(null);
   // 멀티에서 보일 닉네임 — 직접 정한 게 있으면 그걸, 없으면 이메일 앞부분.
   // (초대 링크 자동 참가 이펙트가 로그인 직후부터 필요해서 이 위치에 둔다)
@@ -898,9 +902,11 @@ export default function App() {
                 setMode('quiz'); setMpRoom(null);
               });
             }
-            // 홀덤·오목의 "처음으로"는 카테고리 화면이 아니라 그 게임의 첫 화면으로
-            : mode === 'holdem' ? () => holdemRef.current?.goHome()
-            : mode === 'gomoku' ? () => gomokuRef.current?.goHome()
+            // 홀덤·오목·수프의 "처음으로"는 카테고리 화면이 아니라 그 게임의 첫 화면으로
+            // 간다. 이미 그 첫 화면이면 갈 곳이 없으므로 버튼 자체를 숨긴다.
+            : mode === 'holdem' ? (gameAtHome ? undefined : () => holdemRef.current?.goHome())
+            : mode === 'gomoku' ? (gameAtHome ? undefined : () => gomokuRef.current?.goHome())
+            : mode === 'soup'   ? (gameAtHome ? undefined : () => soupRef.current?.goHome())
             : mode === 'gomoku-multi' ? () => {
               void showConfirm('대국을 나가시겠어요?').then((ok) => {
                 if (!ok) return;
@@ -954,6 +960,7 @@ export default function App() {
               mascot={mascot}
               push={push}
               onGoMulti={() => void handleEnterGomokuMulti()}
+              onAtHomeChange={setGameAtHome}
             />
           ) : mode === 'gomoku-multi' ? (
             gomokuRoom ? (
@@ -980,6 +987,7 @@ export default function App() {
               push={push}
               applyBalance={applyBalance}
               onGoMulti={() => void handleEnterHoldemMulti()}
+              onAtHomeChange={setGameAtHome}
             />
           ) : mode === 'holdem-multi' ? (
             holdemRoom ? (
@@ -1002,12 +1010,14 @@ export default function App() {
             )
           ) : mode === 'soup' ? (
             <SoupGame
+              ref={soupRef}
               tier={tier}
               userId={user.id}
               mascot={mascot}
               push={push}
               applyBalance={applyBalance}
               onExit={() => setMode('quiz')}
+              onAtHomeChange={setGameAtHome}
             />
           ) : game.phase === 'setup' ? (
             busy ? (

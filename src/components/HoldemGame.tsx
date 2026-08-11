@@ -73,6 +73,8 @@ interface Props {
   push: (line: string) => void;
   applyBalance: (n: number) => void;
   onGoMulti: () => void;
+  /** 지금이 이 게임의 첫 화면인지 알려준다 — 창 상단 "처음으로" 표시 여부 판단용 */
+  onAtHomeChange?: (atHome: boolean) => void;
 }
 
 export interface HoldemGameHandle {
@@ -97,7 +99,7 @@ function botExpression(form: Form, hand: HandState, seat: number): string {
   return 'default';
 }
 
-const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mascot, push, applyBalance, onGoMulti }, ref) {
+const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mascot, push, applyBalance, onGoMulti, onAtHomeChange }, ref) {
   const [phase, setPhase] = useState<Phase>('buyin');
   const [buying, setBuying] = useState(false);
   const [buyinError, setBuyinError] = useState<string | null>(null);
@@ -122,6 +124,11 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
   }
 
   useImperativeHandle(ref, () => ({ goHome: resetToIntro }), []);
+
+  // 칩 구매/파산 화면이 이 게임의 첫 화면 — 여기선 "처음으로"가 필요 없다
+  useEffect(() => {
+    onAtHomeChange?.(phase === 'buyin' || phase === 'busted');
+  }, [phase, onAtHomeChange]);
 
   // 이 게임에서는 초텐쨩·아메가 테이블 좌석에 들어와 앉으므로, 떠다니는 마스코트는 치운다.
   useEffect(() => {
