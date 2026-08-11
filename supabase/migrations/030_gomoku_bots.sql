@@ -183,20 +183,21 @@ begin
   returning seat_index, is_host into v_seat, v_was_host;
   if v_seat is null then return; end if;
 
-  if v_status = 'playing' then
-    update public.gomoku_rooms
-    set status = 'finished', winner_seat = 1 - v_seat, result = 'resign',
-        finished_at = now(), turn_started_at = null
-    where id = p_room_id;
-  end if;
-
-  -- 사람이 아무도 안 남았으면(봇만 남았어도) 방을 지운다
+  -- 사람이 아무도 안 남았으면(봇만 남았어도) 방을 지운다.
+  -- 곧 삭제할 방에 굳이 몰수패를 기록할 필요가 없으니 이 검사가 먼저다.
   if not exists (
     select 1 from public.gomoku_members
     where room_id = p_room_id and left_at is null and is_bot = false
   ) then
     delete from public.gomoku_rooms where id = p_room_id;  -- CASCADE로 나머지도 정리
     return;
+  end if;
+
+  if v_status = 'playing' then
+    update public.gomoku_rooms
+    set status = 'finished', winner_seat = 1 - v_seat, result = 'resign',
+        finished_at = now(), turn_started_at = null
+    where id = p_room_id;
   end if;
 
   if v_was_host then

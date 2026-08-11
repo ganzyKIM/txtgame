@@ -873,6 +873,11 @@ export default function App() {
             <img className="desktop-icon-img" src="/icon_kame.png" alt="바다거북수프" draggable={false} />
             <span className="desktop-icon-label">🐢 바다거북수프 <small style={{fontSize:'10px',opacity:.8}}>(beta)</small></span>
           </div>
+          <div className="desktop-icon" onClick={() => { setMode('persuade'); setMinimized(false); }}>
+            {/* 전용 아이콘이 아직 없어서 캐릭터 초상으로 대신한다 */}
+            <img className="desktop-icon-img" src="/char/choten_dere.png" alt="천사쨩 설득하기" draggable={false} />
+            <span className="desktop-icon-label">💬 설득하기</span>
+          </div>
           </div>
         </>
       ) : (

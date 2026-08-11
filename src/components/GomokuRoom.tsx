@@ -382,7 +382,11 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
     setBusy(true); setError(null);
     const { data, error: err } = await rpc.rpc('gomoku_rematch', { p_room_id: room.id });
     if (err || !data?.ok) setError(data?.error ?? err?.message ?? '재대국 실패');
+    // 새 판이니 "이 국면은 이미 처리했다"는 표식들을 전부 리셋한다.
+    // (지금은 재대국 때 흑백이 바뀌어 착수 수의 홀짝도 뒤집히는 덕에
+    //  botRequestedAt이 우연히 겹치지 않지만, 그 우연에 기대지 않는다)
     timeoutClaimedFor.current = null;
+    botRequestedAt.current = -1;
     void loadMoves(); void loadRoom(); void loadSeats();
     setBusy(false);
   }

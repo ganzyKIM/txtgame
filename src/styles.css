@@ -1268,9 +1268,13 @@ body.mode-ame.is-minimized{
   position:fixed; top:14px; right:16px; z-index:2;
   display:flex; gap:8px; align-items:center;
 }
+/* 아이콘이 늘어나도 화면 밖으로 밀려나지 않게 줄바꿈시킨다. position:fixed라
+   한 번 넘치면 스크롤로도 닿을 수 없어서(실제로 폰에서 퀴즈대합전·수프가
+   완전히 가려졌었다) 폭 제한과 wrap이 반드시 같이 있어야 한다. */
 .desktop-icons{
   position:fixed; left:50%; top:45%; transform:translate(-50%,-50%);
-  display:flex; gap:48px; align-items:flex-start;
+  display:flex; flex-wrap:wrap; justify-content:center; gap:48px; align-items:flex-start;
+  width:max-content; max-width:min(92vw, 1100px);
 }
 .desktop-icon{
   display:flex; flex-direction:column; align-items:center; gap:8px;
@@ -1286,6 +1290,14 @@ body.mode-ame.is-minimized{
 .desktop-icon-label{
   font-size:14px; color:#fff; text-align:center; white-space:nowrap;
   text-shadow:1px 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.8), 2px 2px 6px rgba(0,0,0,.7);
+}
+/* 폰에서는 한 줄에 3개씩 들어가도록 축소 — 라벨은 nowrap을 풀어야 아이콘
+   폭이 라벨 길이에 끌려가지 않는다. */
+@media (max-width:640px){
+  .desktop-icons{ gap:10px; max-width:96vw; }
+  .desktop-icon{ padding:8px 4px; gap:5px; width:96px; }
+  .desktop-icon-img{ width:76px; height:76px; }
+  .desktop-icon-label{ font-size:11px; white-space:normal; word-break:keep-all; line-height:1.3; }
 }
 
 body.mode-ame{

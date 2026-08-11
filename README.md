@@ -1,41 +1,63 @@
 # 편차치 99 초텐짱의 와쿠와쿠 ✞추리극장✞
 
-천사쨩(아메)이 숨긴 정답을 **작은 힌트만으로** 맞히는 추리 게임.
-힌트를 적게 열고 맞힐수록 고득점, AI가 정한 임계값을 넘기면 **탈락**.
+윈도우98 × 파스텔 멘헤라갸루 감성의 미니게임 모음. 마스코트(초텐쨩 ⟷ 아메)가 모든 게임에
+상대·해설·응원역으로 등장하고, 변신 버튼으로 성격과 배색이 통째로 바뀐다.
 
-- **UI/캐릭터**: webp_editor의 윈도우98 × 파스텔 멘헤라갸루 감성 + 마스코트(천사쨩 ⟷ 아메, 변신·강림) 차용
-- **AI/로그인/저장**: txtrpg와 **동일한 Supabase 프로젝트·계정** 공유
-  - 구글 OAuth 로그인 (Supabase Auth) — 유저 계정·크레딧(`profiles` 테이블) 공유
-  - Gemini 텍스트 생성은 Supabase Edge Function `generate-text` 경유 (서버키·크레딧 차감 정책 txtrpg와 동일)
-  - 추리극장 전적은 `quiz_results` 테이블에만 저장 — txtrpg 데이터와 완전 분리
+## 게임
+
+| 게임 | 모드 | AI 비용 |
+|---|---|---|
+| ✞퀴즈대합전✞ | 싱글 · 멀티(대합전) | LLM |
+| 🃏 텍사스 홀덤 | 싱글(3인) · 멀티(최대 4인, 봇 추가 가능) | 0원 |
+| ⚫ 오목 (렌주 룰) | 싱글(난이도 3단계) · 멀티(제한시간·봇) | 0원 |
+| 🐢 바다거북수프 | 싱글 (beta) | LLM |
+| 💬 천사쨩 설득하기 | 싱글 | LLM |
+
+멀티는 방을 만들면 **초대 링크**를 바로 공유할 수 있다(모바일은 네이티브 공유 시트).
 
 ## 스택
-Vite + React 19 + TypeScript · @supabase/supabase-js
+
+Vite + React 19 + TypeScript · Supabase(Auth · Postgres RPC · Realtime) · Vercel · PWA
+
+- 구글 OAuth 로그인, 크레딧(`profiles`)은 txtrpg와 **같은 Supabase 프로젝트를 공유**한다
+- LLM 호출은 Edge Function `generate-text` 경유 (서버키 보관 + 크레딧 차감).
+  **크레딧이 0 이하면 거부**된다
+- 홀덤·오목은 LLM을 쓰지 않는다 — 순수 탐색 로직이라 운영비가 0원
 
 ## 로컬 실행
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # tsc --noEmit + vite build → dist/
 ```
-`.env.local` 에 txtrpg와 동일한 값:
+
+`.env.local` (txtrpg와 동일한 값):
+
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
 ```
 
-## 게임 규칙
-1. 카테고리(또는 자유주제) + 난이도 + 모델 선택 → 출제
-2. 첫 힌트 자동 공개. "힌트 열기"로 점점 구체적인 힌트 공개 (열수록 점수 ↓)
-3. 정답 추리 제출 → AI가 의미로 정/오답 판정
-4. 정답 = 클리어(등급 S/A/B/C, 점수) / 힌트를 다 쓰고도 오답 = 탈락(정답 공개)
+## 배포
 
-## 배포 (Vercel) 전 체크리스트
-1. **Supabase SQL Editor**에서 `supabase/migrations/004_quiz_results.sql` 1회 실행
-2. **Supabase → Auth → URL Configuration**에 리디렉트 URL 추가
-   - `http://localhost:5173` (로컬)
-   - Vercel 배포 도메인 (`https://<project>.vercel.app`)
-3. **Vercel 프로젝트 환경변수**에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 등록
-4. Framework Preset: Vite (build `npm run build`, output `dist`). `vercel.json`이 SPA 라우팅 처리.
+`git push origin master` → Vercel 자동 배포.
 
-> 전제: `generate-text`는 크레딧이 0 이하이면 거부한다. txtrpg와 같은 계정/크레딧을 공유한다.
+**SQL 마이그레이션은 배포와 별개다.** `supabase/migrations/`의 새 파일을 Supabase 대시보드
+SQL Editor에 **통째로 붙여넣어 한 번에 실행**해야 한다(CLI 접근 없음).
+
+> ⚠ 에디터가 스크립트 전체를 한 트랜잭션으로 돌린다. **문장 하나가 실패하면 전부 롤백**되므로
+> 절대 쪼개서 실행하지 말 것. 실행 후 원하는 함수/제약이 실제로 생겼는지 확인하는 습관을 권장.
+
+최초 세팅 시:
+1. `supabase/migrations/` 전체를 번호 순서대로 실행
+2. Supabase → Auth → URL Configuration에 리디렉트 URL 등록
+   (`http://localhost:5173`, Vercel 배포 도메인)
+3. Vercel 환경변수에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 등록
+4. Framework Preset: Vite (build `npm run build`, output `dist`) — SPA 라우팅은 `vercel.json`
+
+## 문서
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 구조와 설계 결정, 다시 건드리면 깨지는 것들
+- [docs/ideas.md](docs/ideas.md) — 미착수 재미 개선 아이디어
+- [docs/quiz-ai-data-roadmap.md](docs/quiz-ai-data-roadmap.md) — 퀴즈 데이터 활용 로드맵

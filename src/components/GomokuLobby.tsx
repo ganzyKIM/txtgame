@@ -64,11 +64,11 @@ export async function joinGomokuRoomById(
 }
 
 export default function GomokuLobby({ myUserId, myNickname, mascot, onJoin, onExit }: Props) {
-  // 사람과 두는 화면이라 떠다니는 마스코트는 치운다(홀덤 멀티와 동일)
+  // 퀴즈대합전 멀티와 같은 규칙 — 멀티 화면에서 마스코트는 대국자가 아니라
+  // 옆에서 응원하는 관전자로 남는다(GomokuRoom과 동일). 캐릭터가 게임판의
+  // 일부인 화면(홀덤 테이블·설득·오목 싱글)에서만 치운다.
   useEffect(() => {
-    const m = mascot.current;
-    m?.banish();
-    return () => { m?.summon(); };
+    mascot.current?.event('omok_mp_lobby');
   }, [mascot]);
 
   const [rooms, setRooms] = useState<GomokuRoomRow[]>([]);
