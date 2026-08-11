@@ -136,6 +136,40 @@ function cutBackground(data, w, h) {
   return { cut, bg, isGreenScreen, despilled };
 }
 
+/* 잘라낸 캐릭터에 드롭섀도우를 다시 입힌다.
+   생성물의 그림자는 초록 배경 위에 그려져 있어서 배경을 지우면 같이 사라진다.
+   원본 자산(public/char/*.png)을 실측한 값에 맞춰 여기서 다시 만든다:
+   근사 검정(21,20,37) / 좌우 5~7px, 아래 8~9px 퍼짐 → blur 6, 아래로 3px. */
+const SHADOW = { blur: 6, dx: 0, dy: 3, opacity: 0.5, color: { r: 21, g: 20, b: 37 } };
+
+async function addDropShadow(pngBuf) {
+  const { blur, dx, dy, opacity, color } = SHADOW;
+  const { width, height } = await sharp(pngBuf).metadata();
+  const pad = Math.ceil(blur * 2) + Math.max(Math.abs(dx), Math.abs(dy));
+  const W = width + pad * 2, H = height + pad * 2;
+
+  // 반드시 RGBA 상태에서 "투명"으로 확장한 뒤 알파를 뽑는다.
+  // 1채널로 만든 뒤 extend 하면 여백이 투명이 아닌 값으로 차서 그림자가
+  // 실루엣이 아니라 사각형으로 나온다 (실제로 그랬다).
+  const padded = await sharp(pngBuf)
+    .extend({ top: pad + dy, bottom: pad - dy, left: pad + dx, right: pad - dx,
+              background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png().toBuffer();
+  const mask = await sharp(padded)
+    .extractChannel('alpha')
+    .blur(blur)
+    .linear(opacity, 0)          // 그림자 농도
+    .toBuffer();
+
+  const shadow = await sharp({ create: { width: W, height: H, channels: 3, background: color } })
+    .joinChannel(mask)
+    .png().toBuffer();
+
+  return sharp({ create: { width: W, height: H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: shadow }, { input: pngBuf, left: pad, top: pad }])
+    .png().toBuffer();
+}
+
 async function cutFile(file) {
   const src = resolve(file);
   const img = sharp(src).ensureAlpha();
@@ -151,7 +185,7 @@ async function cutFile(file) {
     .png()
     .trim({ threshold: 1 });
 
-  const trimmed = await out.toBuffer();
+  const trimmed = await addDropShadow(await out.toBuffer());
   const outPath = arg('out')
     ? resolve(arg('out'))
     : resolve(dirname(src), basename(src).replace(/\.png$/, '_cut.png'));
