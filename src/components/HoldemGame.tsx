@@ -85,21 +85,23 @@ export interface HoldemGameHandle {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpc = supabase as any;
 
-/** 판 중간의 감정 상태 — 액션이 일어난 순간 갱신되고 스트리트가 넘어가면 풀린다 */
-type BotMood = 'joy' | 'contempt';
+/** 판 중간의 감정 상태 — 액션이 일어난 순간 갱신되고 스트리트가 넘어가면 풀린다.
+ *  기쁨(joy)은 승리의 상징으로 아껴두고, 판 중에는 경멸·능글·기본만 쓴다. */
+type BotMood = 'smirk' | 'contempt';
 
 /** 봇 좌석 표정 — 승패/폴드/올인뿐 아니라 판 중간 액션(mood)에도 반응한다 */
 function botExpression(_form: Form, hand: HandState, seat: number, mood?: BotMood): string {
   const p = hand.players[seat];
   if (hand.street === 'handEnd') {
+    // 기쁨은 오직 승리했을 때만
     if (hand.winners?.some((w) => w.seat === seat)) return 'bunny_joy';
     // 폴드했든 쇼다운에서 졌든 분한 표정
     return 'bunny_contempt';
   }
   if (p.folded) return 'bunny_contempt';
-  if (mood === 'joy') return 'bunny_joy';
   if (mood === 'contempt') return 'bunny_contempt';
-  if (p.allIn) return 'bunny_joy'; // 승부수를 던진 순간은 신나 있다
+  if (mood === 'smirk') return 'bunny_smirk';
+  if (p.allIn) return 'bunny_smirk';
   if (hand.toAct === seat) return 'bunny_smirk';
   return 'bunny';
 }
@@ -201,10 +203,10 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
       const res = applyAction(hand, seat, action);
       if (res.ok) {
         setBotSpeech((s) => ({ ...s, [seat]: pickLine(form, actionToSpeechKind(action)) }));
-        // 공격적인 액션은 신나서, 폴드는 분해서 — 콜/체크는 평정 유지
+        // 공격적인 액션은 능글맞게, 폴드는 분해서 — 콜/체크는 평정 유지
         setBotMood((m) => ({
           ...m,
-          [seat]: action.type === 'raiseTo' || action.type === 'allin' ? 'joy'
+          [seat]: action.type === 'raiseTo' || action.type === 'allin' ? 'smirk'
             : action.type === 'fold' ? 'contempt'
             : undefined,
         }));
@@ -248,7 +250,7 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
     setActionError(null);
     // 내 액션에 대한 봇들의 즉각 반응 — 아직 살아있는 좌석만
     if (action.type === 'raiseTo' || action.type === 'allin' || action.type === 'fold') {
-      const reaction: BotMood = action.type === 'fold' ? 'joy' : 'contempt';
+      const reaction: BotMood = action.type === 'fold' ? 'smirk' : 'contempt';
       setBotMood((m) => {
         const next = { ...m };
         for (const seat of [1, 2]) if (!hand.players[seat].folded) next[seat] = reaction;
