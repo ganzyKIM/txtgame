@@ -80,11 +80,11 @@ function handSummary(hv: HandValue): string {
 function botFace(_form: 'choten' | 'ame', snap: PublicPlayerSnap, isToAct: boolean, finished: boolean, won: boolean): string {
   if (finished) {
     if (won) return 'bunny_joy';
-    if (snap.folded) return 'bunny_contempt';
-    return 'bunny';
+    // 폴드했든 쇼다운에서 졌든 분한 표정
+    return 'bunny_contempt';
   }
   if (snap.folded) return 'bunny_contempt';
-  if (snap.allIn) return 'bunny_smirk';
+  if (snap.allIn) return 'bunny_joy'; // 승부수를 던진 순간은 신나 있다
   if (isToAct) return 'bunny_smirk';
   return 'bunny';
 }
