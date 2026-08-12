@@ -18,16 +18,27 @@ function openInChrome() {
   }, 800);
 }
 
+/** OAuth 실패로 돌아온 경우 Supabase가 URL에 실어 주는 에러 메시지 */
+function readOAuthCallbackError(): string | null {
+  const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const fromQuery = new URLSearchParams(window.location.search);
+  return fromHash.get('error_description') ?? fromQuery.get('error_description');
+}
+
 export default function LoginScreen() {
   const { signInWithGoogle } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(() => readOAuthCallbackError());
   const inApp = isInAppBrowser();
 
   async function handleLogin() {
     setBusy(true);
+    setError(null);
     try {
       await signInWithGoogle();
-    } finally {
+      // 성공하면 구글로 리디렉션되므로 여기 아래는 실행되지 않는다
+    } catch (e) {
+      setError((e as Error).message || '로그인을 시작하지 못했어. 잠시 후 다시 시도해줘.');
       setBusy(false);
     }
   }
@@ -74,6 +85,7 @@ export default function LoginScreen() {
                 </svg>
                 {busy ? '문을 여는 중...' : 'Google 계정으로 시작하기'}
               </button>
+              {error && <p className="login-error">로그인에 실패했어: {error}</p>}
               <p className="login-notice">로그인하면 전적이 계정에 안전하게 저장됩니다 ♡</p>
               <PwaInstallBanner />
             </>
