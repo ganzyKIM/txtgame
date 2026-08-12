@@ -701,8 +701,11 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
   /* 좌석이 가로폭 제한(세로로 좁고 긴 화면)에 걸리면 줄도 같이 낮아져야
      캐릭터 위에 빈 공간이 쌓이지 않는다 — 여기의 100cqi는 패널 컨테이너
      기준이라 좌석 계산(좌석 줄 기준)과 같은 폭을 가리킨다 */
-  max-height:calc((100cqi - var(--holdem-gaps)) * var(--seat-frac, 0.5) * 1.645 + 8px);
+  max-height:calc((100cqi - var(--holdem-gaps)) * var(--seat-frac, 0.5) * 1.645 + 40px);
   display:flex;justify-content:center;gap:24px;margin-top:4px;
+  /* 말풍선 전용 띠 — 대사가 캐릭터 그림을 가리지 않도록 좌석 위에
+     이만큼 비워두고, 말풍선은 좌석 상단 밖(bottom:100%)에 띄운다 */
+  padding-top:32px;
 }
 .holdem-seat-group{display:flex;align-items:flex-end;justify-content:center;gap:6px;}
 
@@ -770,10 +773,10 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
 .holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-seat-cards{
   position:absolute;right:4px;bottom:22px;z-index:1;
 }
-/* 좌석이 패널 맨 위까지 닿으므로 말풍선을 좌석 밖(-18px)에 띄우면 패널에
-   잘린다 — 캐릭터 좌석에서는 그림 위(머리 근처)에 겹쳐 올린다 */
+/* 대사가 그림을 가리지 않도록 좌석 상단 바로 위(말풍선 띠)에 띄운다 —
+   .holdem-opponents의 padding-top이 이 자리를 미리 비워둔다 */
 .holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-speech{
-  top:6px;
+  top:auto;bottom:calc(100% + 3px);
 }
 
 .holdem-dealer-badge{
