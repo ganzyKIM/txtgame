@@ -130,6 +130,11 @@ function cutBackground(data, w, h) {
   // 몇 겹만 배경 채널을 눌러 준다(안쪽 색조는 건드리지 않는다).
   const SPILL_BAND = 3;
   let despilled = 0;
+  // 스필을 얼마나 세게 지울지는 **배경색**이 정한다. 초록은 두 캐릭터 팔레트에
+  // 아예 없으므로 "초록이 제일 높은 픽셀"은 전부 스필이라 과감히 눌러도 안전하다.
+  // 마젠타·파랑은 분홍 피부·빨간 나비넥타이·연한 하늘색처럼 캐릭터가 실제로
+  // 가진 색과 겹치므로, 배경 쪽으로 물든 픽셀만 조심스럽게 손댄다.
+  const strong = domCh === 1;
   for (let pass = 0; pass < SPILL_BAND; pass++) {
     const alphaSnap = Uint8Array.from({ length: w * h }, (_, p) => data[p * 4 + 3]);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -152,7 +157,7 @@ function cutBackground(data, w, h) {
         Math.abs(data[i] / mx - bgRatio[0])
         + Math.abs(data[i + 1] / mx - bgRatio[1])
         + Math.abs(data[i + 2] / mx - bgRatio[2]);
-      if (dr < 0.45) {
+      if (strong || dr < 0.45) {
         const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
         // 상한을 "나머지 두 채널의 최댓값"으로만 잡는다. 평균까지 끌어내리면
         // 초텐쨩의 민트(초록이 원래 높은 색)가 파랗게 변한다 — 실제로 그랬다.
