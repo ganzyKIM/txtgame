@@ -86,17 +86,17 @@ export interface HoldemGameHandle {
 const rpc = supabase as any;
 
 /** 봇 좌석 표정 — 승패/폴드/올인 상황을 기존 Mascot 이미지로 표현 */
-function botExpression(form: Form, hand: HandState, seat: number): string {
+function botExpression(_form: Form, hand: HandState, seat: number): string {
   const p = hand.players[seat];
   if (hand.street === 'handEnd') {
-    if (hand.winners?.some((w) => w.seat === seat)) return 'dere';
-    if (p.folded) return form === 'choten' ? 'angry' : 'yandere';
-    return 'default';
+    if (hand.winners?.some((w) => w.seat === seat)) return 'bunny_joy';
+    if (p.folded) return 'bunny_contempt';
+    return 'bunny';
   }
-  if (p.folded) return form === 'choten' ? 'angry' : 'yandere';
-  if (p.allIn) return form === 'choten' ? 'peace' : 'drug';
-  if (hand.toAct === seat) return form === 'choten' ? 'peace' : 'smoking';
-  return 'default';
+  if (p.folded) return 'bunny_contempt';
+  if (p.allIn) return 'bunny_smirk';
+  if (hand.toAct === seat) return 'bunny_smirk';
+  return 'bunny';
 }
 
 const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mascot, push, applyBalance, onGoMulti, onAtHomeChange }, ref) {

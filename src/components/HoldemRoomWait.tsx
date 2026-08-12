@@ -77,16 +77,16 @@ function handSummary(hv: HandValue): string {
 }
 
 /** 봇 좌석 표정 — 싱글(HoldemGame.tsx)의 botExpression과 동일한 매핑을 공개 스냅샷 기준으로 */
-function botFace(form: 'choten' | 'ame', snap: PublicPlayerSnap, isToAct: boolean, finished: boolean, won: boolean): string {
+function botFace(_form: 'choten' | 'ame', snap: PublicPlayerSnap, isToAct: boolean, finished: boolean, won: boolean): string {
   if (finished) {
-    if (won) return 'dere';
-    if (snap.folded) return form === 'choten' ? 'angry' : 'yandere';
-    return 'default';
+    if (won) return 'bunny_joy';
+    if (snap.folded) return 'bunny_contempt';
+    return 'bunny';
   }
-  if (snap.folded) return form === 'choten' ? 'angry' : 'yandere';
-  if (snap.allIn) return form === 'choten' ? 'peace' : 'drug';
-  if (isToAct) return form === 'choten' ? 'peace' : 'smoking';
-  return 'default';
+  if (snap.folded) return 'bunny_contempt';
+  if (snap.allIn) return 'bunny_smirk';
+  if (isToAct) return 'bunny_smirk';
+  return 'bunny';
 }
 
 /** 실제 카드값이 필요없는 자리를 채우는 가짜 카드 — 호스트가 아직 공개되면 안 되는

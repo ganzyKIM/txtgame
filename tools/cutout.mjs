@@ -87,13 +87,21 @@ function cutBackground(data, w, h) {
   // **배경 채널이 나머지 두 채널을 압도한다**는 성질은 그대로라 그걸로 잡는다.
   // (캐릭터 팔레트에 그 원색이 없을 때만 안전하므로 크로마키일 때만 적용)
   const domCh = bg.indexOf(Math.max(...bg));
+  // 밝기만 다르고 **색조는 같다**는 성질로 배경 잔재를 잡는다. "배경 채널이
+  // 제일 높다"로 잡으면 안 된다 — 마젠타 배경은 지배 채널이 빨강이라,
+  // 초텐쨩의 빨간 나비넥타이가 통째로 지워졌다. 마젠타처럼 두 채널이 함께
+  // 높은 배경은 채널 하나만 봐서는 구분이 안 된다.
+  const bgRatio = bg.map((v) => v / Math.max(...bg));
   if (isGreenScreen) {
     for (let p = 0; p < w * h; p++) {
       const i = p * 4;
       if (data[i + 3] === 0) continue;
-      const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
-      // 배경 채널이 다른 두 채널보다 크게 높으면 배경이 섞인 픽셀로 본다
-      if (data[i + domCh] > Math.max(...others) * 1.45 + 18) { data[i + 3] = 0; cut++; }
+      const mx = Math.max(data[i], data[i + 1], data[i + 2]);
+      if (mx < 24) continue;   // 거의 검정은 채널 비율이 의미 없다
+      const dr = Math.abs(data[i] / mx - bgRatio[0])
+               + Math.abs(data[i + 1] / mx - bgRatio[1])
+               + Math.abs(data[i + 2] / mx - bgRatio[2]);
+      if (dr < 0.22) { data[i + 3] = 0; cut++; }
     }
   }
 
@@ -135,11 +143,22 @@ function cutBackground(data, w, h) {
       }
       if (!edge) continue;
       const i = p * 4;
-      const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
-      // 상한을 "나머지 두 채널의 최댓값"으로만 잡는다. 평균까지 끌어내리면
-      // 초텐쨩의 민트(초록이 원래 높은 색)가 파랗게 변한다 — 실제로 그랬다.
-      const cap = Math.max(...others);
-      if (data[i + domCh] > cap) { data[i + domCh] = cap; despilled++; }
+      // 먼저 **배경 쪽으로 물든 픽셀**만 남긴다. 이 관문이 없으면 배경 채널이
+      // 원래 높은 색까지 배경 취급해서 눌러버린다 — 마젠타 배경에서 초텐쨩의
+      // 분홍 피부와 빨간 나비넥타이가 시커멓게 죽었다. 지우기(0.22)보다는
+      // 느슨하게 잡아야 덜 물든 바깥 한두 겹까지 닦인다.
+      const mx = Math.max(data[i], data[i + 1], data[i + 2]);
+      const dr = mx < 24 ? 9 :
+        Math.abs(data[i] / mx - bgRatio[0])
+        + Math.abs(data[i + 1] / mx - bgRatio[1])
+        + Math.abs(data[i + 2] / mx - bgRatio[2]);
+      if (dr < 0.45) {
+        const others = [0, 1, 2].filter((c) => c !== domCh).map((c) => data[i + c]);
+        // 상한을 "나머지 두 채널의 최댓값"으로만 잡는다. 평균까지 끌어내리면
+        // 초텐쨩의 민트(초록이 원래 높은 색)가 파랗게 변한다 — 실제로 그랬다.
+        const cap = Math.max(...others);
+        if (data[i + domCh] > cap) { data[i + domCh] = cap; despilled++; }
+      }
       // 다음 패스가 한 겹 더 안쪽을 보도록 임시로 경계 표시를 옮긴다
       if (pass < SPILL_BAND - 1) alphaSnap[p] = 0;
     }
