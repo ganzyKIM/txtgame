@@ -301,6 +301,8 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
   const finished = hand.street === 'handEnd';
   const revealBotCards = finished && (hand.winners?.some((w) => w.handValue !== undefined) ?? false);
   const canRaise = minRaiseTotal < maxTotal;
+  /** 지금 내가 실제로 행동할 수 있는가 — 버튼은 늘 떠 있고 이 값으로 켜고 끈다 */
+  const canAct = !finished && myTurn && !me.folded && !me.allIn;
   const raiseClamped = Math.max(minRaiseTotal, Math.min(maxTotal, raiseAmount || minRaiseTotal));
 
   function bumpRaise(delta: number) {
@@ -365,56 +367,63 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
           <ChipStack amount={me.stack} />
         </div>
 
-        {actionError && <div style={{ fontSize: 11, color: '#c03060' }}>{actionError}</div>}
+        {/* 아래쪽은 진행 상태와 상관없이 늘 같은 자리를 차지한다. 차례가 넘어갈
+            때마다 버튼 줄이 생겼다 없어지면 위쪽 화면까지 통째로 출렁인다.
+            그래서 전부 항상 그려두고 쓸 수 없을 때는 비활성화만 한다. */}
+        <div className="holdem-bottom">
+          <div className={`holdem-status${actionError ? ' is-err' : ''}`}>
+            {actionError
+              ? actionError
+              : finished
+                ? hand.winners?.map((w) => `${hand.players[w.seat].id} +${w.amount}`).join(' · ')
+                : myTurn
+                  ? '내 차례'
+                  : `${hand.players[hand.toAct ?? 1].id}의 차례…`}
+          </div>
+          <div className="holdem-showdown">
+            {finished && revealBotCards
+              ? [0, 1, 2].map((seat) => seatShowdownLine(seat)).filter(Boolean).join(' · ')
+              : ''}
+          </div>
 
-        {!finished && myTurn && !me.folded && !me.allIn && (
           <div className="holdem-actions">
             <div className="holdem-actions-row">
-              <button className="btn btn-warn" onClick={() => act({ type: 'fold' })}>폴드</button>
-              <button className="btn" onClick={() => act(owed > 0 ? { type: 'call' } : { type: 'check' })}>
+              <button className="btn btn-warn" disabled={!canAct} onClick={() => act({ type: 'fold' })}>폴드</button>
+              <button className="btn" disabled={!canAct} onClick={() => act(owed > 0 ? { type: 'call' } : { type: 'check' })}>
                 {owed > 0 ? `콜 (${Math.min(owed, me.stack)})` : '체크'}
               </button>
               <button
                 className="btn"
-                disabled={!canRaise}
+                disabled={!canAct || !canRaise}
                 onClick={() => act({ type: 'raiseTo', amount: Math.min(hand.currentBet + potNow, maxTotal) })}
               >
                 팟 베팅
               </button>
-              <button className="btn btn-lav" onClick={() => act({ type: 'allin' })}>올인 ({maxTotal})</button>
+              <button className="btn btn-lav" disabled={!canAct} onClick={() => act({ type: 'allin' })}>
+                올인 ({maxTotal})
+              </button>
             </div>
-            {canRaise && (
-              <div className="holdem-raise-row">
-                <button className="btn btn-xs" onClick={() => bumpRaise(-50)}>-50</button>
-                <button className="btn btn-xs" onClick={() => bumpRaise(-10)}>-10</button>
-                <span className="holdem-raise-amount">{raiseClamped}</span>
-                <button className="btn btn-xs" onClick={() => bumpRaise(10)}>+10</button>
-                <button className="btn btn-xs" onClick={() => bumpRaise(50)}>+50</button>
-                <button className="btn btn-primary" onClick={() => act({ type: 'raiseTo', amount: raiseClamped })}>
-                  레이즈
-                </button>
-              </div>
-            )}
+            <div className="holdem-raise-row">
+              <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(-50)}>-50</button>
+              <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(-10)}>-10</button>
+              <span className="holdem-raise-amount">{raiseClamped}</span>
+              <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(10)}>+10</button>
+              <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(50)}>+50</button>
+              <button
+                className="btn btn-primary"
+                disabled={!canAct || !canRaise}
+                onClick={() => act({ type: 'raiseTo', amount: raiseClamped })}
+              >
+                레이즈
+              </button>
+            </div>
           </div>
-        )}
-        {!finished && !myTurn && <div className="soup-empty">{hand.players[hand.toAct ?? 1].id}의 차례…</div>}
 
-        {finished && (
-          <div className="soup-result">
-            <div className="soup-result-head">
-              {hand.winners?.map((w) => `${hand.players[w.seat].id} +${w.amount}`).join(' · ')}
-            </div>
-            {revealBotCards && (
-              <div className="holdem-showdown">
-                {[0, 1, 2].map((seat) => seatShowdownLine(seat)).filter(Boolean).join(' · ')}
-              </div>
-            )}
-            <div className="restart-btns">
-              <button className="btn btn-primary" onClick={() => startNextHand(hand)}>▶ 다음 핸드</button>
-              <button className="btn" onClick={resetToIntro}>↩ 첫화면으로</button>
-            </div>
+          <div className="restart-btns">
+            <button className="btn btn-primary" disabled={!finished} onClick={() => startNextHand(hand)}>▶ 다음 핸드</button>
+            <button className="btn" onClick={resetToIntro}>↩ 첫화면으로</button>
           </div>
-        )}
+        </div>
 
       </section>
     </div>

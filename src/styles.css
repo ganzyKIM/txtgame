@@ -816,6 +816,16 @@ body.mode-ame .holdem-board{
 .holdem-me{background:var(--pink-2);}
 .holdem-me.is-turn{border-color:#e6b800 var(--bevel-dk2) var(--bevel-dk2) #e6b800; box-shadow:0 0 0 1px #e6b800;}
 
+/* 진행 상태와 무관하게 항상 같은 높이를 차지하는 아래쪽 고정 영역.
+   내용이 비어도 자리는 지켜야 하므로 각 줄에 min-height 를 준다. */
+.holdem-bottom{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin-top:2px;}
+.holdem-status{
+  min-height:15px;font-size:11px;font-weight:bold;color:var(--magenta-d);text-align:center;
+}
+.holdem-status.is-err{color:#c03060;}
+/* 쇼다운 줄은 비어 있을 때도 자리를 지켜야 한다 — 실제 글자가 들어간 높이(16px)에 맞춘다 */
+.holdem-bottom .holdem-showdown{min-height:16px;margin-top:0;}
+.holdem-bottom .restart-btns{width:100%;max-width:260px;}
 .holdem-actions{display:flex;flex-direction:column;gap:3px;margin-top:2px;align-items:center;}
 .holdem-actions-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;}
 .holdem-raise-row{display:flex;gap:6px;align-items:center;justify-content:center;}

@@ -473,6 +473,8 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
             const minRaiseTotal = Math.min(ph.currentBet + ph.minRaise, maxTotal);
             const potNow = Object.values(ph.players).reduce((s, p) => s + p.committed, 0);
             const canRaise = minRaiseTotal < maxTotal;
+            /** 지금 내가 실제로 행동할 수 있는가 — 버튼은 늘 떠 있고 이 값으로 켜고 끈다 */
+            const canAct = !finished && myTurn && !!myPlayer && !myPlayer.folded && !myPlayer.allIn;
             const raiseClamped = Math.max(minRaiseTotal, Math.min(maxTotal, raiseAmount || minRaiseTotal));
             const otherSeats = ph.seats.filter((s) => s !== mySeat);
 
@@ -553,68 +555,75 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
                   <div className="soup-empty">관전 중이야.</div>
                 )}
 
-                {handError && <div style={{ fontSize: 11, color: '#c03060' }}>{handError}</div>}
+                {/* 싱글과 같은 이유로 고정 슬롯 — 차례가 넘어갈 때마다 버튼 줄이
+                    사라지면 위쪽 좌석까지 통째로 밀려 올라간다(멀티는 남의 차례가
+                    훨씬 잦아서 더 심하다). 전부 그려두고 비활성화만 한다. */}
+                <div className="holdem-bottom">
+                  <div className={`holdem-status${handError ? ' is-err' : ''}`}>
+                    {handError
+                      ? handError
+                      : finished
+                        ? ph.winners?.map((w) => `${seats[w.seat]?.nickname ?? '?'} +${w.amount}`).join(' · ')
+                        : myTurn
+                          ? '내 차례'
+                          : ph.toActReal !== null
+                            ? `${seats[ph.toActReal]?.nickname ?? '?'}의 차례…`
+                            : ''}
+                  </div>
+                  <div className="holdem-showdown">
+                    {finished && ph.revealedHoleCards && ph.board.length === 5
+                      ? Object.entries(ph.revealedHoleCards).map(([seatStr, cards]) => {
+                          const seat = Number(seatStr);
+                          const hv = evaluate7([...cards, ...ph.board]);
+                          return `${seats[seat]?.nickname ?? '?'}: ${handSummary(hv)}`;
+                        }).join(' · ')
+                      : ''}
+                  </div>
 
-                {!finished && myTurn && myPlayer && !myPlayer.folded && !myPlayer.allIn && (
                   <div className="holdem-actions">
                     <div className="holdem-actions-row">
-                      <button className="btn btn-warn" onClick={() => submitAction({ type: 'fold' })}>폴드</button>
-                      <button className="btn" onClick={() => submitAction(owed > 0 ? { type: 'call' } : { type: 'check' })}>
-                        {owed > 0 ? `콜 (${Math.min(owed, myPlayer.stack)})` : '체크'}
+                      <button className="btn btn-warn" disabled={!canAct} onClick={() => submitAction({ type: 'fold' })}>폴드</button>
+                      <button className="btn" disabled={!canAct} onClick={() => submitAction(owed > 0 ? { type: 'call' } : { type: 'check' })}>
+                        {owed > 0 ? `콜 (${Math.min(owed, myPlayer?.stack ?? 0)})` : '체크'}
                       </button>
                       <button
                         className="btn"
-                        disabled={!canRaise}
+                        disabled={!canAct || !canRaise}
                         onClick={() => submitAction({ type: 'raiseTo', amount: Math.min(ph.currentBet + potNow, maxTotal) })}
                       >
                         팟 베팅
                       </button>
-                      <button className="btn btn-lav" onClick={() => submitAction({ type: 'allin' })}>올인 ({maxTotal})</button>
+                      <button className="btn btn-lav" disabled={!canAct} onClick={() => submitAction({ type: 'allin' })}>
+                        올인 ({maxTotal})
+                      </button>
                     </div>
-                    {canRaise && (
-                      <div className="holdem-raise-row">
-                        <button className="btn btn-xs" onClick={() => bumpRaise(-50)}>-50</button>
-                        <button className="btn btn-xs" onClick={() => bumpRaise(-10)}>-10</button>
-                        <span className="holdem-raise-amount">{raiseClamped}</span>
-                        <button className="btn btn-xs" onClick={() => bumpRaise(10)}>+10</button>
-                        <button className="btn btn-xs" onClick={() => bumpRaise(50)}>+50</button>
-                        <button className="btn btn-primary" onClick={() => submitAction({ type: 'raiseTo', amount: raiseClamped })}>
-                          레이즈
-                        </button>
-                      </div>
-                    )}
+                    <div className="holdem-raise-row">
+                      <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(-50)}>-50</button>
+                      <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(-10)}>-10</button>
+                      <span className="holdem-raise-amount">{raiseClamped}</span>
+                      <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(10)}>+10</button>
+                      <button className="btn btn-xs" disabled={!canAct || !canRaise} onClick={() => bumpRaise(50)}>+50</button>
+                      <button
+                        className="btn btn-primary"
+                        disabled={!canAct || !canRaise}
+                        onClick={() => submitAction({ type: 'raiseTo', amount: raiseClamped })}
+                      >
+                        레이즈
+                      </button>
+                    </div>
                   </div>
-                )}
-                {!finished && !myTurn && ph.toActReal !== null && (
-                  <div className="soup-empty">{seats[ph.toActReal]?.nickname ?? '?'}의 차례…</div>
-                )}
 
-                {finished && (
-                  <div className="soup-result">
-                    <div className="soup-result-head">
-                      {ph.winners?.map((w) => `${seats[w.seat]?.nickname ?? '?'} +${w.amount}`).join(' · ')}
-                    </div>
-                    {ph.revealedHoleCards && ph.board.length === 5 && (
-                      <div className="holdem-showdown">
-                        {Object.entries(ph.revealedHoleCards).map(([seatStr, cards]) => {
-                          const seat = Number(seatStr);
-                          const hv = evaluate7([...cards, ...ph.board]);
-                          return `${seats[seat]?.nickname ?? '?'}: ${handSummary(hv)}`;
-                        }).join(' · ')}
-                      </div>
-                    )}
-                    <div className="restart-btns">
-                      {isHost ? (
-                        <button className="btn btn-primary" disabled={dealing} onClick={() => void dealNextHand()}>
-                          {dealing ? '준비 중…' : '▶ 다음 핸드'}
-                        </button>
-                      ) : (
-                        <div className="soup-empty">호스트가 다음 핸드를 준비하는 중…</div>
-                      )}
-                      <button className="btn" onClick={() => void leaveRoom()}>나가기</button>
-                    </div>
+                  <div className="restart-btns">
+                    <button
+                      className="btn btn-primary"
+                      disabled={!finished || !isHost || dealing}
+                      onClick={() => void dealNextHand()}
+                    >
+                      {!isHost ? '호스트 대기 중' : dealing ? '준비 중…' : '▶ 다음 핸드'}
+                    </button>
+                    <button className="btn" onClick={() => void leaveRoom()}>나가기</button>
                   </div>
-                )}
+                </div>
 
                 <div ref={chatContainerRef} className="sunken" style={{ minHeight: 64, maxHeight: 110, overflowY: 'auto', padding: 4, fontSize: 11 }}>
                   {chat.map((c, i) => (
