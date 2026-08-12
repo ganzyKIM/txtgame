@@ -84,7 +84,7 @@ function botFace(_form: 'choten' | 'ame', snap: PublicPlayerSnap, isToAct: boole
     return 'bunny_contempt';
   }
   if (snap.folded) return 'bunny_contempt';
-  if (snap.allIn) return 'bunny_joy'; // 승부수를 던진 순간은 신나 있다
+  if (snap.allIn) return 'bunny_smirk';
   if (isToAct) return 'bunny_smirk';
   return 'bunny';
 }
