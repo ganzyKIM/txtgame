@@ -18,6 +18,40 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * 로그인 왕복 동안 초대 링크 쿼리(?gomoku_room=... 등)를 보관하는 키.
+ * redirectTo에 현재 URL 전체를 넘기면 Supabase 대시보드의 Redirect URL
+ * 허용 목록과 정확히 일치하지 않아 세션 없이 돌아오는 문제(로그인 무한
+ * 반복)가 생긴다. 그래서 redirectTo는 항상 origin으로 고정하고, 쿼리는
+ * 여기 담아 두었다가 로그인 완료 후 URL에 복원한다.
+ */
+const INVITE_QUERY_KEY = 'txtgame:pending-invite-query';
+
+function stashInviteQuery() {
+  try {
+    const search = window.location.search;
+    if (/(?:gomoku|holdem|multi)_room=/.test(search)) {
+      sessionStorage.setItem(INVITE_QUERY_KEY, search);
+    }
+  } catch {
+    // 스토리지가 막힌 환경(일부 인앱 브라우저) — 초대 복원만 포기
+  }
+}
+
+function restoreInviteQuery() {
+  try {
+    const saved = sessionStorage.getItem(INVITE_QUERY_KEY);
+    if (!saved) return;
+    sessionStorage.removeItem(INVITE_QUERY_KEY);
+    // 이미 쿼리가 있으면(직접 초대 링크로 재진입 등) 덮어쓰지 않는다
+    if (!window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + saved + window.location.hash);
+    }
+  } catch {
+    // 무시 — 초대 자동 참가만 안 될 뿐 로그인은 정상 진행
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -47,12 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // OAuth 리디렉션 후 해시를 포함한 세션 처리
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) restoreInviteQuery();
       setSession(session);
       if (session?.user) void loadProfile(session.user.id);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) restoreInviteQuery();
       setSession(session);
       if (session?.user) {
         void loadProfile(session.user.id);
@@ -69,12 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signInWithGoogle() {
-    await supabase.auth.signInWithOAuth({
+    // 초대 링크의 쿼리는 스토리지로 보존한다 — redirectTo에 현재 URL을
+    // 그대로 넘기면 허용 목록 불일치로 로그인이 무한 반복될 수 있음.
+    stashInviteQuery();
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      // 현재 URL(예: 초대 링크의 ?gomoku_room=... 쿼리)을 그대로 유지해야
-      // 로그인 후에도 어떤 방에 들어가려던 건지 알 수 있다.
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: window.location.origin },
     });
+    // 리디렉션이 시작되지 않은 실패(설정 오류 등)는 화면에 알릴 수 있게 던진다
+    if (error) throw error;
   }
 
   async function signOut() {
