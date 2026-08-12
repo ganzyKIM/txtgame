@@ -38,8 +38,9 @@ export function ChipStack({ amount }: { amount: number }) {
 // 캐릭터 원본은 400×658 — 좌석 아바타(130×88)처럼 훨씬 작은 박스에 그대로
 // CSS로 축소하면(특히 크롬) 머리카락·리본 같은 가는 선이 무아레로 깨져 보인다.
 // 캔버스로 고품질 리샘플링(imageSmoothingQuality:'high')한 결과를 캐싱해 쓴다.
+// 전신(400×658)을 잘라내지 않고 통째로 줄이므로 원본과 같은 비율로 잡는다
 const AVATAR_W = 130;
-const AVATAR_H = 88;
+const AVATAR_H = 214;
 const avatarCache = new Map<string, string>();
 
 export function useDownsizedAvatar(src: string): string | null {

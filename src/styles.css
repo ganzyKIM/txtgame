@@ -708,19 +708,43 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
   background:var(--pink-1);
   border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk2) var(--bevel-dk2) var(--bevel-lt);
 }
+/* 캐릭터 좌석은 전신 그림이 주인공이다. 이름표·핸드를 그림 아래에 쌓으면
+   그림 몫의 세로가 그만큼 깎이므로, 액자를 그림에 딱 맞추고 둘 다 위에
+   겹쳐 올린다. 이니셜 원을 쓰는 사람 좌석(멀티)과 내 좌석은 종전 그대로. */
+.holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)){
+  display:block;width:auto;padding:0;gap:0;
+}
 .holdem-seat.is-turn{border-color:#e6b800 var(--bevel-dk2) var(--bevel-dk2) #e6b800; box-shadow:0 0 0 1px #e6b800;}
 .holdem-seat.is-folded{opacity:.5;}
-/* 캐릭터를 최대한 크게 — 나머지 UI는 전부 이 크기를 지키기 위해 압축했다 */
-.holdem-seat-avatar{width:130px;height:88px;flex:none;overflow:hidden;background:var(--pink-0);}
-.holdem-seat-avatar img,.holdem-seat-avatar canvas{width:100%;height:100%;object-fit:cover;object-position:50% 0%;display:block;}
+/* 캐릭터를 최대한 크게 — 나머지 UI는 전부 이 크기를 지키기 위해 압축했다.
+   캐릭터 이미지는 400×658 전신이므로 잘라내지 않고 통째로 보여준다. 높이를
+   기준으로 잡고 폭은 비율로 따라오게 해서, 창이 낮으면 같이 줄어든다. */
+.holdem-seat-avatar{
+  height:clamp(190px, 42vh, 330px);
+  aspect-ratio:400 / 658;
+  flex:none;overflow:hidden;background:var(--pink-0);
+}
+.holdem-seat-avatar img,.holdem-seat-avatar canvas{width:100%;height:100%;object-fit:contain;display:block;}
 /* 멀티 플레이어 좌석 — 캐릭터 스프라이트가 없는 사람 좌석은 닉네임 이니셜 원으로 대신한다 */
-.holdem-human-avatar{display:flex;align-items:center;justify-content:center;background:var(--magenta-d);}
+.holdem-human-avatar{
+  width:130px;height:88px;aspect-ratio:auto;
+  display:flex;align-items:center;justify-content:center;background:var(--magenta-d);
+}
 .holdem-human-avatar span{font-size:32px;font-weight:bold;color:#fff;}
 .holdem-seat-name{
   width:100%;font-size:11px;font-weight:bold;color:var(--ink);text-align:center;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .holdem-seat-cards{display:flex;gap:3px;}
+
+/* 그림 위에 얹는 이름표와 핸드 — 캐릭터 좌석에만 적용한다 */
+.holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-seat-name{
+  position:absolute;left:0;right:0;bottom:0;z-index:1;
+  padding:2px 4px;color:#fff;background:rgba(28,10,34,.72);
+}
+.holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-seat-cards{
+  position:absolute;right:4px;bottom:22px;z-index:1;
+}
 
 .holdem-dealer-badge{
   position:absolute;top:-8px;right:-8px;z-index:2;
@@ -781,7 +805,8 @@ body.mode-ame .holdem-raise-amount{background:#160d1e;color:#ecd8f8;border-color
 
 @media (max-width:640px){
   .holdem-seat{width:128px;padding:5px;}
-  .holdem-seat-avatar{width:118px;height:96px;}
+  .holdem-seat-avatar{height:clamp(170px, 32vh, 230px);}
+  .holdem-human-avatar{width:118px;height:96px;}
   .holdem-opponents{gap:8px;}
 }
 
