@@ -662,7 +662,9 @@ body.mode-ame .btn-appeal{background:linear-gradient(#2a1520,#3a1a28);color:#e0a
 /* overflow-y만 auto로 주면 overflow-x가 암묵적으로 auto가 되어(스펙 규칙),
    말풍선처럼 폭이 들쭉날쭉한 요소가 스크롤바를 깜빡이며 화면을 흔든다.
    가로 스크롤은 애초에 필요 없으니 명시적으로 막는다. */
-.holdem-panel{gap:3px;padding:5px;overflow-x:hidden;overflow-y:auto;}
+/* container-type: 상대 좌석 줄이 자기 최대 높이(가로폭 기반)를 계산할 때
+   쓰는 쿼리 컨테이너 — 패널 내용 폭 = 좌석 줄 폭이라 값이 같다 */
+.holdem-panel{gap:3px;padding:5px;overflow-x:hidden;overflow-y:auto;container-type:inline-size;}
 .pcard{
   width:36px;height:50px;flex:none;
   background:#fff;
@@ -683,7 +685,25 @@ body.mode-ame .pcard{background:#f0e8f4;}
 }
 body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4px,#2a0d38 4px 8px);}
 
-.holdem-opponents{display:flex;justify-content:center;gap:24px;margin-top:10px;}
+/* 상대 좌석 줄이 패널의 남는 세로 공간을 전부 가져간다 — 보드·내 좌석·액션
+   UI가 고유 높이를 먼저 확보하고, 나머지를 캐릭터가 채우므로 캐릭터가
+   최대로 커지면서도 스크롤은 구조적으로 생기지 않는다.
+   container-type:inline-size — 좌석 폭 상한을 뷰포트(vw) 추정이 아니라
+   이 줄의 실제 폭(cqi)으로 계산하기 위한 쿼리 컨테이너 선언.
+   --holdem-n: 이 줄의 상대 수(기본 2, 멀티는 인라인으로 지정),
+   --seat-frac: 1/상대수 — calc의 var 나눗셈 호환성 문제를 피하려고
+   역수를 따로 받는다. --g/--c: 좌석 사이 gap과 칩 더미 폭. */
+.holdem-opponents{
+  flex:1 1 0;min-height:150px;
+  container-type:inline-size;
+  --g:24px; --c:32px;
+  --holdem-gaps:calc((var(--holdem-n, 2) - 1) * var(--g) + var(--holdem-n, 2) * var(--c));
+  /* 좌석이 가로폭 제한(세로로 좁고 긴 화면)에 걸리면 줄도 같이 낮아져야
+     캐릭터 위에 빈 공간이 쌓이지 않는다 — 여기의 100cqi는 패널 컨테이너
+     기준이라 좌석 계산(좌석 줄 기준)과 같은 폭을 가리킨다 */
+  max-height:calc((100cqi - var(--holdem-gaps)) * var(--seat-frac, 0.5) * 1.645 + 8px);
+  display:flex;justify-content:center;gap:24px;margin-top:4px;
+}
 .holdem-seat-group{display:flex;align-items:flex-end;justify-content:center;gap:6px;}
 
 /* 칩 더미 — 좌석 옆 여유 공간에 쌓으므로 세로 높이 예산을 전혀 안 씀.
@@ -714,6 +734,10 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
    겹쳐 올린다. 이니셜 원을 쓰는 사람 좌석(멀티)과 내 좌석은 종전 그대로. */
 .holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)){
   display:block;width:auto;padding:0;gap:0;
+  /* 좌석 줄 높이를 꽉 채우되, (1) 원본 해상도 658px를 넘는 업스케일과
+     (2) 줄의 실제 폭을 상대 수만큼 나눈 가로 몫 초과는 막는다.
+     1.645 = 658/400 (원본 세로/가로 비율) */
+  height:min(100%, 658px, calc((100cqi - var(--holdem-gaps)) * var(--seat-frac, 0.5) * 1.645));
 }
 .holdem-seat.is-turn{border-color:#e6b800 var(--bevel-dk2) var(--bevel-dk2) #e6b800; box-shadow:0 0 0 1px #e6b800;}
 .holdem-seat.is-folded{opacity:.5;}
@@ -721,7 +745,7 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
    캐릭터 이미지는 400×658 전신이므로 잘라내지 않고 통째로 보여준다. 높이를
    기준으로 잡고 폭은 비율로 따라오게 해서, 창이 낮으면 같이 줄어든다. */
 .holdem-seat-avatar{
-  height:clamp(190px, 42vh, 330px);
+  height:100%;
   aspect-ratio:400 / 658;
   flex:none;overflow:hidden;background:var(--pink-0);
 }
@@ -745,6 +769,11 @@ body.mode-ame .pcard-back{background:repeating-linear-gradient(45deg,#4a1560 0 4
 }
 .holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-seat-cards{
   position:absolute;right:4px;bottom:22px;z-index:1;
+}
+/* 좌석이 패널 맨 위까지 닿으므로 말풍선을 좌석 밖(-18px)에 띄우면 패널에
+   잘린다 — 캐릭터 좌석에서는 그림 위(머리 근처)에 겹쳐 올린다 */
+.holdem-seat:not(.holdem-me):not(:has(.holdem-human-avatar)) .holdem-speech{
+  top:6px;
 }
 
 .holdem-dealer-badge{
@@ -806,9 +835,12 @@ body.mode-ame .holdem-raise-amount{background:#160d1e;color:#ecd8f8;border-color
 
 @media (max-width:640px){
   .holdem-seat{width:128px;padding:5px;}
-  .holdem-seat-avatar{height:clamp(170px, 32vh, 230px);}
   .holdem-human-avatar{width:118px;height:96px;}
-  .holdem-opponents{gap:8px;}
+  /* 좁은 화면에선 칩 더미를 좌석 옆이 아니라 그림 위에 겹쳐서(--c:0)
+     그 폭(32px×상대수)까지 전부 캐릭터에게 준다 */
+  .holdem-opponents{gap:8px;--g:8px;--c:0px;}
+  .holdem-opponents .holdem-seat-group{position:relative;}
+  .holdem-opponents .chipstack{position:absolute;left:2px;bottom:24px;z-index:1;}
 }
 
 /* ── 오목 ───────────────────────────────────────────────────────── */

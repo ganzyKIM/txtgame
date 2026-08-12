@@ -1,4 +1,4 @@
-import { forwardRef, useState, useEffect, useCallback, useImperativeHandle, useRef, type RefObject } from 'react';
+import { forwardRef, useState, useEffect, useCallback, useImperativeHandle, useRef, type CSSProperties, type RefObject } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { JoinedPokerRoom } from './HoldemLobby';
@@ -482,7 +482,11 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
 
             return (
               <>
-                <div className="holdem-opponents">
+                {/* 상대 수를 CSS에 알려줘 좁은 화면에서 좌석 폭이 넘치지 않게 한다 */}
+                <div
+                  className="holdem-opponents"
+                  style={{ '--holdem-n': otherSeats.length, '--seat-frac': 1 / Math.max(otherSeats.length, 1) } as CSSProperties}
+                >
                   {otherSeats.map((seat) => {
                     const snap = ph.players[seat];
                     const info = seats[seat];
