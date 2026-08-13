@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type RefObject } from 'react';
 import { supabase } from '../lib/supabase';
+import { recordGameResult } from '../save/cloudSave';
 import { initHand, applyAction, nextDealer, type HandState, type Action } from '../game/poker/engine';
 import { decideBotAction, CHOTEN_PERSONALITY, AME_PERSONALITY, type BotPersonality } from '../game/poker/bot';
 import { rankLabel } from '../game/poker/deck';
@@ -217,9 +218,12 @@ const HoldemGame = forwardRef<HoldemGameHandle, Props>(function HoldemGame({ mas
   }, [hand]);
 
   // 핸드 종료 시 승/패 리액션 (폴드로 이미 빠진 좌석은 방금 한 폴드 대사를 그대로 유지)
+  // 이 effect는 핸드당 정확히 1번 돌므로 전적 기록도 여기서 한다
   useEffect(() => {
     if (!hand || hand.street !== 'handEnd' || lastReactedHandEnd.current === hand) return;
     lastReactedHandEnd.current = hand;
+    const myWin = hand.winners?.find((w) => w.seat === 0);
+    void recordGameResult('holdem', { mode: 'single', won: !!myWin, score: myWin?.amount ?? 0 });
     setBotSpeech((s) => {
       const next = { ...s };
       for (const seat of [1, 2]) {

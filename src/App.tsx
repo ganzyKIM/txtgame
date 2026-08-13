@@ -1059,7 +1059,7 @@ export default function App() {
       )}
       <Mascot ref={mascot} />
       {statsOpen && user && (
-        <StatsModal userId={user.id} onClose={() => setStatsOpen(false)} />
+        <StatsModal onClose={() => setStatsOpen(false)} />
       )}
       {holdemRulesOpen && (
         <HoldemRulesModal onClose={() => setHoldemRulesOpen(false)} />

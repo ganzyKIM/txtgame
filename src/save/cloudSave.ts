@@ -1,6 +1,13 @@
 import { supabase } from '../lib/supabase';
 import type { GameResult } from '../game/types';
 
+/* ════════════════════════════════════════════════════════════════════
+   기록 저장 — 게임들이 종료 시 호출한다. 실패는 전부 무시(게임 진행이
+   전적 저장보다 우선). 조회는 my_stats() RPC 하나로 서버가 집계한다
+   (supabase/migrations/033_game_records.sql) — 클라에서 행을 당겨와
+   계산하지 않는다.
+   ════════════════════════════════════════════════════════════════════ */
+
 export async function saveResult(userId: string, r: GameResult): Promise<void> {
   try {
     await supabase.from('quiz_results').insert({
@@ -15,42 +22,6 @@ export async function saveResult(userId: string, r: GameResult): Promise<void> {
     });
   } catch {
     /* 저장 실패는 무시 */
-  }
-}
-
-export interface Stats {
-  plays: number;
-  wins: number;
-  winRate: number;
-  bestScore: number;
-  avgScore: number;
-  bestRank: string;
-}
-
-export async function getStats(userId: string): Promise<Stats> {
-  const empty: Stats = { plays: 0, wins: 0, winRate: 0, bestScore: 0, avgScore: 0, bestRank: '-' };
-  try {
-    const { data, error } = await supabase
-      .from('quiz_results')
-      .select('won, score, rank')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error || !data) return empty;
-
-    const plays = data.length;
-    const wonRows = data.filter((d) => d.won);
-    const wins = wonRows.length;
-    const winRate = plays > 0 ? Math.round((wins / plays) * 100) : 0;
-    const bestScore = wonRows.reduce((m, d) => Math.max(m, d.score ?? 0), 0);
-    const avgScore = wins > 0 ? Math.round(wonRows.reduce((s, d) => s + (d.score ?? 0), 0) / wins) : 0;
-
-    const RANK_ORDER = ['S', 'A', 'B', 'C'];
-    const bestRank = RANK_ORDER.find((r) => wonRows.some((d) => d.rank === r)) ?? '-';
-
-    return { plays, wins, winRate, bestScore, avgScore, bestRank };
-  } catch {
-    return empty;
   }
 }
 
@@ -71,32 +42,6 @@ export async function saveRun(userId: string, r: RunInput): Promise<void> {
     });
   } catch {
     /* 저장 실패는 무시 */
-  }
-}
-
-export interface RunStats {
-  runs: number;
-  bestTotal: number;
-  avgTotal: number;
-}
-
-export async function getRunStats(userId: string): Promise<RunStats> {
-  const empty: RunStats = { runs: 0, bestTotal: 0, avgTotal: 0 };
-  try {
-    const { data, error } = await supabase
-      .from('quiz_runs')
-      .select('total_score')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error || !data) return empty;
-    const runs = data.length;
-    if (runs === 0) return empty;
-    const bestTotal = data.reduce((m, d) => Math.max(m, d.total_score ?? 0), 0);
-    const avgTotal = Math.round(data.reduce((s, d) => s + (d.total_score ?? 0), 0) / runs);
-    return { runs, bestTotal, avgTotal };
-  } catch {
-    return empty;
   }
 }
 
@@ -121,77 +66,64 @@ export async function saveSoupResult(userId: string, r: SoupResultInput): Promis
   }
 }
 
-export interface SoupStats {
-  plays: number;
-  solved: number;
-  solveRate: number;
-  avgQuestions: number;
-  avgHints: number;
-  noHintSolves: number;
+// ── 공용 게임 기록 (홀덤·오목) ──────────────────────────────────────
+// 행 하나 = 핸드/대국 하나. userId를 프롭으로 끌고 다니지 않도록
+// 세션(로컬 캐시)에서 직접 꺼낸다 — 네트워크 왕복 없음.
+export type RecordableGame = 'holdem' | 'gomoku';
+
+export interface GameRecordInput {
+  mode: 'single' | 'multi';
+  won: boolean;
+  draw?: boolean;
+  /** 홀덤: 이 핸드에서 딴 팟 크기 */
+  score?: number;
+  /** 오목 싱글: { difficulty: 'easy'|'normal'|'hard' } */
+  meta?: Record<string, string>;
 }
 
-export async function getSoupStats(userId: string): Promise<SoupStats> {
-  const empty: SoupStats = { plays: 0, solved: 0, solveRate: 0, avgQuestions: 0, avgHints: 0, noHintSolves: 0 };
+export async function recordGameResult(game: RecordableGame, r: GameRecordInput): Promise<void> {
   try {
-    const { data, error } = await supabase
-      .from('soup_results')
-      .select('solved, hints_used, questions_asked')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error || !data) return empty;
-
-    const plays = data.length;
-    const solvedRows = data.filter((d) => d.solved);
-    const solved = solvedRows.length;
-    const solveRate = plays > 0 ? Math.round((solved / plays) * 100) : 0;
-    const avgQuestions = plays > 0
-      ? Math.round(data.reduce((s, d) => s + (d.questions_asked ?? 0), 0) / plays)
-      : 0;
-    const avgHints = solved > 0
-      ? Math.round((solvedRows.reduce((s, d) => s + (d.hints_used ?? 0), 0) / solved) * 10) / 10
-      : 0;
-    const noHintSolves = solvedRows.filter((d) => (d.hints_used ?? 0) === 0).length;
-
-    return { plays, solved, solveRate, avgQuestions, avgHints, noHintSolves };
+    const { data } = await supabase.auth.getSession();
+    const uid = data.session?.user.id;
+    if (!uid) return;
+    // game_results는 생성된 DB 타입에 없다 — 기존 RPC들과 같은 우회(as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('game_results').insert({
+      user_id: uid,
+      game,
+      mode: r.mode,
+      won: r.won,
+      draw: r.draw ?? false,
+      score: r.score ?? 0,
+      meta: r.meta ?? {},
+    });
   } catch {
-    return empty;
+    /* 저장 실패는 무시 */
   }
 }
 
-export interface Ranking {
-  totalPlayers: number;
+// ── 전적 조회 — my_stats() RPC 하나가 전부 ─────────────────────────
+export interface MyStats {
+  center: { runs: number; best: number; avg: number };
+  /** 센터시험 기준 편차치(서버 계산, 1~99). 기록이 없으면 null */
+  hensachi: number | null;
+  players: number;
   beaten: number;
-  topPercent: number;
-  myBestScore: number;
+  quiz: { plays: number; wins: number };
+  soup: { plays: number; solved: number; no_hint: number };
+  holdem: { hands: number; wins: number; best_pot: number; multi_wins: number };
+  gomoku: {
+    plays: number; wins: number; draws: number;
+    hard_wins: number; multi_plays: number; multi_wins: number;
+  };
 }
 
-export async function getRanking(userId: string): Promise<Ranking | null> {
+export async function getMyStats(): Promise<MyStats | null> {
   try {
-    // 내 센터시험 최고 총점 (편차치 랭킹은 센터시험 기준)
-    const { data: myData } = await supabase
-      .from('quiz_runs')
-      .select('total_score')
-      .eq('user_id', userId)
-      .order('total_score', { ascending: false })
-      .limit(1);
-
-    const myBestScore = myData?.[0]?.total_score ?? 0;
-
-    // SECURITY DEFINER RPC로 전체 순위 조회 (RLS 우회)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: rankData } = await (supabase as any)
-      .rpc('quiz_run_ranking', { p_score: myBestScore }) as { data: { total_players: number; beaten: number } | null };
-
-    if (!rankData) return null;
-
-    const totalPlayers = Number(rankData.total_players) || 0;
-    const beaten = Number(rankData.beaten) || 0;
-    const topPercent = totalPlayers > 0
-      ? Math.max(1, 100 - Math.round((beaten / totalPlayers) * 100))
-      : 100;
-
-    return { totalPlayers, beaten, topPercent, myBestScore };
+    const { data, error } = await (supabase as any).rpc('my_stats');
+    if (error) return null;
+    return (data as MyStats) ?? null;
   } catch {
     return null;
   }

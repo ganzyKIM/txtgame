@@ -1,6 +1,7 @@
 import { forwardRef, useState, useEffect, useCallback, useImperativeHandle, useRef, type CSSProperties, type RefObject } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { recordGameResult } from '../save/cloudSave';
 import type { JoinedPokerRoom } from './HoldemLobby';
 import type { MascotHandle } from './Mascot';
 import { initHandWithDeck, applyAction, type HandState, type Action, type Street } from '../game/poker/engine';
@@ -133,6 +134,18 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
   const [rebuying, setRebuying] = useState(false);
   const [handError, setHandError] = useState<string | null>(null);
   const [raiseAmount, setRaiseAmount] = useState(0);
+
+  // 전적 기록 — 내가 참가한 핸드가 끝날 때 핸드당 1번(handNo로 중복 방지).
+  // broadcast를 받는 모든 클라가 각자 자기 행만 기록한다.
+  const recordedHandRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!publicHand || publicHand.street !== 'handEnd') return;
+    if (recordedHandRef.current === publicHand.handNo) return;
+    if (mySeat === null || !publicHand.seats.includes(mySeat)) return;
+    recordedHandRef.current = publicHand.handNo;
+    const myWin = publicHand.winners?.find((w) => w.seat === mySeat);
+    void recordGameResult('holdem', { mode: 'multi', won: !!myWin, score: myWin?.amount ?? 0 });
+  }, [publicHand, mySeat]);
 
   const loadSeats = useCallback(async () => {
     const { data } = await supabase

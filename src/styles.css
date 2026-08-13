@@ -252,6 +252,13 @@ html.is-mac .console{
   margin-bottom:8px; border-bottom:1px solid var(--pink-3); padding-bottom:4px;
 }
 .stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+/* 게임 카드 3칸 한 줄 + 섹션 제목 옆 칭호 배지 */
+.modal-section .stats-grid{grid-template-columns:repeat(3, 1fr);}
+.stats-title-badge{
+  float:right; font-size:10px; font-weight:bold; color:#fff;
+  background:linear-gradient(90deg, var(--magenta), var(--pink-3));
+  padding:1px 7px; border-radius:8px;
+}
 .stat-cell{background:var(--pink-0); padding:6px 10px;}
 .stat-label{font-size:10px; color:var(--ink-soft);}
 .stat-value{font-size:18px; font-weight:bold; color:var(--magenta-d);}

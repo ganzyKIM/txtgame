@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type RefObject } from 'react';
 import { supabase } from '../lib/supabase';
+import { recordGameResult } from '../save/cloudSave';
 import {
   BLACK, createBoard, findWinLine, forbiddenPoints, checkForbidden, FORBIDDEN_LABEL, opponentOf, applyMove,
   type Board, type Forbidden, type GomokuState, type Player,
@@ -197,6 +198,12 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
       if (roomRow.result === 'draw') mascot.current?.event('omok_mp_draw');
       else if (roomRow.winner_seat === mySeat) mascot.current?.event('omok_mp_win');
       else if (roomRow.winner_seat !== null) mascot.current?.event('omok_mp_lose');
+      // 전적 기록 — playing→finished 전이는 대국당 한 번뿐이다
+      void recordGameResult('gomoku', {
+        mode: 'multi',
+        won: roomRow.winner_seat === mySeat,
+        draw: roomRow.result === 'draw',
+      });
     }
     prevStatusRef.current = status;
   }, [roomRow, mySeat, mascot]);

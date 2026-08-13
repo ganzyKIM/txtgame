@@ -1,47 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getStats, getRanking, getSoupStats, getRunStats, type Stats, type Ranking, type SoupStats, type RunStats } from '../save/cloudSave';
+import { getMyStats, type MyStats } from '../save/cloudSave';
 
 interface Props {
-  userId: string;
   onClose: () => void;
 }
 
-const RANK_COLOR: Record<string, string> = {
-  S: '#d619a6', A: '#7b34c1', B: '#1a7a64', C: '#a06030',
-};
-
-/** Acklam의 역정규분포 근사 (probit) */
-function probit(p: number): number {
-  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
-              1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
-  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
-              6.680131188771972e+01, -1.328068155288572e+01];
-  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
-              -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
-  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
-              3.754408661907416e+00];
-  const pLow = 0.02425, pHigh = 1 - pLow;
-  if (p < pLow) {
-    const q = Math.sqrt(-2 * Math.log(p));
-    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
-           ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
-  } else if (p <= pHigh) {
-    const q = p - 0.5, r = q * q;
-    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
-           (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
-  } else {
-    const q = Math.sqrt(-2 * Math.log(1 - p));
-    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
-              ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
-  }
-}
-
-function toHensachi(beaten: number, totalPlayers: number): number {
-  if (totalPlayers < 2) return 50;
-  const p = Math.max(0.005, Math.min(0.995, beaten / totalPlayers));
-  return Math.round(50 + 10 * probit(p));
-}
-
+/* 편차치 색 — 서비스 이름이 "편차치 99"라 이 숫자가 전적의 얼굴이다 */
 function hensachiColor(v: number): string {
   if (v >= 70) return '#d619a6';
   if (v >= 60) return '#7b34c1';
@@ -50,176 +14,138 @@ function hensachiColor(v: number): string {
   return '#888';
 }
 
-export default function StatsModal({ userId, onClose }: Props) {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [ranking, setRanking] = useState<Ranking | null>(null);
-  const [soupStats, setSoupStats] = useState<SoupStats | null>(null);
-  const [runStats, setRunStats] = useState<RunStats | null>(null);
+/* 게임별 칭호 — 숫자 나열보다 이 한 줄이 재도전 동기를 만든다.
+   달성 조건이 보이도록 바로 위 단계 이름은 UI에 안 숨긴다(다음 목표는 궁금해야 재밌다). */
+function gomokuTitle(g: MyStats['gomoku']): string | null {
+  if (g.hard_wins > 0) return '진심 브레이커';
+  if (g.wins >= 10) return '동네 고수';
+  if (g.wins > 0) return '오목 입문';
+  return null;
+}
+function holdemTitle(h: MyStats['holdem']): string | null {
+  if (h.best_pot >= 2000) return '하이롤러';
+  if (h.wins >= 30) return '테이블의 상어';
+  if (h.wins > 0) return '포커페이스';
+  return null;
+}
+function soupTitle(s: MyStats['soup']): string | null {
+  if (s.no_hint >= 3) return '명탐정';
+  if (s.solved > 0) return '수프 감별사';
+  return null;
+}
+
+function Cell({ label, value, unit, color }: { label: string; value: string | number; unit?: string; color?: string }) {
+  return (
+    <div className="stat-cell">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value" style={color ? { color } : undefined}>
+        {value}{unit && <small> {unit}</small>}
+      </div>
+    </div>
+  );
+}
+
+function Section({ icon, title, badge, empty, children }: {
+  icon: string; title: string; badge: string | null; empty: boolean; children: React.ReactNode;
+}) {
+  return (
+    <div className="modal-section">
+      <div className="modal-section-title">
+        ▌{icon} {title}
+        {badge && <span className="stats-title-badge">★ {badge}</span>}
+      </div>
+      {empty
+        ? <div className="rank-sub" style={{ padding: '8px 0' }}>아직 기록이 없어 — 한번 도전해봐!</div>
+        : <div className="stats-grid">{children}</div>}
+    </div>
+  );
+}
+
+export default function StatsModal({ onClose }: Props) {
+  const [stats, setStats] = useState<MyStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getStats(userId), getRanking(userId), getSoupStats(userId), getRunStats(userId)]).then(([s, r, ss, rs]) => {
-      setStats(s);
-      setRanking(r);
-      setSoupStats(ss);
-      setRunStats(rs);
-      setLoading(false);
-    });
-  }, [userId]);
+    getMyStats().then((s) => { setStats(s); setLoading(false); });
+  }, []);
 
-  const hensachi = ranking && ranking.totalPlayers > 1
-    ? toHensachi(ranking.beaten, ranking.totalPlayers)
-    : null;
+  const topPercent = stats && stats.players > 0
+    ? Math.max(1, 100 - Math.round((stats.beaten / stats.players) * 100))
+    : 100;
 
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <div className="modal-titlebar">
-          <span className="modal-title">◆ 나의 전적 &amp; 랭킹 ★</span>
+          <span className="modal-title">◆ 나의 전적 ★</span>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal-body">
           {loading ? (
             <div className="modal-spinner">불러오는 중… ♡</div>
+          ) : !stats ? (
+            <div className="rank-sub" style={{ padding: '12px 0' }}>
+              전적을 불러올 수 없어요. (SQL 마이그레이션 033 필요)
+            </div>
           ) : (
             <>
-              {/* 🎯 센터시험 전적 (10문제 총점) */}
+              {/* 편차치 헤드라인 — 센터시험 기준, 서버가 계산해서 내려준다 */}
               <div className="modal-section">
-                <div className="modal-section-title">▌🎯 센터시험 전적 (10문제 총점)</div>
-                {runStats && runStats.runs > 0 ? (
-                  <div className="stats-grid">
-                    <div className="stat-cell">
-                      <div className="stat-label">응시 횟수</div>
-                      <div className="stat-value">{runStats.runs}<small> 회</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">최고 총점</div>
-                      <div className="stat-value">{runStats.bestTotal}<small> 점</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">평균 총점</div>
-                      <div className="stat-value">{runStats.avgTotal}<small> 점</small></div>
-                    </div>
-                  </div>
-                ) : (
+                <div className="modal-section-title">▌🎯 센터시험 편차치</div>
+                {stats.hensachi === null ? (
                   <div className="rank-sub" style={{ padding: '10px 0' }}>
-                    아직 센터시험 기록이 없어. 🎯 10문제에 도전해봐!
-                  </div>
-                )}
-              </div>
-
-              {/* 📝 모의시험(개별 문제) 전적 */}
-              <div className="modal-section">
-                <div className="modal-section-title">▌📝 모의시험 전적 (개별 문제)</div>
-                <div className="stats-grid">
-                  <div className="stat-cell">
-                    <div className="stat-label">총 플레이</div>
-                    <div className="stat-value">{stats?.plays ?? 0}<small> 회</small></div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="stat-label">클리어</div>
-                    <div className="stat-value">{stats?.wins ?? 0}<small> 회</small></div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="stat-label">승률</div>
-                    <div className="stat-value">{stats?.winRate ?? 0}<small> %</small></div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="stat-label">최고 점수</div>
-                    <div className="stat-value">{stats?.bestScore ?? 0}<small> 점</small></div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="stat-label">평균 점수</div>
-                    <div className="stat-value">{stats?.avgScore ?? 0}<small> 점</small></div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="stat-label">최고 등급</div>
-                    <div className="stat-value" style={{ color: RANK_COLOR[stats?.bestRank ?? ''] }}>
-                      {stats?.bestRank ?? '-'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 글로벌 랭킹 */}
-              <div className="modal-section">
-                <div className="modal-section-title">▌🎯 센터시험 편차치 랭킹</div>
-                {ranking === null || ranking.totalPlayers === 0 ? (
-                  <div className="rank-sub" style={{ padding: '12px 0' }}>
-                    {ranking === null
-                      ? '랭킹 데이터를 불러올 수 없어요. (SQL 마이그레이션 008·009 필요)'
-                      : '아직 센터시험 데이터가 없어요. 🎯 첫 도전자가 되어봐!'}
+                    센터시험(10문제)을 치르면 편차치가 나와. 첫 도전 가봐!
                   </div>
                 ) : (
                   <>
-                    {/* 편차치 메인 표시 */}
                     <div className="hensachi-wrap">
                       <div className="hensachi-label">편차치</div>
-                      <div
-                        className="hensachi-value"
-                        style={{ color: hensachiColor(hensachi ?? 50) }}
-                      >
-                        {hensachi ?? 50}
+                      <div className="hensachi-value" style={{ color: hensachiColor(stats.hensachi) }}>
+                        {stats.hensachi}
                       </div>
-                      <div className="hensachi-sub">상위 {ranking.topPercent}%</div>
+                      <div className="hensachi-sub">상위 {topPercent}%</div>
                     </div>
-
-                    {/* 진행 바 */}
                     <div className="rank-bar-wrap">
                       <div className="rank-bar-bg">
-                        <div
-                          className="rank-bar-fill"
-                          style={{ width: `${100 - ranking.topPercent}%` }}
-                        />
+                        <div className="rank-bar-fill" style={{ width: `${100 - topPercent}%` }} />
                         <div className="rank-bar-label">
-                          상위 {ranking.topPercent}% · 센터 최고총점 {ranking.myBestScore}점
+                          최고 {stats.center.best}점 · 전체 {stats.players}명 중 {stats.beaten}명을 제쳤어
                         </div>
                       </div>
-                    </div>
-                    <div className="rank-sub" style={{ marginTop: 6 }}>
-                      전체 {ranking.totalPlayers}명 중 {ranking.beaten}명보다 높은 점수
                     </div>
                   </>
                 )}
               </div>
 
-              {/* 🐢 수프 전적 */}
-              <div className="modal-section">
-                <div className="modal-section-title">▌🐢 바다거북 수프 전적</div>
-                {soupStats && soupStats.plays > 0 ? (
-                  <div className="stats-grid">
-                    <div className="stat-cell">
-                      <div className="stat-label">총 플레이</div>
-                      <div className="stat-value">{soupStats.plays}<small> 회</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">진상 해결</div>
-                      <div className="stat-value">{soupStats.solved}<small> 회</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">해결률</div>
-                      <div className="stat-value">{soupStats.solveRate}<small> %</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">평균 질문수</div>
-                      <div className="stat-value">{soupStats.avgQuestions}<small> 개</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">평균 힌트수</div>
-                      <div className="stat-value">{soupStats.avgHints}<small> 개</small></div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="stat-label">힌트 없이 해결</div>
-                      <div className="stat-value">{soupStats.noHintSolves}<small> 회</small></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rank-sub" style={{ padding: '10px 0' }}>
-                    아직 수프 기록이 없어. 🐢 한번 도전해봐!
-                  </div>
-                )}
-              </div>
+              <Section icon="🎯" title="퀴즈" badge={null} empty={stats.center.runs === 0 && stats.quiz.plays === 0}>
+                <Cell label="센터 응시" value={stats.center.runs} unit="회" />
+                <Cell label="센터 최고" value={stats.center.best} unit="점" />
+                <Cell label="모의 클리어" value={`${stats.quiz.wins}/${stats.quiz.plays}`} />
+              </Section>
+
+              <Section icon="⚫" title="오목" badge={gomokuTitle(stats.gomoku)} empty={stats.gomoku.plays === 0}>
+                <Cell label="승리" value={`${stats.gomoku.wins}/${stats.gomoku.plays}`} />
+                <Cell label="진심 격파" value={stats.gomoku.hard_wins} unit="회"
+                      color={stats.gomoku.hard_wins > 0 ? '#d619a6' : undefined} />
+                <Cell label="멀티 승" value={stats.gomoku.multi_wins} unit="회" />
+              </Section>
+
+              <Section icon="🃏" title="홀덤" badge={holdemTitle(stats.holdem)} empty={stats.holdem.hands === 0}>
+                <Cell label="핸드 승" value={`${stats.holdem.wins}/${stats.holdem.hands}`} />
+                <Cell label="최대 팟" value={stats.holdem.best_pot} unit="칩"
+                      color={stats.holdem.best_pot >= 2000 ? '#d619a6' : undefined} />
+                <Cell label="멀티 승" value={stats.holdem.multi_wins} unit="회" />
+              </Section>
+
+              <Section icon="🐢" title="바다거북 수프" badge={soupTitle(stats.soup)} empty={stats.soup.plays === 0}>
+                <Cell label="해결" value={`${stats.soup.solved}/${stats.soup.plays}`} />
+                <Cell label="노히트 해결" value={stats.soup.no_hint} unit="회"
+                      color={stats.soup.no_hint >= 3 ? '#d619a6' : undefined} />
+                <Cell label="해결률"
+                      value={stats.soup.plays > 0 ? Math.round((stats.soup.solved / stats.soup.plays) * 100) : 0}
+                      unit="%" />
+              </Section>
 
               <button className="btn" onClick={onClose} style={{ alignSelf: 'flex-end' }}>닫기</button>
             </>

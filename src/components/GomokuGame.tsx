@@ -5,6 +5,7 @@ import {
   type Difficulty, type Forbidden, type GomokuState, type Player, type Situation,
 } from '../game/gomoku/engine';
 import { requestAiMove, warmUpAiWorker, terminateAiWorker } from '../game/gomoku/aiClient';
+import { recordGameResult } from '../save/cloudSave';
 import GomokuBoard from './GomokuBoard';
 import type { LineKind, MascotHandle } from './Mascot';
 
@@ -152,14 +153,21 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
     return () => window.clearTimeout(t);
   }, [phase, state, mascot]);
 
-  // ── 대국 종료 로그 ───────────────────────────────────────────
+  // ── 대국 종료 로그 + 전적 기록 ───────────────────────────────
+  // winner는 판마다 null → 값으로 딱 한 번 바뀌므로 여기가 1회 기록 지점이다
   useEffect(() => {
     if (state.winner === null) return;
     const msg = state.winner === 'draw' ? '> ⚫ 오목 무승부 (판이 꽉 찼어)'
       : state.winner === state.humanSeat ? '> ⚫ 오목 승리! 내가 이겼어'
       : '> ⚪ 오목 패배… 다음엔 이기자';
     push(msg);
-  }, [state.winner, state.humanSeat, push]);
+    void recordGameResult('gomoku', {
+      mode: 'single',
+      won: state.winner === state.humanSeat,
+      draw: state.winner === 'draw',
+      meta: { difficulty },
+    });
+  }, [state.winner, state.humanSeat, difficulty, push]);
 
   // ── 금수 자리 — 판에 ✕로 표시해 미리 알려준다 ────────────────
   // 금수는 흑에게만 걸리므로 사람이 흑일 때만 의미가 있다.
