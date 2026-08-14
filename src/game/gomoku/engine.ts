@@ -507,7 +507,48 @@ function buildSolution(preset: DifficultyPreset): GomokuSolution {
   });
 }
 
-/** 기존 돌에서 2칸 이내인 빈 칸들 — 실수(blunder)해도 아주 뜬금없진 않게 */
+/**
+ * player가 "바로 다음 수에 5목을 완성"할 수 있는 국면인가.
+ * 이 상황에서 실수를 하면 유일한 방어를 버리고 즉사하므로, 실수를 건너뛰는
+ * 조건으로 쓴다. 흑은 금수(장목 등)라 실제로는 못 두는 칸이 있으므로 제외한다.
+ */
+function opponentCanWinNext(board: Board, player: Player): boolean {
+  for (const key of criticalCells(board, player)) {
+    const [r, c] = key.split(',').map(Number);
+    if (threatAt(board, r, c, player) !== 'win') continue;   // 4목은 아직 즉사가 아니다
+    if (player === BLACK && checkForbidden(board, r, c)) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 최근 둔 돌들 바로 옆(1칸)의 빈 칸들 — 실수할 때 고를 후보.
+ * 판 전체에서 아무 데나 고르면 싸움터와 무관한 구석에 두게 되어
+ * "실수"가 아니라 "고장"으로 보인다. 최근 수 주변으로 좁히면 약하긴 해도
+ * 국면에 참여하는 수처럼 보인다.
+ */
+function recentAdjacentCells(state: GomokuState): [number, number][] {
+  const recent = state.moves.slice(-4);
+  const seen = new Set<string>();
+  const out: [number, number][] = [];
+  for (const m of recent) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = m.r + dr;
+        const c = m.c + dc;
+        if (!inBounds(r, c) || state.board[r][c] !== -1) continue;
+        const key = `${r},${c}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push([r, c]);
+      }
+    }
+  }
+  return out;
+}
+
+/** 기존 돌에서 2칸 이내인 빈 칸들 — 탐색이 실패했을 때의 최후 폴백용 */
 function nearbyEmptyCells(board: Board): [number, number][] {
   const out: [number, number][] = [];
   for (let r = 0; r < BOARD_SIZE; r++) {
@@ -588,12 +629,23 @@ export function chooseAiMove(
     break;
   }
 
-  // 실수: 확률적으로 최선수를 버린다. 단, "지금 두면 바로 이기는 수"는
-  // 절대 버리지 않는다 — 다 이긴 판을 놓치면 실수가 아니라 버그처럼 보인다.
+  /* 실수: 확률적으로 최선수를 버려서 사람이 이길 틈을 준다.
+     단 아래 두 경우는 실수가 아니라 "자멸"로 보이므로 절대 건드리지 않는다.
+       ① 지금 두면 바로 이기는 수 — 다 이긴 판을 놓치는 건 버그처럼 보인다.
+       ② 상대가 다음 수에 5목을 완성할 수 있는 국면 — 유일한 방어를 버리면
+          엉뚱한 곳에 두고 즉사한다. 실제로 "AI가 뜬금없는 수를 두고 스스로
+          졌다"는 제보가 여기서 나왔다.
+     실수하더라도 판 전체에서 아무 칸이나 고르지 않고 최근 수 주변에서 고른다
+     — 싸움터와 무관한 구석에 두면 실수가 아니라 고장으로 보인다.
+     (차선수를 다시 탐색해 두는 방식도 해봤는데, 차선수가 최선수와 별로
+      다르지 않아 보통이 진심과 대등해졌고 탐색이 두 번 돌아 느려졌다.) */
   if (move && preset.blunder > 0 && rng() < preset.blunder) {
-    const isWinningNow = threatAt(state.board, move[0], move[1], seat) === 'win';
-    if (!isWinningNow) {
-      const cands = nearbyEmptyCells(state.board).filter(([r, c]) => isPlayable(r, c));
+    const iWinNow = threatAt(state.board, move[0], move[1], seat) === 'win';
+    if (!iWinNow && !opponentCanWinNext(state.board, opponentOf(seat))) {
+      const near = recentAdjacentCells(state).filter(([r, c]) => isPlayable(r, c));
+      const cands = near.length > 0
+        ? near
+        : nearbyEmptyCells(state.board).filter(([r, c]) => isPlayable(r, c));
       if (cands.length > 0) move = cands[Math.floor(rng() * cands.length)];
     }
   }
