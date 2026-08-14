@@ -734,9 +734,6 @@ export default function App() {
     void handleStart(lastConfig);
   }
 
-  function handleMinimize() {
-    setMinimized(true);
-  }
 
   // 사회인모드 진입 — 게임 상태는 그대로 두고 화면만 위장, 마스코트는 안 보이게
   function handleEnterOffice() {
@@ -755,9 +752,21 @@ export default function App() {
     }
   }
 
-  function handleClose() {
-    push('> 아직 더 놀아야 해~! 허락 없이는 나갈 수 없어! ♡');
+  /** 닫기 = 창을 접고 바탕화면(게임 선택)으로. 진행 중이던 판은 그대로 두므로
+   *  다시 열면 이어서 할 수 있다. 예전엔 초텐쨩이 아예 못 나가게 막았지만,
+   *  게임이 여러 종류가 된 지금은 "다른 게임 고르기"가 정상 동선이라 열어줬다.
+   *  대신 실수로 누르는 걸 막으려고 확인을 한 번 받는다(대사는 그대로 살림). */
+  async function handleClose() {
+    push('> 아직 더 놀아야 해~! 정말 닫을 거야…? ♡');
     mascot.current?.event('close');
+    const ok = await showConfirm({
+      title: '닫기',
+      message: '정말 닫을까? 진행 중인 판은 그대로 남아있어 — 다시 열면 이어서 할 수 있어! ♡',
+      confirmLabel: '닫기',
+      cancelLabel: '더 놀기',
+      danger: true,
+    });
+    if (ok) setMinimized(true);
   }
 
   async function handleLogout() {
@@ -887,8 +896,7 @@ export default function App() {
           onTransform={handleTransformOrExitOffice}
           onLogout={() => void handleLogout()}
           onOpenStats={() => setStatsOpen(true)}
-          onMinimize={handleMinimize}
-          onClose={handleClose}
+          onClose={() => void handleClose()}
           hideConsole={mode === 'multi' || mode === 'holdem' || mode === 'holdem-multi' || mode === 'gomoku' || mode === 'gomoku-multi'}
           officeMode={officeMode}
           onEnterOffice={handleEnterOffice}

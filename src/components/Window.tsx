@@ -8,7 +8,6 @@ interface Props {
   onTransform: () => void;
   onLogout: () => void;
   onOpenStats: () => void;
-  onMinimize: () => void;
   onClose: () => void;
   /** 제공되면 메뉴바에 "처음으로"(카테고리 선택 복귀) 버튼 노출 */
   onHome?: () => void;
@@ -33,7 +32,7 @@ interface Props {
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onMinimize, onClose, onHome, onMultiplay, onShowRules, hideConsole, multiBackground,
+  onTransform, onLogout, onOpenStats, onClose, onHome, onMultiplay, onShowRules, hideConsole, multiBackground,
   officeMode, onEnterOffice, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
@@ -53,8 +52,9 @@ export default function Window({
           ) : (
             <span className="title-text">초텐짱의 편차치99 ✞퀴즈대합전✞ <span className="blink">♥</span></span>
           )}
+          {/* 최소화는 없앴다 — 게임이 여러 종류가 되면서 "닫고 다른 게임 고르기"가
+              기본 동선이 됐고, 최소화와 닫기가 사실상 같은 일을 하게 됐다. */}
           <div className="title-btns">
-            <button className="tbtn" title="최소화" onClick={onMinimize}>_</button>
             <button className="tbtn tbtn-x" title="닫기" onClick={onClose}>✕</button>
           </div>
         </div>
