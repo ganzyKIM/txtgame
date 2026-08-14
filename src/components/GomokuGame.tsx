@@ -59,6 +59,10 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   const aiRequestedAt = useRef(-1);
   // 판마다 흑백을 번갈아 잡는다 — 흑(선공)이 유리하니 한쪽만 계속 잡으면 불공평하다
   const nextHumanSeat = useRef<Player>(BLACK);
+  // 종료 처리를 판당 한 번만 하기 위한 표식 (끝난 state 객체를 토큰으로 씀).
+  // push가 App의 일반 함수라 렌더마다 신원이 바뀌고, push 자체가 상태를 바꿔
+  // 재렌더를 부른다 → deps에 두면 종료 화면에서 무한히 재실행된다.
+  const finishedRef = useRef<typeof state | null>(null);
 
   // 첫 수에서 워커 로딩 지연이 보이지 않도록 미리 띄우고, 화면을 벗어나면 정리
   useEffect(() => {
@@ -154,9 +158,11 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   }, [phase, state, mascot]);
 
   // ── 대국 종료 로그 + 전적 기록 ───────────────────────────────
-  // winner는 판마다 null → 값으로 딱 한 번 바뀌므로 여기가 1회 기록 지점이다
+  // 끝난 국면 하나당 정확히 한 번만 돈다(finishedRef 가드). 가드가 없으면
+  // push → App 재렌더 → push 신원 변경 → effect 재실행이 무한히 돈다.
   useEffect(() => {
-    if (state.winner === null) return;
+    if (state.winner === null || finishedRef.current === state) return;
+    finishedRef.current = state;
     const msg = state.winner === 'draw' ? '> ⚫ 오목 무승부 (판이 꽉 찼어)'
       : state.winner === state.humanSeat ? '> ⚫ 오목 승리! 내가 이겼어'
       : '> ⚪ 오목 패배… 다음엔 이기자';
@@ -167,7 +173,7 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
       draw: state.winner === 'draw',
       meta: { difficulty },
     });
-  }, [state.winner, state.humanSeat, difficulty, push]);
+  }, [state, difficulty, push]);
 
   // ── 금수 자리 — 판에 ✕로 표시해 미리 알려준다 ────────────────
   // 금수는 흑에게만 걸리므로 사람이 흑일 때만 의미가 있다.

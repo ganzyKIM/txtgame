@@ -144,7 +144,10 @@ const HoldemRoomWait = forwardRef<HoldemRoomWaitHandle, Props>(function HoldemRo
     if (mySeat === null || !publicHand.seats.includes(mySeat)) return;
     recordedHandRef.current = publicHand.handNo;
     const myWin = publicHand.winners?.find((w) => w.seat === mySeat);
-    void recordGameResult('holdem', { mode: 'multi', won: !!myWin, score: myWin?.amount ?? 0 });
+    void recordGameResult('holdem', {
+      mode: 'multi', won: !!myWin, score: myWin?.amount ?? 0,
+      key: `${room.id}:${publicHand.handNo}`,
+    });
   }, [publicHand, mySeat]);
 
   const loadSeats = useCallback(async () => {

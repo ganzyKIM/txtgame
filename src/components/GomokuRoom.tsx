@@ -198,11 +198,12 @@ const GomokuRoom = forwardRef<GomokuRoomHandle, Props>(function GomokuRoom({ roo
       if (roomRow.result === 'draw') mascot.current?.event('omok_mp_draw');
       else if (roomRow.winner_seat === mySeat) mascot.current?.event('omok_mp_win');
       else if (roomRow.winner_seat !== null) mascot.current?.event('omok_mp_lose');
-      // 전적 기록 — playing→finished 전이는 대국당 한 번뿐이다
+      // 전적 기록 — 방 id를 키로 줘서 컴포넌트가 리마운트돼도 한 번만 들어간다
       void recordGameResult('gomoku', {
         mode: 'multi',
         won: roomRow.winner_seat === mySeat,
         draw: roomRow.result === 'draw',
+        key: room.id,
       });
     }
     prevStatusRef.current = status;

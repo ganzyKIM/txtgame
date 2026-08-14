@@ -79,9 +79,23 @@ export interface GameRecordInput {
   score?: number;
   /** 오목 싱글: { difficulty: 'easy'|'normal'|'hard' } */
   meta?: Record<string, string>;
+  /**
+   * 같은 판을 두 번 기록하지 않기 위한 식별자(방 id·핸드 번호 등).
+   * 컴포넌트 안의 ref 가드는 리마운트되면 초기화되지만 이건 모듈 수준이라
+   * 세션 내내 유지된다 — 오목 싱글에서 effect가 무한 재실행되며 12,539행이
+   * 들어간 사고를 겪고 넣었다.
+   */
+  key?: string;
 }
 
+const recordedKeys = new Set<string>();
+
 export async function recordGameResult(game: RecordableGame, r: GameRecordInput): Promise<void> {
+  if (r.key) {
+    const k = `${game}:${r.mode}:${r.key}`;
+    if (recordedKeys.has(k)) return;
+    recordedKeys.add(k);
+  }
   try {
     const { data } = await supabase.auth.getSession();
     const uid = data.session?.user.id;
