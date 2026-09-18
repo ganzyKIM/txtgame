@@ -5,3 +5,4 @@ tmp/
 .env*.local
 .vercel
 supabase/.temp/
+data/quiz-seed/
