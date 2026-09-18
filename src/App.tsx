@@ -21,7 +21,7 @@ import { loadBank, addToBank, updateBankStats, recordAppealUpheld, getDifficulty
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
-import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, recordQuizServe } from './save/quizBank';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import HoldemRulesModal from './components/HoldemRulesModal';
 import DialogHost from './components/DialogHost';
@@ -262,12 +262,11 @@ export default function App() {
       ...chronicFailures,  // Level 2: 만성 실패 정답 자동 차단
     ])];
 
-    // ① 서버 문제은행 우선 — 시드로 채워져 있어 사실상 항상 적중(0크레딧, ~0.3초).
-    //    저장된 힌트 세트는 전부 검증 파이프라인 통과분이라 재검증 생략.
-    //    서버가 유저별 "최근 10문제 정답" 창을 자동 제외·기록한다 (migration 034).
-    //    유저가 주제·컨셉을 직접 입력했을 때만 즉석 AI 생성으로 — 뱅크 문제는
-    //    주제를 반영하지 못하므로 (종전 65% 확률 재사용은 주제를 무시하는 문제가 있었다).
-    if (!cfg.theme) {
+    // ① 서버 문제은행 우선 재사용 — 적중하면 AI 호출 없이 출제(0크레딧).
+    //    저장된 힌트 세트는 전부 생성 당시 검증을 통과했으므로 재검증도 생략.
+    //    항상 뱅크만 쓰면 신선도가 떨어지므로 확률 상한을 둔다.
+    const SERVER_BANK_REUSE_P = 0.65;
+    if (Math.random() < SERVER_BANK_REUSE_P) {
       const hit = await pickServerBankPuzzle(catKey, cfg.difficulty, baseExclusions);
       if (hit) {
         const reused: Puzzle = {
@@ -326,32 +325,10 @@ export default function App() {
       applyBalance(balance);
       cand = parsePuzzle(text, cfg.categoryLabel, cfg.theme);
 
-      // 재시도 소진 시: 검증 안 된 후보를 그대로 내보내지 않는다.
-      // 예전엔 여기서 무조건 채택했는데, 그게 환각 정답("사이버드" 등)이 실제 출제되고
-      // 뱅크 통계까지 오염시킨 유입구였다. 이제 문제은행에 검증된 재고가 충분하므로
-      // 검증된 문제로 폴백한다(주제 지정은 포기 — 틀린 문제보다 낫다).
+      // 마지막 시도는 무조건 채택 (무한루프·과도한 호출 방지)
+      // — 검증을 건너뛰었으므로 통과 플래그는 전부 미검증(false)으로 남긴다
+      // → 뱅크에는 안 쌓이고 quiz_generations 로그에만 남음(재사용 대상 아님).
       if (attempt >= MAX_RETRY) {
-        const fallback = await pickServerBankPuzzle(catKey, cfg.difficulty, banned);
-        if (fallback) {
-          push('> ♻ 검증 통과 문제를 찾지 못해 문제은행에서 출제');
-          const reused: Puzzle = {
-            answer: fallback.answer,
-            hints: fallback.hints,
-            maxHints: fallback.maxHints,
-            acceptable: fallback.acceptable,
-            category: cfg.categoryLabel,
-            categoryKey: catKey,
-            theme: cfg.theme,
-          };
-          answerBank.current = addToBank(answerBank.current, {
-            answer: reused.answer, categoryKey: catKey, categoryLabel: cfg.categoryLabel,
-            acceptable: reused.acceptable, wikiVerified: true, difficultyLabeled: cfg.difficulty,
-          });
-          exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, reused.answer);
-          return reused;
-        }
-        // 뱅크마저 비었을 때만 최후로 채택 — 통과 플래그는 전부 false로 남겨
-        // 뱅크에 쌓이지 않게 한다(재사용 대상 제외, quiz_generations 로그에만 기록).
         puzzle = cand;
         genSource = 'ai_fresh';
         genAxes = candAxes;
@@ -467,8 +444,6 @@ export default function App() {
     });
 
     exclusions.current = addExclusion(exclusions.current, cfg.categoryLabel, puzzle.answer);
-    // 즉석 생성 정답도 서버 "최근 10문제 창"에 기록 — 뱅크 픽은 RPC가 자체 기록한다
-    void recordQuizServe(puzzle.answer);
     return puzzle;
   }
 

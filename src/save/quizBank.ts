@@ -182,16 +182,6 @@ export async function pickServerBankPuzzle(
   } catch { return null; }
 }
 
-/**
- * AI 즉석 생성으로 출제가 확정된 정답을 서버 "최근 10문제 창"에 기록 (migration 034).
- * 뱅크 픽 경로는 RPC가 스스로 기록하므로 이 함수는 ai_fresh 채택 시에만 부른다.
- */
-export async function recordQuizServe(answer: string): Promise<void> {
-  try {
-    await rpc.rpc('record_quiz_serve', { p_answer_key: normAnswerKey(answer) });
-  } catch { /* 무시 */ }
-}
-
 /** 이용자 문제 신고 (2회 이상 → 서버에서 banned). */
 export async function reportQuizProblem(
   answer: string,
