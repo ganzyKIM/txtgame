@@ -421,8 +421,21 @@ export interface DifficultyPreset {
   narrow: NarrowStage[];
   /** 승부처(4목 이상)에서만 돌리는 정밀 탐색 깊이 */
   deepDepth: number;
-  /** 이 확률로 최선수를 버리고 근처의 그럴듯한 수를 둔다 (사람이 이길 틈) */
+  /**
+   * 조용한 국면에서 이 확률로 최선수 대신 "그럴듯한 차선"을 둔다 (사람이 이길 틈).
+   * 열린3·4가 걸린 국면에서는 확률과 무관하게 실수하지 않는다(chooseAiMove 참고).
+   */
   blunder: number;
+  /** 실수할 때 칸 가치 순위 상위 몇 개까지 후보로 볼지 — 넓을수록 엉성한 수가 섞인다 */
+  mistakeBreadth: number;
+  /** 최고 칸 가치 대비 이 비율 미만인 칸은 실수 후보에서 뺀다 — "뜬금없는 수" 방지 */
+  mistakeFloor: number;
+  /**
+   * 실수가 걸렸을 때 상대의 열린3을 "못 보고" 자기 공격 수를 둘 확률.
+   * 초보가 지는 가장 흔하고 자연스러운 방식이라 살살에만 준다. 보통이 이걸 하면
+   * 기본기가 없어 보인다.
+   */
+  missOpenThree: number;
   /**
    * 탐색이 즉시 끝나도 최소 이만큼은 뜸을 들인다.
    * 오목은 수 대부분이 1ms 안에 끝나서 그대로 두면 "생각도 안 하고 착 착 놓는"
@@ -434,26 +447,32 @@ export interface DifficultyPreset {
 
 /**
  * 진심은 라이브러리 기본값과 같은 탐색 구성이다(잘 튜닝돼 있음).
- * 살살/보통은 단계를 덜어내 얕게 보게 만들고, 거기에 실수율을 더했다.
- * 승률·실수율 실측치는 docs/gomoku-plan.md 참고.
+ * 난이도 차이는 **탐색 깊이**로 만든다 — 얕게 보면 연속 4 공격 같은 콤비네이션을
+ * 못 읽어서 진다. 사람이 약한 상대를 이기는 자연스러운 방식이다.
+ * 실수(blunder)는 기력을 거의 깎지 못한다: 칸 가치 휴리스틱으로 고른 "그럴듯한 차선"이
+ * 실제로는 꽤 좋은 수라서, 실수율만 올린 보통이 오히려 진심을 22승 8패로 이긴 적이 있다.
+ * 그래서 실수는 수의 다양성과 가끔의 빈틈 용도로만 쓴다. 실측치는 docs/ARCHITECTURE.md.
  */
 export const DIFFICULTIES: Record<Difficulty, DifficultyPreset> = {
   easy: {
     label: '살살',
     narrow: [{ depth: 2, candidates: 6, promotion: 'two' }],
-    deepDepth: 6,
-    blunder: 0.35,
+    deepDepth: 4,
+    blunder: 0.4,
+    mistakeBreadth: 6,
+    mistakeFloor: 0.15,
+    missOpenThree: 0.4,
     ponderMs: 700,
     hint: '얕게 보고 자주 실수해. 오목 처음이면 이걸로.',
   },
   normal: {
     label: '보통',
-    narrow: [
-      { depth: 2, candidates: 8, promotion: 'two' },
-      { depth: 4, candidates: 6, promotion: 'three' },
-    ],
-    deepDepth: 12,
-    blunder: 0.12,
+    narrow: [{ depth: 2, candidates: 8, promotion: 'two' }],
+    deepDepth: 6,
+    blunder: 0.3,
+    mistakeBreadth: 4,
+    mistakeFloor: 0.3,
+    missOpenThree: 0,
     ponderMs: 1000,
     hint: '기본기는 있지만 가끔 빈틈을 보여.',
   },
@@ -468,6 +487,9 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyPreset> = {
     // 있지만 탐색이 워커에서 돌아 UI는 멈추지 않는다.
     deepDepth: 16,
     blunder: 0,
+    mistakeBreadth: 1,
+    mistakeFloor: 1,
+    missOpenThree: 0,
     ponderMs: 1300,
     hint: '실수 없이 다 막고 함정도 판다. 각오해.',
   },
@@ -522,30 +544,71 @@ function opponentCanWinNext(board: Board, player: Player): boolean {
   return false;
 }
 
+/** 5칸 창 가치표 — 창 안의 같은 색 돌이 n개가 될 때의 가치 (상대 돌이 섞인 창은 0) */
+const WINDOW_VALUE = [0, 1, 10, 100, 1000, 100000];
+
 /**
- * 최근 둔 돌들 바로 옆(1칸)의 빈 칸들 — 실수할 때 고를 후보.
- * 판 전체에서 아무 데나 고르면 싸움터와 무관한 구석에 두게 되어
- * "실수"가 아니라 "고장"으로 보인다. 최근 수 주변으로 좁히면 약하긴 해도
- * 국면에 참여하는 수처럼 보인다.
+ * (r,c)에 player가 두었을 때 그 칸을 지나는 5칸 창들의 가치 합.
+ * 고전적인 5-튜플 휴리스틱이라 끊긴 3(●_●●) 같은 모양도 자연스럽게 잡힌다.
+ * 탐색용이 아니라 "실수할 때 뭘 둘지" 고르는 용도라 이 정도 근사로 충분하다.
  */
-function recentAdjacentCells(state: GomokuState): [number, number][] {
-  const recent = state.moves.slice(-4);
-  const seen = new Set<string>();
-  const out: [number, number][] = [];
-  for (const m of recent) {
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const r = m.r + dr;
-        const c = m.c + dc;
-        if (!inBounds(r, c) || state.board[r][c] !== -1) continue;
-        const key = `${r},${c}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push([r, c]);
+function windowScore(board: Board, r: number, c: number, player: Player): number {
+  const opponent = opponentOf(player);
+  let score = 0;
+  for (const [dr, dc] of DIRS) {
+    for (let k = -(WIN_LEN - 1); k <= 0; k++) {
+      let own = 0;
+      let blocked = false;
+      for (let i = 0; i < WIN_LEN; i++) {
+        const rr = r + dr * (k + i);
+        const cc = c + dc * (k + i);
+        if (!inBounds(rr, cc) || board[rr][cc] === opponent) { blocked = true; break; }
+        if (board[rr][cc] === player) own++;
       }
+      if (!blocked) score += WINDOW_VALUE[own + 1];
     }
   }
-  return out;
+  return score;
+}
+
+/** 칸의 실전 가치 = 내가 두면 얻는 공격 가치 + 상대가 두면 잃을 수비 가치 */
+function cellValue(board: Board, r: number, c: number, seat: Player): number {
+  return windowScore(board, r, c, seat) + windowScore(board, r, c, opponentOf(seat));
+}
+
+/**
+ * (r,c)에 player가 두면 한 줄에 5목 완성 칸이 둘 이상 생기는가 = 열린4.
+ * 열린4는 막을 방법이 없다. 그래서 상대에게 이런 칸이 하나라도 있으면(=열린3·끊긴3)
+ * 지금 막지 않는 순간 진다.
+ */
+function makesOpenFour(board: Board, r: number, c: number, player: Player): boolean {
+  board[r][c] = player;
+  let found = false;
+  outer: for (const [dr, dc] of DIRS) {
+    let winCells = 0;
+    for (let d = -WIN_LEN; d <= WIN_LEN; d++) {
+      const er = r + dr * d;
+      const ec = c + dc * d;
+      if (!inBounds(er, ec) || board[er][ec] !== -1) continue;
+      board[er][ec] = player;
+      const { count } = lineStats(board, er, ec, dr, dc, player);
+      board[er][ec] = -1;
+      const five = player === BLACK ? count === WIN_LEN : count >= WIN_LEN;
+      if (five && ++winCells >= 2) { found = true; break outer; }
+    }
+  }
+  board[r][c] = -1;
+  return found;
+}
+
+/** player에게 "두면 열린4가 되는 칸"이 있는가. 흑은 금수라 실제로 못 두는 칸을 뺀다. */
+function hasOpenFourMove(board: Board, player: Player): boolean {
+  for (const [r, c] of nearbyEmptyCells(board)) {
+    if (!makesOpenFour(board, r, c, player)) continue;
+    if (player === BLACK && checkForbidden(board, r, c)) continue;
+    return true;
+  }
+  return false;
 }
 
 /** 기존 돌에서 2칸 이내인 빈 칸들 — 탐색이 실패했을 때의 최후 폴백용 */
@@ -567,6 +630,35 @@ function nearbyEmptyCells(board: Board): [number, number][] {
     }
   }
   return out;
+}
+
+/**
+ * 실수할 때 둘 수 — 최선수는 아니지만 그럴듯한 수.
+ * 칸 가치 순위에서 최선수를 뺀 상위 mistakeBreadth개 중에서 고르되, 최고 가치의
+ * mistakeFloor 비율에 못 미치는 칸은 버린다. 남는 후보가 없으면 null(=실수 안 함).
+ */
+function plausibleMistake(
+  board: Board,
+  seat: Player,
+  best: [number, number],
+  preset: DifficultyPreset,
+  isPlayable: (r: number, c: number) => boolean,
+  rng: () => number,
+  attackOnly = false,
+): [number, number] | null {
+  // attackOnly: 상대 위협을 못 본 상황 — 자기 공격 가치만 보고 둔다
+  const value = (r: number, c: number) =>
+    attackOnly ? windowScore(board, r, c, seat) : cellValue(board, r, c, seat);
+  const scored = nearbyEmptyCells(board)
+    .filter(([r, c]) => isPlayable(r, c) && !(r === best[0] && c === best[1]))
+    .map(([r, c]) => ({ r, c, v: value(r, c) }))
+    .sort((a, b) => b.v - a.v);
+  if (scored.length === 0) return null;
+  const ref = Math.max(value(best[0], best[1]), scored[0].v);
+  const pool = scored.slice(0, preset.mistakeBreadth).filter((x) => x.v >= ref * preset.mistakeFloor);
+  if (pool.length === 0) return null;
+  const pick = pool[Math.floor(rng() * pool.length)];
+  return [pick.r, pick.c];
 }
 
 /**
@@ -630,23 +722,35 @@ export function chooseAiMove(
   }
 
   /* 실수: 확률적으로 최선수를 버려서 사람이 이길 틈을 준다.
-     단 아래 두 경우는 실수가 아니라 "자멸"로 보이므로 절대 건드리지 않는다.
-       ① 지금 두면 바로 이기는 수 — 다 이긴 판을 놓치는 건 버그처럼 보인다.
-       ② 상대가 다음 수에 5목을 완성할 수 있는 국면 — 유일한 방어를 버리면
-          엉뚱한 곳에 두고 즉사한다. 실제로 "AI가 뜬금없는 수를 두고 스스로
-          졌다"는 제보가 여기서 나왔다.
-     실수하더라도 판 전체에서 아무 칸이나 고르지 않고 최근 수 주변에서 고른다
-     — 싸움터와 무관한 구석에 두면 실수가 아니라 고장으로 보인다.
-     (차선수를 다시 탐색해 두는 방식도 해봤는데, 차선수가 최선수와 별로
-      다르지 않아 보통이 진심과 대등해졌고 탐색이 두 번 돌아 느려졌다.) */
+     실수는 "조용한 국면"에서만 한다. 아래 중 하나라도 걸리면 확률과 무관하게 최선수를 둔다.
+       ① 최선수가 5목 완성이거나 4를 만드는 공격 — 다 이긴 판을 놓치면 버그처럼 보인다.
+       ② 상대가 다음 수에 5목을 완성할 수 있다 — 유일한 방어를 버리면 즉사.
+       ③ 상대에게 두면 열린4가 되는 칸이 있다(열린3·끊긴3) — 안 막으면 다음 수에 열린4,
+          열린4는 막을 수 없으니 사실상 즉사. 예전엔 이걸 몰라서 실수의 24%가 여기서
+          나왔고 "져주는 느낌"이라는 제보의 원인이었다.
+       ④ 내가 열린4를 만들 수 있다 — 이긴 판을 스스로 버리는 수가 된다.
+     실수할 때 둘 칸도 무작위가 아니다. 예전엔 최근 수 옆 빈칸을 무작위로 골라서 실수의
+     1/3이 공격·수비 가치가 사실상 없는 "뜬금없는 수"였다. 지금은 칸 가치 상위권에서
+     최선수가 아닌 수를 고른다 — 약하지만 사람이 둘 법한 수다.
+     (탐색으로 차선수를 다시 구하는 방식도 해봤는데 차선수가 최선수와 별로 다르지 않아
+      보통이 진심과 대등해졌고 탐색이 두 번 돌아 느려졌다. 휴리스틱 순위는 그보다 훨씬
+      싸고, 얕은 휴리스틱이라 적당히 빈틈이 생긴다.) */
   if (move && preset.blunder > 0 && rng() < preset.blunder) {
-    const iWinNow = threatAt(state.board, move[0], move[1], seat) === 'win';
-    if (!iWinNow && !opponentCanWinNext(state.board, opponentOf(seat))) {
-      const near = recentAdjacentCells(state).filter(([r, c]) => isPlayable(r, c));
-      const cands = near.length > 0
-        ? near
-        : nearbyEmptyCells(state.board).filter(([r, c]) => isPlayable(r, c));
-      if (cands.length > 0) move = cands[Math.floor(rng() * cands.length)];
+    const opponent = opponentOf(seat);
+    const bestThreat = threatAt(state.board, move[0], move[1], seat);
+    const decisive =
+      bestThreat === 'win' || bestThreat === 'four' ||
+      opponentCanWinNext(state.board, opponent) ||
+      hasOpenFourMove(state.board, seat);
+    if (!decisive) {
+      if (!hasOpenFourMove(state.board, opponent)) {
+        const alt = plausibleMistake(state.board, seat, move, preset, isPlayable, rng);
+        if (alt) move = alt;
+      } else if (preset.missOpenThree > 0 && rng() < preset.missOpenThree) {
+        // 살살 전용: 상대 열린3을 못 보고 자기 모양만 본다 (초보의 전형적인 패배 방식)
+        const alt = plausibleMistake(state.board, seat, move, preset, isPlayable, rng, true);
+        if (alt) move = alt;
+      }
     }
   }
 
