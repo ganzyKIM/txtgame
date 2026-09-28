@@ -23,6 +23,10 @@ import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, recordQuizServe } from './save/quizBank';
 import StatsModal from './components/StatsModal';
+import WardrobeModal from './components/WardrobeModal';
+import { evaluateUnlocks, newlyUnlocked, isCostume, type Costume, type UnlockState } from './game/wardrobe';
+import { getMyStats, RECORDED_EVENT } from './save/cloudSave';
+import type { Form } from './game/mascotImages';
 import HoldemRulesModal from './components/HoldemRulesModal';
 import DialogHost from './components/DialogHost';
 import { showConfirm, showPrompt } from './lib/dialog';
@@ -89,6 +93,47 @@ const emptyGame: GameState = {
 export default function App() {
   const { user, profile, loading: authLoading, signOut, applyBalance } = useAuth();
   const mascot = useRef<MascotHandle>(null);
+
+  // 마운트 시 기억해 둔 옷을 입힌다
+  useEffect(() => { mascot.current?.setCostume(selectedCostume); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function selectCostume(c: Costume | null) {
+    setSelectedCostume(c);
+    try { if (c) localStorage.setItem('mascot_costume', c); else localStorage.removeItem('mascot_costume'); } catch { /* noop */ }
+    mascot.current?.setCostume(c);
+  }
+
+  /** 서버 전적으로 해금을 다시 계산하고, 처음 열린 옷이 있으면 마스코트가 입고 축하한다 */
+  async function refreshUnlocks() {
+    if (!user) { setUnlocks(evaluateUnlocks(null)); return; }
+    const stats = await getMyStats();
+    const st = evaluateUnlocks(stats);
+    setUnlocks(st);
+    let celebrated: Costume[] = [];
+    try { const v = JSON.parse(localStorage.getItem('costumes_celebrated') ?? '[]'); if (Array.isArray(v)) celebrated = v.filter(isCostume); } catch { /* noop */ }
+    const fresh = newlyUnlocked(celebrated, st.unlocked);
+    if (fresh.length === 0) return;
+    try { localStorage.setItem('costumes_celebrated', JSON.stringify([...celebrated, ...fresh])); } catch { /* noop */ }
+    // 여러 벌이 한꺼번에 열렸으면 가장 어려운(카탈로그 뒤쪽) 옷으로 축하한다
+    const star = fresh[fresh.length - 1];
+    mascot.current?.unlockCostume(star);
+    setSelectedCostume(star);
+    try { localStorage.setItem('mascot_costume', star); } catch { /* noop */ }
+  }
+
+  // 로그인 상태가 바뀌면 한 번, 전적이 저장될 때마다 1.5초 뒤 한 번 (서버 집계가 따라올 시간)
+  useEffect(() => { void refreshUnlocks(); }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let t: number | null = null;
+    const onRecorded = () => { if (t) clearTimeout(t); t = window.setTimeout(() => { void refreshUnlocks(); }, 1500); };
+    window.addEventListener(RECORDED_EVENT, onRecorded);
+    return () => { window.removeEventListener(RECORDED_EVENT, onRecorded); if (t) clearTimeout(t); };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function openWardrobe() {
+    setWardrobeForm(mascot.current?.getForm() ?? 'choten');
+    setWardrobeOpen(true);
+  }
   const mpViewRef = useRef<MultiplayerViewHandle>(null);
   const holdemRef = useRef<HoldemGameHandle>(null);
   const holdemWaitRef = useRef<HoldemRoomWaitHandle>(null);
@@ -103,6 +148,15 @@ export default function App() {
   const [appealing, setAppealing] = useState(false);
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
+  // ── 옷장 ──────────────────────────────────────────────
+  // 고른 의상은 기기에 기억한다. 해금 여부는 서버 전적(my_stats)으로 매번 다시 계산하고,
+  // "이미 축하한 의상" 목록만 기기에 남겨 같은 해금 연출을 반복하지 않는다.
+  const [selectedCostume, setSelectedCostume] = useState<Costume | null>(() => {
+    try { const v = localStorage.getItem('mascot_costume'); return isCostume(v) ? v : null; } catch { return null; }
+  });
+  const [unlocks, setUnlocks] = useState<UnlockState>(() => evaluateUnlocks(null));
+  const [wardrobeOpen, setWardrobeOpen] = useState(false);
+  const [wardrobeForm, setWardrobeForm] = useState<Form>('choten');
   const [holdemRulesOpen, setHoldemRulesOpen] = useState(false);
   // 접속하면 퀴즈가 바로 뜨는 대신 데스크탑(아이콘 화면)부터 보여준다
   const [minimized, setMinimized] = useState(true);
@@ -889,6 +943,11 @@ export default function App() {
               {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
             </button>
             {!officeMode && (
+              <button className="menu-btn" onClick={openWardrobe} title="옷장 — 의상 고르기·해금 조건">
+                <span className="menu-icon">👗</span> 옷장
+              </button>
+            )}
+            {!officeMode && (
               <button className="menu-btn" onClick={handleEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
                 <span className="menu-icon">🗂️</span>
                 <span className="menu-label-full">사회인모드</span>
@@ -923,6 +982,7 @@ export default function App() {
           onTransform={handleTransformOrExitOffice}
           onLogout={() => void handleLogout()}
           onOpenStats={() => setStatsOpen(true)}
+          onOpenWardrobe={openWardrobe}
           onClose={() => void handleClose()}
           hideConsole={mode === 'multi' || mode === 'holdem' || mode === 'holdem-multi' || mode === 'gomoku' || mode === 'gomoku-multi'}
           officeMode={officeMode}
@@ -1095,6 +1155,16 @@ export default function App() {
       <Mascot ref={mascot} />
       {statsOpen && user && (
         <StatsModal onClose={() => setStatsOpen(false)} />
+      )}
+      {wardrobeOpen && (
+        <WardrobeModal
+          form={wardrobeForm}
+          selected={selectedCostume}
+          unlocks={unlocks}
+          loggedIn={!!user}
+          onSelect={selectCostume}
+          onClose={() => setWardrobeOpen(false)}
+        />
       )}
       {holdemRulesOpen && (
         <HoldemRulesModal onClose={() => setHoldemRulesOpen(false)} />

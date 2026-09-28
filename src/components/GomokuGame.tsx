@@ -76,8 +76,8 @@ const GomokuGame = forwardRef<GomokuGameHandle, Props>(function GomokuGame({ mas
   useEffect(() => {
     const m = mascot.current;
     m?.setIdleKind('omok_longthink');
-    m?.setCostume('kimono');
-    return () => { m?.setIdleKind(null); m?.setCostume(null); };
+    m?.setCostumeOverride('kimono');
+    return () => { m?.setIdleKind(null); m?.setCostumeOverride(null); };
   }, [mascot]);
 
   const fireSituation = useCallback((situation: Situation | undefined) => {

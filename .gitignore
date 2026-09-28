@@ -6,3 +6,5 @@ tmp/
 .vercel
 supabase/.temp/
 data/quiz-seed/
+cut/
+.DS_Store

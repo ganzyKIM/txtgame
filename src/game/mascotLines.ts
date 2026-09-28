@@ -34,216 +34,88 @@ export const FORMS: Record<Form, { img: string; name: string; cls: string }> = {
   ame:    { img: '/char/ame_default.png',    name: '아메',   cls: 'form-ame'    },
 };
 
-export const LINE_IMAGES: Record<Form, Record<LineKind, string>> = {
-  choten: {
-    intro:              '/char/choten_default.png',
-    hint:               '/char/choten_peace.png',
-    correct:            '/char/choten_dere.png',
-    wrong:              '/char/choten_angry.png',
-    eliminated:         '/char/choten_angry.png',
-    win:                '/char/choten_dere.png',
-    idle:               '/char/choten_vape.png',
-    loading:            '/char/choten_vape.png',
-    judging:            '/char/choten_dere.png',
-    close:              '/char/choten_angry.png',
-    soup_intro:         '/char/choten_default.png',
-    soup_yes:           '/char/choten_dere.png',
-    soup_no:            '/char/choten_angry.png',
-    soup_irrelevant:    '/char/choten_vape.png',
-    soup_solve:         '/char/choten_dere.png',
-    soup_reveal:        '/char/choten_angry.png',
-    soup_hint:          '/char/choten_peace.png',
-    mp_lobby:           '/char/choten_default.png',
-    mp_start:           '/char/choten_peace.png',
-    mp_round:           '/char/choten_peace.png',
-    mp_correct:         '/char/choten_dere.png',
-    mp_rival_correct:   '/char/choten_angry.png',
-    mp_timeout:         '/char/choten_vape.png',
-    mp_lasthint:        '/char/choten_angry.png',
-    mp_loading:         '/char/choten_vape.png',
-    mp_win:             '/char/choten_dere.png',
-    mp_rank:            '/char/choten_peace.png',
-    mp_allgiveup:       '/char/choten_default.png',
-    omok_intro:         '/char/choten_default.png',
-    omok_ai_threat:     '/char/choten_peace.png',
-    omok_ai_block:      '/char/choten_peace.png',
-    omok_player_threat: '/char/choten_angry.png',
-    omok_player_block:  '/char/choten_angry.png',
-    omok_calm:          '/char/choten_default.png',
-    omok_win:           '/char/choten_dere.png',
-    omok_lose:          '/char/choten_angry.png',
-    omok_draw:          '/char/choten_vape.png',
-    omok_longthink:     '/char/choten_vape.png',
-    omok_forbidden:     '/char/choten_angry.png',
-    omok_mp_lobby:      '/char/choten_default.png',
-    omok_mp_start:      '/char/choten_peace.png',
-    omok_mp_threat:     '/char/choten_peace.png',
-    omok_mp_opp_threat: '/char/choten_angry.png',
-    omok_mp_block:      '/char/choten_dere.png',
-    omok_mp_opp_block:  '/char/choten_vape.png',
-    omok_mp_win:        '/char/choten_dere.png',
-    omok_mp_lose:       '/char/choten_angry.png',
-    omok_mp_draw:       '/char/choten_vape.png',
-    office_exit:        '/char/choten_angry.png',
-  },
-  ame: {
-    intro:              '/char/ame_default.png',
-    hint:               '/char/ame_smoking.png',
-    correct:            '/char/ame_dere.png',
-    wrong:              '/char/ame_yandere.png',
-    eliminated:         '/char/ame_yandere.png',
-    win:                '/char/ame_dere.png',
-    idle:               '/char/ame_smoking.png',
-    loading:            '/char/ame_smoking.png',
-    judging:            '/char/ame_drug.png',
-    close:              '/char/ame_drug.png',
-    soup_intro:         '/char/ame_default.png',
-    soup_yes:           '/char/ame_dere.png',
-    soup_no:            '/char/ame_yandere.png',
-    soup_irrelevant:    '/char/ame_smoking.png',
-    soup_solve:         '/char/ame_dere.png',
-    soup_reveal:        '/char/ame_yandere.png',
-    soup_hint:          '/char/ame_drug.png',
-    mp_lobby:           '/char/ame_default.png',
-    mp_start:           '/char/ame_smoking.png',
-    mp_round:           '/char/ame_smoking.png',
-    mp_correct:         '/char/ame_dere.png',
-    mp_rival_correct:   '/char/ame_yandere.png',
-    mp_timeout:         '/char/ame_smoking.png',
-    mp_lasthint:        '/char/ame_yandere.png',
-    mp_loading:         '/char/ame_smoking.png',
-    mp_win:             '/char/ame_dere.png',
-    mp_rank:            '/char/ame_drug.png',
-    mp_allgiveup:       '/char/ame_drug.png',
-    omok_intro:         '/char/ame_default.png',
-    omok_ai_threat:     '/char/ame_smoking.png',
-    omok_ai_block:      '/char/ame_smoking.png',
-    omok_player_threat: '/char/ame_yandere.png',
-    omok_player_block:  '/char/ame_yandere.png',
-    omok_calm:          '/char/ame_default.png',
-    omok_win:           '/char/ame_dere.png',
-    omok_lose:          '/char/ame_yandere.png',
-    omok_draw:          '/char/ame_drug.png',
-    omok_longthink:     '/char/ame_smoking.png',
-    omok_forbidden:     '/char/ame_yandere.png',
-    omok_mp_lobby:      '/char/ame_default.png',
-    omok_mp_start:      '/char/ame_smoking.png',
-    omok_mp_threat:     '/char/ame_smoking.png',
-    omok_mp_opp_threat: '/char/ame_yandere.png',
-    omok_mp_block:      '/char/ame_dere.png',
-    omok_mp_opp_block:  '/char/ame_smoking.png',
-    omok_mp_win:        '/char/ame_dere.png',
-    omok_mp_lose:       '/char/ame_yandere.png',
-    omok_mp_draw:       '/char/ame_drug.png',
-    office_exit:        '/char/ame_yandere.png',
-  },
+import { pickImage, baseImageName, imagePath, touchImages, type Mood } from './mascotImages';
+import { EXTRA_CHOTEN } from './mascotLinesExtraChoten';
+import { EXTRA_AME } from './mascotLinesExtraAme';
+export type { Costume } from './wardrobe';
+import type { Costume } from './wardrobe';
+
+/* ── 상황 → 감정 ───────────────────────────────────────────────
+   그림은 mascotImages.ts 가 감정(Mood)으로 고른다. 여기서는 49개 상황을
+   감정 하나에 매핑만 한다. 의상이 무엇이든 같은 표가 쓰인다 — 그 옷에
+   그 표정이 없으면 해석기가 알아서 옷 기본 컷으로 떨어진다. */
+export const KIND_MOOD: Record<LineKind, Mood> = {
+  intro: 'wave', hint: 'think', correct: 'joy', wrong: 'pout', eliminated: 'sad', win: 'love',
+  idle: 'idle', loading: 'calm', judging: 'think', close: 'sad',
+  soup_intro: 'smug', soup_yes: 'joy', soup_no: 'pout', soup_irrelevant: 'calm',
+  soup_solve: 'love', soup_reveal: 'contempt', soup_hint: 'think',
+  mp_lobby: 'wave', mp_start: 'cheer', mp_round: 'cheer', mp_correct: 'joy', mp_rival_correct: 'jealous',
+  mp_timeout: 'worried', mp_lasthint: 'worried', mp_loading: 'calm', mp_win: 'love', mp_rank: 'smug',
+  mp_allgiveup: 'sad',
+  // 오목 싱글 — 마스코트가 곧 대국 상대다
+  omok_intro: 'smug', omok_ai_threat: 'contempt', omok_ai_block: 'smug', omok_player_threat: 'surprised',
+  omok_player_block: 'think', omok_calm: 'calm', omok_win: 'joy', omok_lose: 'pout', omok_draw: 'idle',
+  omok_longthink: 'sleepy', omok_forbidden: 'contempt',
+  // 오목 멀티 — P를 응원하는 관전자
+  omok_mp_lobby: 'wave', omok_mp_start: 'cheer', omok_mp_threat: 'joy', omok_mp_opp_threat: 'jealous',
+  omok_mp_block: 'cheer', omok_mp_opp_block: 'calm', omok_mp_win: 'love', omok_mp_lose: 'sad',
+  omok_mp_draw: 'idle',
+  office_exit: 'pout',
 };
 
-/* ── 의상(costume) ───────────────────────────────────────────────
-   오목 화면에서는 두 캐릭터가 기모노 차림으로만 등장한다. 기모노는 표정이
-   4종(기본/경멸/흡연/기쁨)뿐이라 LineKind를 그 4종에 접어서 매핑한다.
-   매핑에 없는 LineKind(퀴즈용 대사 등)는 기본 표정으로 떨어진다. */
-
-export type Costume = 'kimono';
-type KimonoFace = 'base' | 'contempt' | 'smoke' | 'joy';
-
-const COSTUME_IMAGES: Record<Costume, Record<Form, Record<KimonoFace, string>>> = {
-  kimono: {
-    choten: {
-      base:     '/char/choten_kimono.png',
-      contempt: '/char/choten_kimono_contempt.png',
-      smoke:    '/char/choten_kimono_vape.png',
-      joy:      '/char/choten_kimono_joy.png',
-    },
-    ame: {
-      base:     '/char/ame_kimono.png',
-      contempt: '/char/ame_kimono_contempt.png',
-      smoke:    '/char/ame_kimono_smoke.png',
-      joy:      '/char/ame_kimono_joy.png',
-    },
-  },
-};
-
-/** 상황(LineKind) → 기모노 4표정 중 무엇으로 보여줄지 */
-const KIMONO_FACE: Partial<Record<LineKind, KimonoFace>> = {
-  // 싱글 — 마스코트가 곧 대국 상대다
-  omok_intro:         'base',
-  omok_ai_threat:     'contempt',   // 자기가 몰아붙일 때 = 의기양양
-  omok_ai_block:      'contempt',
-  omok_player_threat: 'base',
-  omok_player_block:  'base',
-  omok_calm:          'smoke',      // 별일 없는 수 = 심드렁
-  omok_win:           'joy',
-  omok_lose:          'base',
-  omok_draw:          'base',
-  omok_longthink:     'smoke',      // 사람이 오래 고민할 때 = 지루함
-  omok_forbidden:     'contempt',   // 금수라고 지적할 때
-  // 멀티 — 마스코트는 대국자가 아니라 P를 응원하는 관전자다
-  omok_mp_lobby:      'base',
-  omok_mp_start:      'joy',
-  omok_mp_threat:     'joy',        // P가 잘하는 중
-  omok_mp_opp_threat: 'contempt',   // 상대를 노려봄
-  omok_mp_block:      'joy',
-  omok_mp_opp_block:  'smoke',
-  omok_mp_win:        'joy',
-  omok_mp_lose:       'smoke',
-  omok_mp_draw:       'base',
-};
-
-/** 의상이 걸려 있으면 그 옷의 이미지를, 아니면 기본 이미지를 돌려준다 */
+/** 상황에 맞는 이미지. 의상이 걸려 있으면 그 옷의 표정, 없으면 교복 */
 export function lineImage(form: Form, kind: LineKind, costume: Costume | null): string {
-  if (costume) return COSTUME_IMAGES[costume][form][KIMONO_FACE[kind] ?? 'base'];
-  return LINE_IMAGES[form][kind];
+  return pickImage(form, costume, KIND_MOOD[kind]);
 }
 
-/** 의상 차림일 때의 기본(무표정) 이미지 — 변신 직후 등에 쓴다 */
-export function costumeBaseImage(form: Form, costume: Costume): string {
-  return COSTUME_IMAGES[costume][form].base;
+/** 의상 기본(무표정) 컷 — 변신 직후·옷장 카드에 쓴다 */
+export function costumeBaseImage(form: Form, costume: Costume | null): string {
+  return imagePath(baseImageName(form, costume));
 }
 
-/** 의상 차림에서 마스코트를 눌렀을 때 보여줄 이미지 후보 */
-export function costumeTouchImages(form: Form, costume: Costume): string[] {
-  const set = COSTUME_IMAGES[costume][form];
-  return [set.base, set.smoke, set.joy, set.contempt];
+/** 마스코트를 눌렀을 때 보여줄 이미지 후보 (그 옷의 표정 전부) */
+export function costumeTouchImages(form: Form, costume: Costume | null): string[] {
+  return touchImages(form, costume);
 }
 
-/** 터치(클릭) 시 대사별로 다른 이미지를 보여주기 위한 idle 전용 변형 */
-export const IDLE_VARIANTS: Record<Form, { text: string; img: string }[]> = {
+/** 마스코트를 눌렀을 때의 대사 — 그림은 touchImages 가 그 옷의 표정 중에서 고른다.
+    의상을 입고 있을 때는 mascotCostumeLines.ts 의 touch 대사가 대신 나온다. */
+export const IDLE_TOUCH: Record<Form, string[]> = {
   choten: [
-    { text: '뭐해뭐해?! 초텐쨩이 여기 있잖아~♡',          img: '/char/choten_default.png' },
-    { text: '퀴즈 한 판 해봐! 초텐쨩이 기다리고 있어♡',    img: '/char/choten_peace.png'   },
-    { text: '심심하면 문제 풀자구! 재밌는 거 있어♡',        img: '/char/choten_peace.png'   },
-    { text: 'P~ 빨리 시작해! 초텐쨩이 낼게♡',              img: '/char/choten_angry.png'   },
-    { text: '초텐쨩 여기 있어용~ 말 걸어줘서 기뻐♡',       img: '/char/choten_dere.png'    },
-    { text: '오늘도 잘 부탁해요~ 초텐쨩이에요♡',           img: '/char/choten_default.png' },
-    { text: '오늘은 어떤 문제 풀지 기대돼!♡',              img: '/char/choten_dere.png'    },
-    { text: '초텐쨩이랑 퀴즈왕 되어보자구♡',               img: '/char/choten_peace.png'   },
-    { text: '말 걸어줬다!! 초텐쨩 기뻐서 날아갈 것 같아♡', img: '/char/choten_dere.png'    },
-    { text: '심심하지? 초텐쨩이 있잖아~♡',                 img: '/char/choten_vape.png'    },
-    { text: '헤헤~ 자꾸 누르니까 간지러워♡',               img: '/char/choten_dere.png'    },
-    { text: '초텐쨩 어디 안 가! 계속 여기 있을 거야♡',     img: '/char/choten_default.png' },
-    { text: '오목도 있어! 초텐쨩이랑 한 판 어때?♡',        img: '/char/choten_peace.png'   },
-    { text: '포커도 되고 오목도 되고~ 골라봐♡',            img: '/char/choten_peace.png'   },
-    { text: '가만히 있으면 초텐쨩이 심심하다구!♡',         img: '/char/choten_angry.png'   },
-    { text: '오늘 컨디션 최고야! 뭐든 해보자♡',            img: '/char/choten_dere.png'    },
+    '뭐해뭐해?! 초텐쨩이 여기 있잖아~♡',
+    '퀴즈 한 판 해봐! 초텐쨩이 기다리고 있어♡',
+    '심심하면 문제 풀자구! 재밌는 거 있어♡',
+    'P~ 빨리 시작해! 초텐쨩이 낼게♡',
+    '초텐쨩 여기 있어용~ 말 걸어줘서 기뻐♡',
+    '오늘도 잘 부탁해요~ 초텐쨩이에요♡',
+    '오늘은 어떤 문제 풀지 기대돼!♡',
+    '초텐쨩이랑 퀴즈왕 되어보자구♡',
+    '말 걸어줬다!! 초텐쨩 기뻐서 날아갈 것 같아♡',
+    '심심하지? 초텐쨩이 있잖아~♡',
+    '헤헤~ 자꾸 누르니까 간지러워♡',
+    '초텐쨩 어디 안 가! 계속 여기 있을 거야♡',
+    '오목도 있어! 초텐쨩이랑 한 판 어때?♡',
+    '포커도 되고 오목도 되고~ 골라봐♡',
+    '가만히 있으면 초텐쨩이 심심하다구!♡',
+    '오늘 컨디션 최고야! 뭐든 해보자♡',
   ],
   ame: [
-    { text: '…뭐. 보고 싶었어?',                      img: '/char/ame_default.png'  },
-    { text: '퀴즈나 하자. 어차피 할 거잖아.',          img: '/char/ame_smoking.png'  },
-    { text: '…심심해? 같이 있어줄게.',                 img: '/char/ame_default.png'  },
-    { text: '빨리 문제 골라. 기다리는 거 별로 안 좋아.', img: '/char/ame_yandere.png' },
-    { text: '…나한테 말 거는 거야. 뭔데.',             img: '/char/ame_smoking.png'  },
-    { text: '하루종일 여기 있을 건데. …같이 해.',      img: '/char/ame_dere.png'     },
-    { text: '…별로 안 기다린 거야. 그냥 있었을 뿐.',   img: '/char/ame_dere.png'     },
-    { text: '…퀴즈, 아직 안 했잖아. 해.',              img: '/char/ame_yandere.png'  },
-    { text: '말 걸지 마— …아니, 말 걸어도 돼. 조금.', img: '/char/ame_drug.png'     },
-    { text: '…여기 있어. 언제든지.',                   img: '/char/ame_smoking.png'  },
-    { text: '…자꾸 누르네. 싫진 않아.',                img: '/char/ame_dere.png'     },
-    { text: '…오목 할래? 상대해줄게.',                 img: '/char/ame_smoking.png'  },
-    { text: '…뭘 하든 같이 있어줄 거야. 그러니까 골라.', img: '/char/ame_dere.png'   },
-    { text: '…딴 데 보지 마. 여기 있잖아.',            img: '/char/ame_yandere.png'  },
-    { text: '…시간 아깝지 않아? 뭐라도 하자.',         img: '/char/ame_default.png'  },
-    { text: '…조용한 것도 나쁘지 않네. 잠깐은.',       img: '/char/ame_drug.png'     },
+    '…뭐. 보고 싶었어?',
+    '퀴즈나 하자. 어차피 할 거잖아.',
+    '…심심해? 같이 있어줄게.',
+    '빨리 문제 골라. 기다리는 거 별로 안 좋아.',
+    '…나한테 말 거는 거야. 뭔데.',
+    '하루종일 여기 있을 건데. …같이 해.',
+    '…별로 안 기다린 거야. 그냥 있었을 뿐.',
+    '…퀴즈, 아직 안 했잖아. 해.',
+    '말 걸지 마— …아니, 말 걸어도 돼. 조금.',
+    '…여기 있어. 언제든지.',
+    '…자꾸 누르네. 싫진 않아.',
+    '…오목 할래? 상대해줄게.',
+    '…뭘 하든 같이 있어줄 거야. 그러니까 골라.',
+    '…딴 데 보지 마. 여기 있잖아.',
+    '…시간 아깝지 않아? 뭐라도 하자.',
+    '…조용한 것도 나쁘지 않네. 잠깐은.',
   ],
 };
 
@@ -1003,6 +875,11 @@ export const LINES: Record<Form, Record<LineKind, string[]>> = {
     ],
   },
 };
+
+/* 추가 대사 병합 — 상황별 기본 대사 뒤에 붙여 뽑기 풀을 넓힌다.
+   파일을 나눈 이유: 한 파일에 1,500줄이 넘으면 대사를 고치다 구조를 깨기 쉽다. */
+for (const [k, arr] of Object.entries(EXTRA_CHOTEN)) LINES.choten[k as LineKind].push(...(arr ?? []));
+for (const [k, arr] of Object.entries(EXTRA_AME))    LINES.ame[k as LineKind].push(...(arr ?? []));
 
 export const TRANSFORM_LINE: Record<Form, string> = {
   choten: '변신— ☆ 초절정☆귀염뽀짝☆초텐쨩, 등장!♡',

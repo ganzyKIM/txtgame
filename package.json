@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "char:manifest": "node tools/char-manifest.mjs",
+    "test": "node tools/run-tests.mjs"
   },
   "dependencies": {
     "@algorithm.ts/gomoku": "^4.0.5",

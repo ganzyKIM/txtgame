@@ -8,6 +8,8 @@ interface Props {
   onTransform: () => void;
   onLogout: () => void;
   onOpenStats: () => void;
+  /** 옷장(의상 선택) 열기 */
+  onOpenWardrobe?: () => void;
   onClose: () => void;
   /** 제공되면 메뉴바에 "처음으로"(카테고리 선택 복귀) 버튼 노출 */
   onHome?: () => void;
@@ -32,7 +34,7 @@ interface Props {
 
 export default function Window({
   credits, consoleLines, statusText,
-  onTransform, onLogout, onOpenStats, onClose, onHome, onMultiplay, onShowRules, hideConsole, multiBackground,
+  onTransform, onLogout, onOpenStats, onOpenWardrobe, onClose, onHome, onMultiplay, onShowRules, hideConsole, multiBackground,
   officeMode, onEnterOffice, children,
 }: Props) {
   const consoleRef = useRef<HTMLPreElement>(null);
@@ -76,6 +78,11 @@ export default function Window({
             >
               {officeMode ? '⚙' : <><span className="menu-icon">✧</span> 변신 <span className="menu-icon">✧</span></>}
             </button>
+            {!officeMode && onOpenWardrobe && (
+              <button className="menu-btn" onClick={onOpenWardrobe} title="옷장 — 의상 고르기·해금 조건">
+                <span className="menu-icon">👗</span> 옷장
+              </button>
+            )}
             {!officeMode && onEnterOffice && (
               <button className="menu-btn" onClick={onEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
                 <span className="menu-icon">🗂️</span>

@@ -1,16 +1,22 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
-  FORMS, LINES, IDLE_VARIANTS, TRANSFORM_LINE, pickLine,
+  FORMS, LINES, IDLE_TOUCH, TRANSFORM_LINE, pickLine,
   lineImage, costumeBaseImage, costumeTouchImages,
   type Form, type LineKind, type Costume,
 } from '../game/mascotLines';
+import { costumeTouchLine, costumeUnlockLine } from '../game/mascotCostumeLines';
 
 /* ════════════════════════════════════════════════════════════════════
    Mascot — 쵸텐(초텐쨩) ⟷ 아메, 게임 진행자 겸 오목 상대
 
-   대사·표정 데이터는 전부 src/game/mascotLines.ts로 분리했다.
-   이 파일은 "언제 무엇을 띄울지"(말풍선 타이밍·변신 연출·드래그·강림)만
-   담당한다. 대사를 추가하려면 mascotLines.ts만 건드리면 된다.
+   대사·표정 데이터는 전부 src/game/mascotLines.ts(+ mascotCostumeLines.ts)로
+   분리했다. 이 파일은 "언제 무엇을 띄울지"(말풍선 타이밍·변신 연출·드래그·
+   강림·의상 착용)만 담당한다.
+
+   의상은 두 층이다.
+     selected : 사용자가 옷장에서 고른 옷 (App 이 localStorage 에 기억)
+     override : 화면이 강제하는 옷 (오목 = 기모노). 화면을 나가면 null.
+   실제로 입는 옷 = override ?? selected. 오목에서 나오면 고른 옷으로 돌아온다.
    ════════════════════════════════════════════════════════════════════ */
 
 // 기존 import 경로(./Mascot)를 쓰는 파일들이 많아 타입은 여기서 그대로 재수출한다
@@ -23,6 +29,8 @@ export interface MascotHandle {
   banish: () => void;
   transform: () => void;
   isSummoned: () => boolean;
+  /** 지금 폼(초텐/아메) — 옷장 카드 그림을 맞추는 데 쓴다 */
+  getForm: () => Form;
   /**
    * 가만히 있을 때 저절로 나오는 대사의 종류를 바꾼다.
    * 기본값은 퀴즈용 'idle'인데, 오목처럼 마스코트가 그 게임의 상대로
@@ -30,11 +38,12 @@ export interface MascotHandle {
    * 화면을 벗어날 때 null로 되돌릴 것.
    */
   setIdleKind: (kind: LineKind | null) => void;
-  /**
-   * 마스코트에게 의상을 입힌다. 오목 화면에서는 두 캐릭터가 기모노 차림으로만
-   * 나와야 해서 쓴다. 화면을 벗어날 때 null로 되돌릴 것.
-   */
+  /** 사용자가 고른 의상(옷장). null = 교복 */
   setCostume: (costume: Costume | null) => void;
+  /** 화면이 강제하는 의상(오목 = 기모노). 화면을 벗어날 때 null로 되돌릴 것 */
+  setCostumeOverride: (costume: Costume | null) => void;
+  /** 해금 연출: 변신 이펙트와 함께 그 옷을 입고 해금 대사를 한다. 고른 의상도 그 옷이 된다 */
+  unlockCostume: (costume: Costume) => void;
 }
 
 const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
@@ -46,14 +55,22 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   const bubbleTimer   = useRef<number | null>(null);
   const idleTimer     = useRef<number | null>(null);
   const idleKindRef   = useRef<LineKind>('idle');
-  const costumeRef    = useRef<Costume | null>(null);
+  const selectedRef   = useRef<Costume | null>(null);
+  const overrideRef   = useRef<Costume | null>(null);
 
   const [renderTick, setRenderTick] = useState(0);
 
+  /** 지금 실제로 입고 있는 옷 */
+  function worn(): Costume | null { return overrideRef.current ?? selectedRef.current; }
+
   function setImg(kind: LineKind) {
     if (imgRef.current) {
-      imgRef.current.src = lineImage(formRef.current, kind, costumeRef.current);
+      imgRef.current.src = lineImage(formRef.current, kind, worn());
     }
+  }
+
+  function showBase() {
+    if (imgRef.current) imgRef.current.src = costumeBaseImage(formRef.current, worn());
   }
 
   function say(text: string, holdMs = 3200) {
@@ -86,23 +103,40 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
 
   function setForm(name: Form) {
     formRef.current = name;
-    if (imgRef.current) {
-      imgRef.current.src = costumeRef.current
-        ? costumeBaseImage(name, costumeRef.current)
-        : FORMS[name].img;
-    }
+    showBase();
     document.body.classList.toggle('mode-ame', name === 'ame');
     setRenderTick((n) => n + 1);
   }
 
-  function transform() {
+  /** 변신 이펙트를 돌리고 중간(480ms)에 콜백으로 모습을 바꾼다 */
+  function morph(mid: () => void) {
     const root = rootRef.current;
-    if (!root || root.classList.contains('transforming')) return;
-    const next: Form = formRef.current === 'choten' ? 'ame' : 'choten';
+    if (!root || root.classList.contains('transforming')) return false;
     root.classList.add('transforming');
     if (bubbleRef.current) bubbleRef.current.hidden = true;
-    window.setTimeout(() => { setForm(next); say(TRANSFORM_LINE[next], 3400); }, 480);
+    window.setTimeout(mid, 480);
     window.setTimeout(() => root.classList.remove('transforming'), 1300);
+    return true;
+  }
+
+  function transform() {
+    const next: Form = formRef.current === 'choten' ? 'ame' : 'choten';
+    morph(() => { setForm(next); say(TRANSFORM_LINE[next], 3400); });
+  }
+
+  function unlockCostume(costume: Costume) {
+    const started = morph(() => {
+      selectedRef.current = costume;
+      showBase();
+      say(costumeUnlockLine(costume, formRef.current), 4500);
+      bumpIdle();
+    });
+    // 변신 중이라 이펙트를 못 돌려도 옷과 대사는 넣는다
+    if (!started) {
+      selectedRef.current = costume;
+      showBase();
+      say(costumeUnlockLine(costume, formRef.current), 4500);
+    }
   }
 
   function summon() {
@@ -134,17 +168,18 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
   }
 
   useImperativeHandle(ref, () => ({
-    say, event, summon, banish, transform,
+    say, event, summon, banish, transform, unlockCostume,
     isSummoned: () => summonedRef.current,
+    getForm: () => formRef.current,
     setIdleKind: (kind: LineKind | null) => { idleKindRef.current = kind ?? 'idle'; },
     setCostume: (costume: Costume | null) => {
-      costumeRef.current = costume;
+      selectedRef.current = costume;
       // 지금 떠 있는 그림도 바로 갈아입힌다 (다음 대사까지 기다리지 않게)
-      if (imgRef.current) {
-        imgRef.current.src = costume
-          ? costumeBaseImage(formRef.current, costume)
-          : FORMS[formRef.current].img;
-      }
+      showBase();
+    },
+    setCostumeOverride: (costume: Costume | null) => {
+      overrideRef.current = costume;
+      showBase();
     },
   }));
 
@@ -205,19 +240,15 @@ const Mascot = forwardRef<MascotHandle>(function Mascot(_props, ref) {
       root.classList.remove('dragging');
       try { img.releasePointerCapture(e.pointerId); } catch { /* noop */ }
       if (!moved && !root.classList.contains('transforming') && summonedRef.current) {
-        const variants = IDLE_VARIANTS[formRef.current];
-        const v = variants[Math.floor(Math.random() * variants.length)];
-        // 대사는 그대로 쓰되, 의상 차림이면 그림만 그 옷 것으로 바꾼다
+        // 터치: 옷을 입고 있으면 그 옷 이야기를, 아니면 평소 대사를. 그림은 그 옷의 표정 중 무작위
+        const form = formRef.current;
+        const costume = worn();
+        const text = costume ? costumeTouchLine(costume, form) : pickLine(IDLE_TOUCH[form]);
         if (imgRef.current) {
-          const costume = costumeRef.current;
-          if (costume) {
-            const imgs = costumeTouchImages(formRef.current, costume);
-            imgRef.current.src = imgs[Math.floor(Math.random() * imgs.length)];
-          } else {
-            imgRef.current.src = v.img;
-          }
+          const imgs = costumeTouchImages(form, costume);
+          imgRef.current.src = imgs[Math.floor(Math.random() * imgs.length)];
         }
-        say(v.text);
+        say(text);
         bumpIdle();
       }
     };

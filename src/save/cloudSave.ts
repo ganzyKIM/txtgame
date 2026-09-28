@@ -1,6 +1,13 @@
 import { supabase } from '../lib/supabase';
 import type { GameResult } from '../game/types';
 
+/** 전적이 하나 저장될 때마다 창에 알린다 — App 이 듣고 my_stats 를 다시 읽어 해금을 본다.
+    저장 실패도 알린다(서버 트리거가 늦게 반영될 수 있으니 굳이 가르지 않는다). */
+export const RECORDED_EVENT = 'txtgame:recorded';
+function notifyRecorded(game: string) {
+  try { window.dispatchEvent(new CustomEvent(RECORDED_EVENT, { detail: { game } })); } catch { /* SSR·테스트 */ }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    기록 저장 — 게임들이 종료 시 호출한다. 실패는 전부 무시(게임 진행이
    전적 저장보다 우선). 조회는 my_stats() RPC 하나로 서버가 집계한다
@@ -20,6 +27,7 @@ export async function saveResult(userId: string, r: GameResult): Promise<void> {
       score: r.score,
       rank: r.rank,
     });
+    notifyRecorded('quiz');
   } catch {
     /* 저장 실패는 무시 */
   }
@@ -40,6 +48,7 @@ export async function saveRun(userId: string, r: RunInput): Promise<void> {
       questions: r.questions,
       category: r.category,
     });
+    notifyRecorded('center');
   } catch {
     /* 저장 실패는 무시 */
   }
@@ -61,6 +70,7 @@ export async function saveSoupResult(userId: string, r: SoupResultInput): Promis
       hints_used: r.hintsUsed,
       questions_asked: r.questionsAsked,
     });
+    notifyRecorded('soup');
   } catch {
     /* 저장 실패는 무시 */
   }
@@ -111,6 +121,7 @@ export async function recordGameResult(game: RecordableGame, r: GameRecordInput)
       score: r.score ?? 0,
       meta: r.meta ?? {},
     });
+    notifyRecorded('game');
   } catch {
     /* 저장 실패는 무시 */
   }

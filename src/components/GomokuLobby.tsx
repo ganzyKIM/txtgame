@@ -69,9 +69,9 @@ export default function GomokuLobby({ myUserId, myNickname, mascot, onJoin, onEx
   // 일부인 화면(홀덤 테이블·설득·오목 싱글)에서만 치운다.
   useEffect(() => {
     const m = mascot.current;
-    m?.setCostume('kimono');       // 오목 화면에서는 기모노 차림으로만 나온다
+    m?.setCostumeOverride('kimono');       // 오목 화면에서는 기모노 차림으로만 나온다
     m?.event('omok_mp_lobby');
-    return () => m?.setCostume(null);
+    return () => m?.setCostumeOverride(null);
   }, [mascot]);
 
   const [rooms, setRooms] = useState<GomokuRoomRow[]>([]);
