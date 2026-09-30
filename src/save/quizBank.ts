@@ -83,7 +83,7 @@ export async function updateQuizBankStats(
   }
 }
 
-/** 이의제기 인용 기록 (2회 이상 → 서버에서 banned). */
+/** 이의제기 인용 기록 — 정답이 환각이었을 수 있으니 서버가 즉시 숨기고 검토 큐에 넣는다 (migration 038). */
 export async function recordQuizAppeal(answer: string, categoryKey: string): Promise<void> {
   if (!categoryKey) return;
   try {
@@ -192,7 +192,7 @@ export async function recordQuizServe(answer: string): Promise<void> {
   } catch { /* 무시 */ }
 }
 
-/** 이용자 문제 신고 (2회 이상 → 서버에서 banned). */
+/** 이용자 문제 신고 — 1건이면 서버가 즉시 숨기고 검토 큐에 넣는다 (migration 038). */
 export async function reportQuizProblem(
   answer: string,
   categoryKey: string,

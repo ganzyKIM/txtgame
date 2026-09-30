@@ -64,7 +64,7 @@ export default function GamePanel({ state, judging, appealing, result, generatin
   const reportZone = (
     <div className="report-zone">
       {reportStep === 'done' ? (
-        <span className="report-done">✓ 신고가 접수되었습니다</span>
+        <span className="report-done">✓ 신고 접수 — 검토가 끝날 때까지 이 문제는 출제되지 않아요</span>
       ) : reportStep === 'selecting' ? (
         <div className="report-options">
           <span className="report-ask">신고 사유를 선택해주세요:</span>

@@ -8,7 +8,7 @@ import {
   type SoupPuzzle, type SoupTurn,
 } from '../game/soup';
 import { saveSoupResult } from '../save/cloudSave';
-import { pickSoupPuzzle, recordSoupBankResult } from '../save/soupBank';
+import { pickSoupPuzzle, recordSoupBankResult, reportSoupProblem } from '../save/soupBank';
 import type { MascotHandle } from './Mascot';
 import type { TextTier } from '../types';
 
@@ -57,6 +57,8 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
   const [hintsUsed, setHintsUsed] = useState(0);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  // 결과 화면의 신고 단계: idle → selecting → done (은행 문제일 때만 보인다)
+  const [reportStep, setReportStep] = useState<'idle' | 'selecting' | 'done'>('idle');
   const recentTitles = useRef<string[]>([]);
   // 문제은행에서 뽑은 문제면 그 id — 결과 기록용. 실시간 생성이면 null
   const bankId = useRef<string | null>(null);
@@ -90,6 +92,7 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
     setTurns([]);
     setHintsUsed(0);
     setPuzzle(null);
+    setReportStep('idle');
     push('> 🐢 바다거북 수프를 끓이는 중…');
     mascot.current?.event('loading');
     const tick = window.setInterval(() => mascot.current?.event('loading'), 4000);
@@ -336,6 +339,20 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
             <div className="soup-solution">{puzzle?.solution}</div>
             <div className="restart-btns">
               <button className="btn btn-primary" onClick={() => void brew()}>🍲 새 수프</button>
+              {bankId.current && (
+                reportStep === 'done' ? (
+                  <span className="report-done">✓ 신고 접수 — 검토 전까지 이 수프는 나오지 않아요</span>
+                ) : reportStep === 'selecting' ? (
+                  <span className="report-options">
+                    <button className="btn btn-xs btn-report" onClick={() => { setReportStep('done'); void reportSoupProblem(bankId.current!, 'broken_logic'); }}>진상이 말이 안 됨</button>
+                    <button className="btn btn-xs btn-report" onClick={() => { setReportStep('done'); void reportSoupProblem(bankId.current!, 'spoiler'); }}>문제만 봐도 답이 보임</button>
+                    <button className="btn btn-xs btn-report" onClick={() => { setReportStep('done'); void reportSoupProblem(bankId.current!, 'inappropriate'); }}>소재가 불쾌함</button>
+                    <button className="btn btn-xs" onClick={() => setReportStep('idle')}>취소</button>
+                  </span>
+                ) : (
+                  <button className="btn" onClick={() => setReportStep('selecting')}>⚠ 문제 신고</button>
+                )
+              )}
               <button className="btn" onClick={onExit}>↩ 카테고리로</button>
             </div>
           </div>

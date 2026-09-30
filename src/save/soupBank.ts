@@ -44,3 +44,12 @@ export async function recordSoupBankResult(bankId: string, solved: boolean): Pro
     console.error('[soup_bank] record exception:', e);
   }
 }
+
+/** 수프 문제 신고 — 서버가 즉시 숨기고 검토 큐에 넣는다 (migration 038). fail-silent */
+export async function reportSoupProblem(bankId: string, reason: 'broken_logic' | 'spoiler' | 'inappropriate', note = ''): Promise<void> {
+  try {
+    await rpc.rpc('record_soup_report', { p_bank_id: bankId, p_reason: reason, p_note: note });
+  } catch (e) {
+    console.error('[soup_bank] report exception:', e);
+  }
+}
