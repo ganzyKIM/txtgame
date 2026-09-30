@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 const MOODS = new Set([
   '오싹한 호러', '뭉클한 감동', '소름 돋는 반전', '일상 속 기묘함',
@@ -152,8 +153,11 @@ function cmdSql() {
   console.log(`SQL ${rows.length}행 → ${outFile}`);
 }
 
-const cmd = process.argv[2];
-if (cmd === 'lint') cmdLint();
-else if (cmd === 'assemble') cmdAssemble();
-else if (cmd === 'sql') cmdSql();
-else { console.error('usage: pipeline.mjs lint|assemble|sql ...'); process.exit(2); }
+// seed-load.mjs 가 scenarioKey 를 import 하므로, 직접 실행됐을 때만 CLI 로 동작한다
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const cmd = process.argv[2];
+  if (cmd === 'lint') cmdLint();
+  else if (cmd === 'assemble') cmdAssemble();
+  else if (cmd === 'sql') cmdSql();
+  else { console.error('usage: pipeline.mjs lint|assemble|sql ...'); process.exit(2); }
+}

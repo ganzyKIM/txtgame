@@ -435,3 +435,32 @@ Mascot 컴포넌트를 고치지 않고 **가벼운 전용 도킹 컴포넌트�
 - `WordChainGame.tsx`와 `PersuadeGame.tsx`는 완성 전이라 **App.tsx에 데스크탑 아이콘을
   일부러 붙이지 않았다**(데드코드도 버그도 아님). 진입 경로가 없다고 "고치지" 말 것 —
   실제로 한 번 그렇게 잘못 판단해서 설득게임 아이콘을 붙였다가 되돌렸다.
+
+---
+
+## 바다거북 수프 문제은행 + 시드 적재 RPC (035·036)
+
+퀴즈와 같은 이유로 수프도 **출제를 은행에서 뽑는다**(`soup_bank`, 진상이 있어 RLS 정책 없음,
+`pick_soup_puzzle` definer RPC 만). 질문 판정·힌트·정답 판정은 여전히 AI 가 진상을 읽고 하되,
+은행 문제에는 `key_facts`(판정 기준 사실)가 있어 프롬프트에 함께 넣는다. 유저당 최근 30문제는
+`soup_serve_history` 로 서버가 기억한다. 은행이 비면 기존 실시간 생성으로 폴백.
+
+시드 적재는 SQL Editor 붙여넣기 대신 **토큰 문 하나**로 한다(036): `seed_load_quiz` /
+`seed_load_soup(p_token, p_rows)` 는 `seed_secrets.seed_token` 과 맞을 때만 업서트한다.
+anon 키로 호출 가능하지만 토큰 없이는 아무것도 못 한다 — Management API 토큰(계정 전체)이나
+DB 비밀번호를 루틴에 줄 이유가 없다. `tools/seed-load.mjs` 가 이 문을 두드리고,
+`seed_inventory` 로 칸별 재고를 본다. 사이클 런북은 `docs/SEED_PIPELINE.md`.
+
+수프 검수는 출제의 1/4을 버린다(144→107). 수프 출제는 목표의 1.4배로 잡는다.
+
+## 캐릭터 컷 정규화·옷장 썸네일
+
+제미나이가 표정마다 따로 그린 컷은 같은 캐릭터인데 키가 5%(초텐 628~658px) 다르고 가로
+위치가 30px 씩 어긋나 있어, 표정이 바뀔 때마다 커졌다 작아졌다 했다. `tools/char-normalize.mjs`
+가 폼별 교복 세트의 **알파 박스 높이 중앙값·발끝 y·알파 질량중심 x** 를 기준으로 전 컷을
+맞춘다(멱등). 가로 기준을 박스 중심이 아니라 질량중심으로 잡은 건 팔을 뻗은 컷에서 박스가
+팔 쪽으로 쏠리기 때문이다. sharp 는 한 체인 안에서 resize/extend/extract 순서를 제 규칙으로
+재배열하므로 단계마다 버퍼로 끊는다.
+
+옷장 카드는 400px 원본을 150px 에 `image-rendering:pixelated` 로 욱여넣어 선이 깨졌다.
+`tools/char-thumbs.mjs` 가 만든 320px LANCZOS 축소본(`public/char/thumb/`)을 쓴다.
