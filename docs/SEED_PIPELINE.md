@@ -179,6 +179,37 @@ node tools/soup-seed/pipeline.mjs assemble --drafts data/soup-seed/<cycle> --ver
 node tools/seed-load.mjs soup data/soup-seed/<cycle>_final     # SEED_TOKEN 필요
 ```
 
+## 8. 신고·이의제기 검토 (매 사이클 처음에)
+
+유저가 신고하거나 이의제기가 인용된 문제는 즉시 `status = 'review'` 로 숨겨지고
+`quiz_review_queue` 에 쌓인다(migration 038). 사이클마다 이걸 먼저 비운다.
+
+```bash
+node tools/review.mjs list          # → data/review/pending.json  (kind, bank_id, reasons, item)
+```
+
+검토 에이전트(Sonnet, 항목 20개당 1개) 프롬프트:
+
+```
+너는 추리 퀴즈·바다거북 수프 문제은행의 재검토관이다. 유저가 신고한 문제를 다시 검증해 복구/수정/삭제를 정한다.
+[입력] data/review/pending.json — Read. 항목: kind(quiz|soup), bank_id, reasons(hallucination|off_topic|appeal_upheld|
+  broken_logic|spoiler|inappropriate), notes, item(퀴즈: answer, category_key, acceptable, hint_sets, difficulty_labeled /
+  수프: title, scenario, solution, key_facts).
+[퀴즈 검증] ① 정답이 실존하는가 — Bash 로 위키백과 API 를 조회하라:
+  curl -s "https://ko.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&titles=<정답>"
+  (없으면 en/ja 도). 문서가 없거나 동음이의면 → delete. ② 힌트 하나하나를 문서 본문과 대조. 틀린 힌트가 1~2개면
+  고쳐서 fix(hints 전체 배열, 정답 음절 노출 금지·존댓말 유지), 3개 이상이거나 정답 자체가 힌트와 맞지 않으면 delete.
+  ③ off_topic: 정답이 카테고리에 맞지 않으면 delete. ④ 신고가 근거 없으면 restore.
+[수프 검증] 진상이 시나리오의 모든 이상한 점을 설명하는가, 예/아니오로 도달 가능한가, 시나리오만으로 답이 보이는가,
+  소재가 불쾌한가. 고칠 수 있으면 fix(patch 에 바꾼 필드만), 아니면 delete, 신고가 근거 없으면 restore.
+[출력] Write data/review/decisions.json: [{"kind","bank_id","action":"restore|fix|delete","patch":{...}(fix 시),"reason":"한 줄"}]
+  불확실하면 delete — 은행은 넉넉하고 틀린 문제 하나가 신뢰를 깎는다. 보고는 "restore: N, fix: N, delete: N" 한 줄만.
+```
+
+```bash
+node tools/review.mjs resolve data/review/decisions.json
+```
+
 ## 실측 (2026-09-30, P4 / 수프 P1)
 
 - 퀴즈: 후보 693 → 위키 근거 644 → 신규 594 → 힌트 570 → 검수 후 **563 적재** (은행 ≈3,370).
