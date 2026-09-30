@@ -42,7 +42,8 @@ const EXCLUSION_KEY = 'txtgame_exclusions_v1';
 // 출제 프롬프트에 매번 주입되는 "최근 정답(중복 금지)" 목록 상한.
 // 너무 크면 입력 토큰이 그만큼 늘어 비용↑ → 반복 방지에 충분한 선에서 조절.
 // 다양성 체감을 위해 더 길게 기억(괄호 제거 베이스명까지 누적되므로 실효 기억은 더 큼).
-const MAX_PER_CATEGORY = 25;
+// 서버 seen 집합(037)이 로그인 유저의 중복을 막고, 이 목록은 비로그인 유저의 유일한 방어라 넉넉히
+const MAX_PER_CATEGORY = 200;
 
 function loadExclusions(): Record<string, string[]> {
   try {

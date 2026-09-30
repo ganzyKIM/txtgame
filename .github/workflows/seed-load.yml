@@ -1,0 +1,43 @@
+# 주간 시딩 루틴이 `seed/<날짜>` 브랜치에 남긴 data/pending/ 을 문제은행에 적재한다.
+# 루틴 쪽 클라우드 환경에 비밀을 두지 않아도 되게, 적재만 이 저장소의 Actions 비밀로 한다.
+#   SEED_TOKEN         — DB seed_secrets.seed_token (migration 036)
+#   SUPABASE_URL       — https://<ref>.supabase.co
+#   SUPABASE_ANON_KEY  — anon 키 (클라 번들에 이미 들어 있는 공개 키)
+# 적재가 끝나면 그 브랜치를 지운다 — 정답이 든 파일을 공개 저장소에 오래 두지 않기 위해.
+name: seed-load
+on:
+  push:
+    branches: ['seed/**']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: '적재할 브랜치 (seed/...)'
+        required: false
+permissions:
+  contents: write
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 적재
+        env:
+          SEED_TOKEN: ${{ secrets.SEED_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -e
+          shopt -s nullglob
+          n=0
+          for d in data/pending/*/quiz; do node tools/seed-load.mjs quiz "$d" --force; n=$((n+1)); done
+          for d in data/pending/*/soup; do node tools/seed-load.mjs soup "$d" --force; n=$((n+1)); done
+          echo "적재한 디렉터리: $n"
+          node tools/seed-load.mjs inventory
+      - name: 브랜치 정리
+        if: startsWith(github.ref_name, 'seed/')
+        run: git push origin --delete "${GITHUB_REF_NAME}"

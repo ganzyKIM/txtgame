@@ -14,6 +14,17 @@ import type { TextTier } from '../types';
 
 const MAX_HINTS = 3;
 
+const SERVED_KEY = 'soup_served_v1';
+const SERVED_MAX = 200;
+function loadServed(): string[] {
+  try { const v = JSON.parse(localStorage.getItem(SERVED_KEY) ?? '[]'); return Array.isArray(v) ? v.map(String) : []; }
+  catch { return []; }
+}
+function saveServed(ids: string[]): string[] {
+  try { localStorage.setItem(SERVED_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
+  return ids;
+}
+
 // 출제(brew)는 창작·논리 일관성이 필요해 고품질 tier(quiz_gen)를 쓰지만,
 // 질문 응답/힌트/정답 판정은 "주어진 진상을 읽고 판단"만 하므로
 // 빠르고 싼 티어(quiz_judge)로 충분하다 → 멀티턴 토큰 대폭 절감.
@@ -49,8 +60,8 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
   const recentTitles = useRef<string[]>([]);
   // 문제은행에서 뽑은 문제면 그 id — 결과 기록용. 실시간 생성이면 null
   const bankId = useRef<string | null>(null);
-  // 이 세션에서 이미 받은 은행 문제 (서버 창과 별개로 비로그인도 중복을 막는다)
-  const servedIds = useRef<string[]>([]);
+  // 이미 받은 은행 문제 id — 서버 seen 집합(037)과 별개로 비로그인 유저의 유일한 방어라 localStorage 에 200개 유지
+  const servedIds = useRef<string[]>(loadServed());
   const logRef = useRef<HTMLDivElement>(null);
 
   // 풀던 판을 버리고 첫 화면으로
@@ -88,7 +99,7 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
       const bank = await pickSoupPuzzle(servedIds.current);
       if (bank) {
         bankId.current = bank.bankId;
-        servedIds.current = [...servedIds.current.slice(-59), bank.bankId];
+        servedIds.current = saveServed([...servedIds.current.slice(-(SERVED_MAX - 1)), bank.bankId]);
         p = bank;
       } else {
         bankId.current = null;
