@@ -1,0 +1,11 @@
+{
+  "drafted": 144,
+  "pass": 65,
+  "fixed": 43,
+  "dropVerdict": 36,
+  "dropLint": 0,
+  "dropMissing": 0,
+  "dropDup": 1,
+  "dropLoaded": 0,
+  "final": 107
+}
