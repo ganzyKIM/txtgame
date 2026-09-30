@@ -93,7 +93,7 @@ export function touchImages(form: Form, costume: Costume | null): string[] {
   return (filtered.length ? filtered : [baseImageName(form, costume)]).map(imagePath);
 }
 
-const COSTUME_PREFIXES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse'];
+const COSTUME_PREFIXES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse', 'swim'];
 function isCostumeFile(form: Form, name: string): boolean {
   const rest = name.slice(form.length + 1);
   return COSTUME_PREFIXES.some((c) => rest === c || rest.startsWith(c + '_'));

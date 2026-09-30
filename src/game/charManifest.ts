@@ -1,5 +1,5 @@
 // 자동 생성 — 손으로 고치지 말 것. `npm run char:manifest`
-// public/char/*.png 의 파일명(확장자 제외). 154개.
+// public/char/*.png 의 파일명(확장자 제외). 168개.
 export const CHAR_FILES: readonly string[] = [
   "ame_bunny",
   "ame_bunny_contempt",
@@ -73,6 +73,13 @@ export const CHAR_FILES: readonly string[] = [
   "ame_summer_thinking",
   "ame_summer_vape",
   "ame_surprised",
+  "ame_swim",
+  "ame_swim_joy",
+  "ame_swim_pout",
+  "ame_swim_smoke",
+  "ame_swim_surprised",
+  "ame_swim_thinking",
+  "ame_swim_wave",
   "ame_thinking",
   "ame_vape",
   "ame_wave",
@@ -151,6 +158,13 @@ export const CHAR_FILES: readonly string[] = [
   "choten_summer_surprised",
   "choten_summer_thinking",
   "choten_surprised",
+  "choten_swim",
+  "choten_swim_joy",
+  "choten_swim_pout",
+  "choten_swim_surprised",
+  "choten_swim_thinking",
+  "choten_swim_vape",
+  "choten_swim_wave",
   "choten_thinking",
   "choten_vape",
   "choten_wave",

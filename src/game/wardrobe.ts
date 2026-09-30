@@ -12,12 +12,12 @@
 import type { MyStats } from '../save/cloudSave';
 
 /** 기본 교복은 의상이 아니라 null 이다 */
-export type Costume = 'kimono' | 'bunny' | 'pajama' | 'lounge' | 'casual' | 'summer' | 'knit' | 'nurse';
+export type Costume = 'kimono' | 'bunny' | 'pajama' | 'lounge' | 'casual' | 'summer' | 'knit' | 'nurse' | 'swim';
 
 /** my_stats 에서 뽑아 쓰는 지표 하나 */
 export type StatKey =
   | 'plays_total' | 'soup_plays' | 'gomoku_plays' | 'gomoku_wins' | 'center_best'
-  | 'holdem_hands' | 'holdem_multi_wins' | 'gomoku_hard_wins' | 'hensachi';
+  | 'holdem_hands' | 'holdem_multi_wins' | 'gomoku_hard_wins' | 'hensachi' | 'soup_no_hint';
 
 export interface UnlockRule { key: StatKey; need: number; label: string }
 
@@ -28,6 +28,8 @@ export interface CostumeDef {
   desc: string;
   /** 비어 있으면 항상 열려 있다. 여러 개면 하나만 만족해도 열린다 */
   unlock: UnlockRule[];
+  /** true 면 unlock 의 규칙을 **전부** 만족해야 한다 (복합 조건) */
+  all?: boolean;
 }
 
 export const COSTUMES: readonly CostumeDef[] = [
@@ -53,6 +55,16 @@ export const COSTUMES: readonly CostumeDef[] = [
       { key: 'gomoku_hard_wins', need: 1, label: '오목 진심 격파 1회' },
       { key: 'hensachi', need: 60, label: '편차치 60 이상' },
     ] },
+  // 최종 의상. 다섯 게임을 전부 깊게 파야 하는 복합 조건 — 하나라도 빠지면 안 열린다
+  { id: 'swim',   label: '수영복', desc: '여름 한정. 튜브까지 챙겨 왔어',
+    all: true,
+    unlock: [
+      { key: 'plays_total', need: 50, label: '합계 50판' },
+      { key: 'center_best', need: 8000, label: '센터시험 8,000점 이상(80%)' },
+      { key: 'gomoku_hard_wins', need: 3, label: '오목 진심 격파 3회' },
+      { key: 'holdem_multi_wins', need: 2, label: '홀덤 멀티 2승' },
+      { key: 'soup_no_hint', need: 1, label: '바다거북 수프 힌트 없이 정답 1회' },
+    ] },
 ];
 
 export const COSTUME_BY_ID: Record<Costume, CostumeDef> =
@@ -75,16 +87,19 @@ export function statValue(stats: MyStats, key: StatKey): number {
     case 'holdem_multi_wins': return stats.holdem.multi_wins;
     case 'gomoku_hard_wins':  return stats.gomoku.hard_wins;
     case 'hensachi':          return stats.hensachi ?? 0;
+    case 'soup_no_hint':      return stats.soup.no_hint;
   }
 }
 
 export interface Progress {
-  /** 가장 진행이 앞선 규칙 기준 */
+  /** OR 의상: 가장 진행이 앞선 규칙 기준. AND 의상: 만족한 규칙 수 / 전체 */
   cur: number;
   need: number;
   label: string;
   /** 0~1 */
   ratio: number;
+  /** AND 의상만: 규칙별 진행. 옷장이 체크리스트로 그린다 */
+  parts?: { label: string; cur: number; need: number; ok: boolean }[];
 }
 
 export interface UnlockState {
@@ -110,14 +125,20 @@ export function evaluateUnlocks(stats: MyStats | null, opts: { master?: boolean 
   const progress: Partial<Record<Costume, Progress>> = {};
   for (const c of COSTUMES) {
     if (c.unlock.length === 0) { achieved.add(c.id); continue; }
-    let best: Progress | null = null;
-    for (const r of c.unlock) {
+    const each = c.unlock.map((r) => {
       const cur = stats ? Math.min(statValue(stats, r.key), r.need) : 0;
-      const p: Progress = { cur, need: r.need, label: r.label, ratio: r.need > 0 ? cur / r.need : 1 };
-      if (!best || p.ratio > best.ratio) best = p;
+      return { cur, need: r.need, label: r.label, ratio: r.need > 0 ? cur / r.need : 1 };
+    });
+    let p: Progress;
+    if (c.all) {
+      const parts = each.map((e) => ({ label: e.label, cur: e.cur, need: e.need, ok: e.ratio >= 1 }));
+      const done = parts.filter((x) => x.ok).length;
+      p = { cur: done, need: parts.length, label: `복합 조건 ${parts.length}개 전부`, ratio: done / parts.length, parts };
+    } else {
+      p = each.reduce((b, e) => (e.ratio > b.ratio ? e : b));
     }
-    progress[c.id] = best!;
-    if (best!.ratio >= 1) achieved.add(c.id);
+    progress[c.id] = p;
+    if (p.ratio >= 1) achieved.add(c.id);
   }
   const unlocked = master ? new Set<Costume>(COSTUMES.map((c) => c.id)) : new Set(achieved);
   return { unlocked, achieved, progress, master };

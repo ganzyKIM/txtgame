@@ -15,6 +15,7 @@ test('옷장: 로그인 전에는 안내와 잠금 카드가 그려진다', () =
   assert.ok(html.includes('wardrobe-card locked'));
   assert.ok(html.includes('아무 게임이나 5판'));
   assert.ok(html.includes('오목 1판') && html.includes('홀덤 10핸드'), '기모노·바니도 조건 표시');
+  assert.ok(html.includes('wardrobe-parts') && html.includes('오목 진심 격파 3회'), '수영복은 체크리스트');
   assert.ok(html.includes('/char/choten_pajama.png'));
   assert.ok(html.includes('착용 중'));
 });
@@ -50,4 +51,6 @@ test('옷장: 마스터는 전부 열리고 달성/미달성이 따로 보인다
   assert.ok(!html.includes('wardrobe-card locked'));
   assert.ok(html.includes('✓ 달성 · 바다거북 수프 1판 체험'));
   assert.ok(html.includes('✗ 미달성 · 오목 3승 (0/3)'));
+  assert.ok(html.includes('✗ 미달성 · 복합 조건 5개 전부 (0/5)'));
+  assert.ok(html.includes('wardrobe-parts'), '마스터도 수영복 체크리스트가 보인다');
 });

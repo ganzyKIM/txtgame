@@ -54,7 +54,7 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
                   img={costumeBaseImage(form, c.id)} label={c.label} desc={c.desc}
                   locked={locked} active={selected === c.id}
                   condition={p ? p.label : undefined}
-                  progress={p && locked ? p : undefined}
+                  progress={p && (locked || p.parts) ? p : undefined}
                   achievedMark={achievedMark}
                   onClick={() => { if (!locked) onSelect(c.id); }}
                 />
@@ -71,7 +71,7 @@ interface CardProps {
   img: string; label: string; desc: string;
   locked: boolean; active: boolean;
   condition?: string;
-  progress?: { cur: number; need: number };
+  progress?: { cur: number; need: number; parts?: { label: string; ok: boolean; cur: number; need: number }[] };
   /** 마스터 계정용: 열려 있어도 조건 달성 여부를 표시 */
   achievedMark?: { ok: boolean; text: string };
   onClick: () => void;
@@ -94,6 +94,13 @@ function WardrobeCard({ img, label, desc, locked, active, condition, progress, a
       {locked ? (
         <div className="wardrobe-card-cond">
           <div>{condition}</div>
+          {progress?.parts && (
+            <ul className="wardrobe-parts">
+              {progress.parts.map((x) => (
+                <li key={x.label} className={x.ok ? 'ok' : ''}>{x.ok ? '✓' : '·'} {x.label} <small>{x.cur}/{x.need}</small></li>
+              ))}
+            </ul>
+          )}
           {progress && (
             <div className="wardrobe-bar" aria-label={`${progress.cur}/${progress.need}`}>
               <div className="wardrobe-bar-fill" style={{ width: `${Math.round((progress.cur / progress.need) * 100)}%` }} />
@@ -106,6 +113,13 @@ function WardrobeCard({ img, label, desc, locked, active, condition, progress, a
           <div className="wardrobe-card-desc">{desc}</div>
           {achievedMark && (
             <div className={`wardrobe-achieved${achievedMark.ok ? ' ok' : ''}`}>{achievedMark.text}</div>
+          )}
+          {achievedMark && progress?.parts && (
+            <ul className="wardrobe-parts">
+              {progress.parts.map((x) => (
+                <li key={x.label} className={x.ok ? 'ok' : ''}>{x.ok ? '✓' : '·'} {x.label} <small>{x.cur}/{x.need}</small></li>
+              ))}
+            </ul>
           )}
         </>
       )}

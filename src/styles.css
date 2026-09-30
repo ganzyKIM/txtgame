@@ -1608,5 +1608,8 @@ body.mode-ame .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#
 .wardrobe-bar-text{ position:absolute; inset:0; font-size:9px; line-height:12px; text-align:center; color:var(--ink); }
 .wardrobe-achieved{ font-size:10px; line-height:1.3; padding:2px 6px; border:1px dashed var(--bevel-dk); color:var(--ink-soft); background:#fff; }
 .wardrobe-achieved.ok{ color:var(--magenta-d); border-color:var(--magenta); }
+.wardrobe-parts{ list-style:none; margin:0; padding:0; width:100%; text-align:left; font-size:10px; line-height:1.4; color:var(--ink-soft); }
+.wardrobe-parts li.ok{ color:var(--magenta-d); }
+.wardrobe-parts small{ opacity:.7; }
 body.mode-ame .wardrobe-card{ color:var(--ink); }
 body.office-mode .wardrobe-card-img img{ filter:grayscale(1); }

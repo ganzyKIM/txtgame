@@ -5,7 +5,7 @@ import type { MyStats } from '../src/save/cloudSave';
 
 function stats(over: Partial<{
   quizPlays: number; centerRuns: number; centerBest: number; hensachi: number | null;
-  soupPlays: number; holdemHands: number; holdemMultiWins: number;
+  soupPlays: number; soupNoHint: number; holdemHands: number; holdemMultiWins: number;
   gomokuPlays: number; gomokuWins: number; gomokuHardWins: number;
 }> = {}): MyStats {
   return {
@@ -13,7 +13,7 @@ function stats(over: Partial<{
     hensachi: over.hensachi ?? null,
     players: 1, beaten: 0,
     quiz: { plays: over.quizPlays ?? 0, wins: 0 },
-    soup: { plays: over.soupPlays ?? 0, solved: 0, no_hint: 0 },
+    soup: { plays: over.soupPlays ?? 0, solved: 0, no_hint: over.soupNoHint ?? 0 },
     holdem: { hands: over.holdemHands ?? 0, wins: 0, best_pot: 0, multi_wins: over.holdemMultiWins ?? 0 },
     gomoku: { plays: over.gomokuPlays ?? 0, wins: over.gomokuWins ?? 0, draws: 0,
       hard_wins: over.gomokuHardWins ?? 0, multi_plays: 0, multi_wins: 0 },
@@ -91,10 +91,10 @@ test('모든 의상에 조건이 있다 (교복만 기본)', () => {
 
 test('마스터: 전부 열리지만 달성 여부는 전적대로', () => {
   const s = evaluateUnlocks(stats({ soupPlays: 1 }), { master: true });
-  assert.equal(s.unlocked.size, 8);
+  assert.equal(s.unlocked.size, 9);
   assert.deepEqual([...s.achieved], ['lounge']);
   assert.equal(s.master, true);
-  assert.equal(evaluateUnlocks(null, { master: true }).unlocked.size, 8);
+  assert.equal(evaluateUnlocks(null, { master: true }).unlocked.size, 9);
 });
 
 test('마스터 이메일 판정은 대소문자·공백 무시', () => {
@@ -104,6 +104,22 @@ test('마스터 이메일 판정은 대소문자·공백 무시', () => {
   assert.ok(!isMasterEmail(null));
 });
 
-test('카탈로그에는 8종이 있고 id 가 겹치지 않는다', () => {
-  assert.equal(new Set(COSTUMES.map((c) => c.id)).size, 8);
+test('카탈로그에는 9종이 있고 id 가 겹치지 않는다', () => {
+  assert.equal(new Set(COSTUMES.map((c) => c.id)).size, 9);
+});
+
+test('수영복: 다섯 조건을 전부 채워야 열린다 (AND)', () => {
+  const almost = { quizPlays: 50, centerBest: 8000, gomokuHardWins: 3, holdemMultiWins: 2, soupNoHint: 0 };
+  const s1 = evaluateUnlocks(stats(almost));
+  assert.ok(!s1.unlocked.has('swim'), '넷만 채우면 안 열린다');
+  assert.equal(s1.progress.swim?.cur, 4);
+  assert.equal(s1.progress.swim?.need, 5);
+  assert.equal(s1.progress.swim?.parts?.length, 5);
+  assert.equal(s1.progress.swim?.parts?.filter((x) => x.ok).length, 4);
+  assert.ok(s1.progress.swim?.parts?.some((x) => !x.ok && x.label.includes('힌트 없이')));
+  const s2 = evaluateUnlocks(stats({ ...almost, soupNoHint: 1 }));
+  assert.ok(s2.unlocked.has('swim'));
+  assert.ok(s2.achieved.has('swim'));
+  // 다른 옷들처럼 OR 로 새지 않는다
+  assert.ok(!evaluateUnlocks(stats({ centerBest: 10000 })).unlocked.has('swim'));
 });
