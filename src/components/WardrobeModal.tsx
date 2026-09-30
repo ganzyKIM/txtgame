@@ -33,6 +33,9 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
           {!loggedIn && (
             <div className="wardrobe-note">로그인하면 전적으로 새 옷이 열리고 진행도가 보여요.</div>
           )}
+          {unlocks.master && (
+            <div className="wardrobe-note">★ 마스터 계정 — 모든 옷을 입을 수 있어요. 카드의 표시는 실제 조건 달성 여부예요.</div>
+          )}
           <div className="wardrobe-grid">
             <WardrobeCard
               img={costumeBaseImage(form, null)} label="교복" desc="언제나의 그 모습"
@@ -41,6 +44,10 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
             {COSTUMES.map((c) => {
               const locked = !unlocks.unlocked.has(c.id);
               const p = unlocks.progress[c.id];
+              // 마스터는 잠기지 않지만 조건을 달성했는지는 따로 보여준다
+              const achievedMark = unlocks.master && p
+                ? (unlocks.achieved.has(c.id) ? { ok: true, text: `✓ 달성 · ${p.label}` } : { ok: false, text: `✗ 미달성 · ${p.label} (${p.cur}/${p.need})` })
+                : undefined;
               return (
                 <WardrobeCard
                   key={c.id}
@@ -48,6 +55,7 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
                   locked={locked} active={selected === c.id}
                   condition={p ? p.label : undefined}
                   progress={p && locked ? p : undefined}
+                  achievedMark={achievedMark}
                   onClick={() => { if (!locked) onSelect(c.id); }}
                 />
               );
@@ -64,10 +72,12 @@ interface CardProps {
   locked: boolean; active: boolean;
   condition?: string;
   progress?: { cur: number; need: number };
+  /** 마스터 계정용: 열려 있어도 조건 달성 여부를 표시 */
+  achievedMark?: { ok: boolean; text: string };
   onClick: () => void;
 }
 
-function WardrobeCard({ img, label, desc, locked, active, condition, progress, onClick }: CardProps) {
+function WardrobeCard({ img, label, desc, locked, active, condition, progress, achievedMark, onClick }: CardProps) {
   return (
     <button
       type="button"
@@ -92,7 +102,12 @@ function WardrobeCard({ img, label, desc, locked, active, condition, progress, o
           )}
         </div>
       ) : (
-        <div className="wardrobe-card-desc">{desc}</div>
+        <>
+          <div className="wardrobe-card-desc">{desc}</div>
+          {achievedMark && (
+            <div className={`wardrobe-achieved${achievedMark.ok ? ' ok' : ''}`}>{achievedMark.text}</div>
+          )}
+        </>
       )}
     </button>
   );

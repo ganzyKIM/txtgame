@@ -3,8 +3,11 @@
 
    해금 판정은 서버 my_stats() 한 덩어리만 보고 하는 순수 함수다. 클라가
    따로 진행도를 세거나 저장하지 않는다 — 전적이 진실이고, 기기를 옮겨도
-   같은 결과가 나온다. stats 가 없으면(로그인 전·조회 실패) 항상 열려 있는
-   의상만 돌려준다.
+   같은 결과가 나온다. 교복 외의 옷은 전부 조건이 있다. stats 가 없으면
+   (로그인 전·조회 실패) 아무 옷도 열리지 않는다.
+
+   마스터 계정은 조건과 무관하게 전부 열리지만, "조건을 실제로 달성했는가"
+   (achieved)는 따로 계산해 옷장에 표시하고 해금 축하도 achieved 기준으로 한다.
    ════════════════════════════════════════════════════════════════════ */
 import type { MyStats } from '../save/cloudSave';
 
@@ -13,7 +16,7 @@ export type Costume = 'kimono' | 'bunny' | 'pajama' | 'lounge' | 'casual' | 'sum
 
 /** my_stats 에서 뽑아 쓰는 지표 하나 */
 export type StatKey =
-  | 'plays_total' | 'soup_plays' | 'gomoku_wins' | 'center_best'
+  | 'plays_total' | 'soup_plays' | 'gomoku_plays' | 'gomoku_wins' | 'center_best'
   | 'holdem_hands' | 'holdem_multi_wins' | 'gomoku_hard_wins' | 'hensachi';
 
 export interface UnlockRule { key: StatKey; need: number; label: string }
@@ -28,8 +31,10 @@ export interface CostumeDef {
 }
 
 export const COSTUMES: readonly CostumeDef[] = [
-  { id: 'kimono', label: '기모노', desc: '오목 대국 정장. 오목 화면에선 항상 이 차림', unlock: [] },
-  { id: 'bunny',  label: '바니',   desc: '홀덤 테이블의 딜러 복장',                       unlock: [] },
+  { id: 'kimono', label: '기모노', desc: '오목 대국 정장. 오목 화면에선 옷장과 무관하게 이 차림',
+    unlock: [{ key: 'gomoku_plays', need: 1, label: '오목 1판' }] },
+  { id: 'bunny',  label: '바니',   desc: '홀덤 테이블의 딜러 복장',
+    unlock: [{ key: 'holdem_hands', need: 10, label: '홀덤 10핸드' }] },
   { id: 'pajama', label: '파자마', desc: '같이 밤새울 준비 완료',
     unlock: [{ key: 'plays_total', need: 5, label: '아무 게임이나 5판' }] },
   { id: 'lounge', label: '룸웨어', desc: '헐렁한 티셔츠에 반바지. 집에서만 보여주는 모습',
@@ -63,6 +68,7 @@ export function statValue(stats: MyStats, key: StatKey): number {
     case 'plays_total':
       return stats.quiz.plays + stats.center.runs + stats.gomoku.plays + stats.holdem.hands + stats.soup.plays;
     case 'soup_plays':        return stats.soup.plays;
+    case 'gomoku_plays':      return stats.gomoku.plays;
     case 'gomoku_wins':       return stats.gomoku.wins;
     case 'center_best':       return stats.center.best;
     case 'holdem_hands':      return stats.holdem.hands;
@@ -82,16 +88,28 @@ export interface Progress {
 }
 
 export interface UnlockState {
+  /** 옷장에서 입을 수 있는 옷 (마스터면 전부) */
   unlocked: Set<Costume>;
+  /** 전적으로 조건을 실제로 달성한 옷 — 해금 축하와 마스터용 달성 표시에 쓴다 */
+  achieved: Set<Costume>;
   /** 조건이 있는 의상만 들어 있다 */
   progress: Partial<Record<Costume, Progress>>;
+  master: boolean;
 }
 
-export function evaluateUnlocks(stats: MyStats | null): UnlockState {
-  const unlocked = new Set<Costume>();
+/** 모든 옷이 열려 있는 관리 계정. 표시용 권한일 뿐이라 클라 판정으로 충분하다 */
+export const MASTER_EMAILS: readonly string[] = ['kimdh12307@gmail.com'];
+
+export function isMasterEmail(email: string | null | undefined): boolean {
+  return !!email && MASTER_EMAILS.includes(email.trim().toLowerCase());
+}
+
+export function evaluateUnlocks(stats: MyStats | null, opts: { master?: boolean } = {}): UnlockState {
+  const master = !!opts.master;
+  const achieved = new Set<Costume>();
   const progress: Partial<Record<Costume, Progress>> = {};
   for (const c of COSTUMES) {
-    if (c.unlock.length === 0) { unlocked.add(c.id); continue; }
+    if (c.unlock.length === 0) { achieved.add(c.id); continue; }
     let best: Progress | null = null;
     for (const r of c.unlock) {
       const cur = stats ? Math.min(statValue(stats, r.key), r.need) : 0;
@@ -99,9 +117,10 @@ export function evaluateUnlocks(stats: MyStats | null): UnlockState {
       if (!best || p.ratio > best.ratio) best = p;
     }
     progress[c.id] = best!;
-    if (best!.ratio >= 1) unlocked.add(c.id);
+    if (best!.ratio >= 1) achieved.add(c.id);
   }
-  return { unlocked, progress };
+  const unlocked = master ? new Set<Costume>(COSTUMES.map((c) => c.id)) : new Set(achieved);
+  return { unlocked, achieved, progress, master };
 }
 
 /** 이전에 열려 있던 집합과 비교해 새로 열린 의상만 (카탈로그 순서) */

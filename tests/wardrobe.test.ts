@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateUnlocks, newlyUnlocked, statValue, COSTUMES } from '../src/game/wardrobe';
+import { evaluateUnlocks, newlyUnlocked, statValue, COSTUMES, isMasterEmail } from '../src/game/wardrobe';
 import type { MyStats } from '../src/save/cloudSave';
 
 function stats(over: Partial<{
@@ -20,9 +20,10 @@ function stats(over: Partial<{
   };
 }
 
-test('로그인 전(stats null)에는 항상 열린 의상만', () => {
+test('로그인 전(stats null)에는 아무 옷도 열리지 않는다', () => {
   const s = evaluateUnlocks(null);
-  assert.deepEqual([...s.unlocked].sort(), ['bunny', 'kimono']);
+  assert.deepEqual([...s.unlocked], []);
+  assert.deepEqual([...s.achieved], []);
   assert.equal(s.progress.pajama?.cur, 0);
   assert.equal(s.progress.pajama?.need, 5);
 });
@@ -71,9 +72,36 @@ test('진행도는 가장 앞선 규칙을 보여주고 need 로 캡된다', () 
 });
 
 test('newlyUnlocked 는 조건부 의상 중 새로 열린 것만, 카탈로그 순서로', () => {
-  const now = evaluateUnlocks(stats({ quizPlays: 10, soupPlays: 1, gomokuWins: 3, gomokuPlays: 3 })).unlocked;
+  const now = evaluateUnlocks(stats({ quizPlays: 10, soupPlays: 1, gomokuWins: 3, gomokuPlays: 3 })).achieved;
   assert.deepEqual(newlyUnlocked(['kimono', 'bunny', 'pajama'], now), ['lounge', 'casual']);
+  assert.deepEqual(newlyUnlocked([], now), ['kimono', 'pajama', 'lounge', 'casual']);
   assert.deepEqual(newlyUnlocked(now, now), []);
+});
+
+test('기모노: 오목 1판, 바니: 홀덤 10핸드', () => {
+  assert.ok(!evaluateUnlocks(stats()).unlocked.has('kimono'));
+  assert.ok(evaluateUnlocks(stats({ gomokuPlays: 1 })).unlocked.has('kimono'));
+  assert.ok(!evaluateUnlocks(stats({ holdemHands: 9 })).unlocked.has('bunny'));
+  assert.ok(evaluateUnlocks(stats({ holdemHands: 10 })).unlocked.has('bunny'));
+});
+
+test('모든 의상에 조건이 있다 (교복만 기본)', () => {
+  assert.ok(COSTUMES.every((c) => c.unlock.length > 0));
+});
+
+test('마스터: 전부 열리지만 달성 여부는 전적대로', () => {
+  const s = evaluateUnlocks(stats({ soupPlays: 1 }), { master: true });
+  assert.equal(s.unlocked.size, 8);
+  assert.deepEqual([...s.achieved], ['lounge']);
+  assert.equal(s.master, true);
+  assert.equal(evaluateUnlocks(null, { master: true }).unlocked.size, 8);
+});
+
+test('마스터 이메일 판정은 대소문자·공백 무시', () => {
+  assert.ok(isMasterEmail('kimdh12307@gmail.com'));
+  assert.ok(isMasterEmail(' KIMDH12307@gmail.com '));
+  assert.ok(!isMasterEmail('someone@gmail.com'));
+  assert.ok(!isMasterEmail(null));
 });
 
 test('카탈로그에는 8종이 있고 id 가 겹치지 않는다', () => {

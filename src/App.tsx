@@ -24,7 +24,7 @@ import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, recordQuizServe } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import WardrobeModal from './components/WardrobeModal';
-import { evaluateUnlocks, newlyUnlocked, isCostume, type Costume, type UnlockState } from './game/wardrobe';
+import { evaluateUnlocks, newlyUnlocked, isCostume, isMasterEmail, type Costume, type UnlockState } from './game/wardrobe';
 import { getMyStats, RECORDED_EVENT } from './save/cloudSave';
 import type { Form } from './game/mascotImages';
 import HoldemRulesModal from './components/HoldemRulesModal';
@@ -107,11 +107,13 @@ export default function App() {
   async function refreshUnlocks() {
     if (!user) { setUnlocks(evaluateUnlocks(null)); return; }
     const stats = await getMyStats();
-    const st = evaluateUnlocks(stats);
+    const st = evaluateUnlocks(stats, { master: isMasterEmail(user.email) });
     setUnlocks(st);
+    // 예전에 골라 둔 옷이 이제 잠겨 있으면(조건표가 바뀌었거나 다른 계정) 교복으로
+    if (selectedCostume && !st.unlocked.has(selectedCostume)) selectCostume(null);
     let celebrated: Costume[] = [];
     try { const v = JSON.parse(localStorage.getItem('costumes_celebrated') ?? '[]'); if (Array.isArray(v)) celebrated = v.filter(isCostume); } catch { /* noop */ }
-    const fresh = newlyUnlocked(celebrated, st.unlocked);
+    const fresh = newlyUnlocked(celebrated, st.achieved);
     if (fresh.length === 0) return;
     try { localStorage.setItem('costumes_celebrated', JSON.stringify([...celebrated, ...fresh])); } catch { /* noop */ }
     // 여러 벌이 한꺼번에 열렸으면 가장 어려운(카탈로그 뒤쪽) 옷으로 축하한다
