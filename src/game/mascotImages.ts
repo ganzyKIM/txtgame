@@ -61,6 +61,11 @@ export function imagePath(name: string): string {
   return `/char/${name}.png`;
 }
 
+/** 옷장 카드용 축소본 (tools/char-thumbs.mjs 가 만든다) */
+export function thumbPath(name: string): string {
+  return `/char/thumb/${name}.png`;
+}
+
 /** 의상 기본 컷(무표정). 의상이 없으면 교복 기본 */
 export function baseImageName(form: Form, costume: Costume | null): string {
   if (costume && FILES.has(`${form}_${costume}`)) return `${form}_${costume}`;

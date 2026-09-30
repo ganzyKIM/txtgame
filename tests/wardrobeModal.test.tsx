@@ -16,7 +16,7 @@ test('옷장: 로그인 전에는 안내와 잠금 카드가 그려진다', () =
   assert.ok(html.includes('아무 게임이나 5판'));
   assert.ok(html.includes('오목 1판') && html.includes('홀덤 10핸드'), '기모노·바니도 조건 표시');
   assert.ok(html.includes('wardrobe-parts') && html.includes('오목 진심 격파 3회'), '수영복은 체크리스트');
-  assert.ok(html.includes('/char/choten_pajama.png'));
+  assert.ok(html.includes('/char/thumb/choten_pajama.png'), '옷장은 축소본을 쓴다');
   assert.ok(html.includes('착용 중'));
 });
 
@@ -32,7 +32,7 @@ test('옷장: 열린 의상은 잠금 없이, 선택된 카드는 active', () =>
   );
   assert.ok(!html.includes('로그인하면'));
   assert.ok(/wardrobe-card active"[^>]*title="햇빛/.test(html), '여름 원피스 카드가 active 이고 잠기지 않았다');
-  assert.ok(html.includes('/char/ame_summer.png'));
+  assert.ok(html.includes('/char/thumb/ame_summer.png'));
   assert.ok(html.includes('wardrobe-card locked') && html.includes('오목 3승'));
 });
 

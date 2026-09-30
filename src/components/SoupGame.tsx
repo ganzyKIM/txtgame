@@ -8,6 +8,7 @@ import {
   type SoupPuzzle, type SoupTurn,
 } from '../game/soup';
 import { saveSoupResult } from '../save/cloudSave';
+import { pickSoupPuzzle, recordSoupBankResult } from '../save/soupBank';
 import type { MascotHandle } from './Mascot';
 import type { TextTier } from '../types';
 
@@ -46,6 +47,10 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const recentTitles = useRef<string[]>([]);
+  // 문제은행에서 뽑은 문제면 그 id — 결과 기록용. 실시간 생성이면 null
+  const bankId = useRef<string | null>(null);
+  // 이 세션에서 이미 받은 은행 문제 (서버 창과 별개로 비로그인도 중복을 막는다)
+  const servedIds = useRef<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
   // 풀던 판을 버리고 첫 화면으로
@@ -78,13 +83,23 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
     mascot.current?.event('loading');
     const tick = window.setInterval(() => mascot.current?.event('loading'), 4000);
     try {
-      const { text, balance } = await proxyGenerateText(
-        tier,
-        [{ role: 'user', text: '바다거북 수프 문제를 하나 출제해줘.' }],
-        { system: buildSoupSetupPrompt(recentTitles.current), temperature: 1.0 },
-      );
-      applyBalance(balance);
-      const p = parseSoupPuzzle(text);
+      // 문제은행 우선 — 크레딧 0, 즉시. 은행이 비었거나 실패하면 실시간 생성으로
+      let p: SoupPuzzle | null = null;
+      const bank = await pickSoupPuzzle(servedIds.current);
+      if (bank) {
+        bankId.current = bank.bankId;
+        servedIds.current = [...servedIds.current.slice(-59), bank.bankId];
+        p = bank;
+      } else {
+        bankId.current = null;
+        const { text, balance } = await proxyGenerateText(
+          tier,
+          [{ role: 'user', text: '바다거북 수프 문제를 하나 출제해줘.' }],
+          { system: buildSoupSetupPrompt(recentTitles.current), temperature: 1.0 },
+        );
+        applyBalance(balance);
+        p = parseSoupPuzzle(text);
+      }
       recentTitles.current = [...recentTitles.current.slice(-19), p.title];
       setPuzzle(p);
       setPhase('playing');
@@ -122,6 +137,7 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
         setPhase('solved');
         push('> ⭕ 진상을 꿰뚫었어! 클리어!');
         mascot.current?.event('soup_solve');
+        if (bankId.current) void recordSoupBankResult(bankId.current, true);
         if (userId && puzzle) void saveSoupResult(userId, {
           title: puzzle.title, solved: true, hintsUsed,
           questionsAsked: turns.filter((t) => t.role === 'user').length + 1,
@@ -190,6 +206,7 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
         setPhase('solved');
         push('> ⭕ 정답! 진상을 완벽하게 추리했어!');
         mascot.current?.event('soup_solve');
+        if (bankId.current) void recordSoupBankResult(bankId.current, true);
         if (userId && puzzle) void saveSoupResult(userId, {
           title: puzzle.title, solved: true, hintsUsed,
           questionsAsked: turns.filter((t) => t.role === 'user').length + 1,
@@ -211,6 +228,7 @@ const SoupGame = forwardRef<SoupGameHandle, Props>(function SoupGame(
     setPhase('revealed');
     push('> 🏳️ 진상을 공개했어.');
     mascot.current?.event('soup_reveal');
+    if (bankId.current) void recordSoupBankResult(bankId.current, false);
     if (userId) void saveSoupResult(userId, {
       title: puzzle.title, solved: false, hintsUsed,
       questionsAsked: turns.filter((t) => t.role === 'user').length,

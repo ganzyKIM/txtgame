@@ -9,6 +9,15 @@ export interface SoupPuzzle {
   scenario: string;
   /** 숨겨진 진상 전체 (유저에게 숨김) */
   solution: string;
+  /** 문제은행 문제만: 진행자가 예/아니오를 판정할 때 기준으로 삼는 핵심 사실 */
+  keyFacts?: string[];
+}
+
+/** 프롬프트에 끼울 [핵심 사실] 블록 — 은행 문제에만 있다 */
+function keyFactsBlock(p: SoupPuzzle): string {
+  return p.keyFacts && p.keyFacts.length > 0
+    ? `[핵심 사실 — 판정의 기준]\n${p.keyFacts.map((f) => `  • ${f}`).join('\n')}`
+    : '';
 }
 
 export type SoupVerdict = '예' | '아니오' | '상관없음' | '정답';
@@ -91,6 +100,7 @@ export function buildSoupAnswerPrompt(puzzle: SoupPuzzle, question: string): str
     '',
     `[문제] ${puzzle.scenario}`,
     `[진상] ${puzzle.solution}`,
+    keyFactsBlock(puzzle),
     `[유저 질문] ${question}`,
     '',
     '판정 규칙:',
@@ -103,7 +113,7 @@ export function buildSoupAnswerPrompt(puzzle: SoupPuzzle, question: string): str
     '',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"verdict": "예"|"아니오"|"상관없음"|"정답", "comment": string}',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 export interface SoupAnswer {
@@ -127,11 +137,12 @@ export function buildSoupGuessPrompt(puzzle: SoupPuzzle, guess: string): string 
     '',
     `[문제] ${puzzle.scenario}`,
     `[진상] ${puzzle.solution}`,
+    keyFactsBlock(puzzle),
     `[유저의 추리] ${guess}`,
     '',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"correct": boolean, "comment": string}  // comment는 한국어 한두 문장. 오답이면 진상을 누설하지 말고 살짝 힌트만.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 export interface SoupGuessResult {
@@ -169,6 +180,7 @@ export function buildSoupHintPrompt(
     '',
     `[문제] ${puzzle.scenario}`,
     `[진상] ${puzzle.solution}`,
+    keyFactsBlock(puzzle),
     qaLog ? `[지금까지 Q&A]\n${qaLog}` : '[지금까지 Q&A] 없음',
     '',
     `[힌트 수준 — ${hintNum}번째 힌트] ${HINT_LEVEL[hintNum] ?? HINT_LEVEL[3]}`,
@@ -180,7 +192,7 @@ export function buildSoupHintPrompt(
     '',
     '출력은 순수 JSON 하나만 (코드펜스/설명 금지):',
     '{"hint": string}',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 export function parseSoupHint(raw: string): string {

@@ -1593,7 +1593,7 @@ body.mode-ame .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#
 .wardrobe-card.active{ border-color:var(--magenta); box-shadow:0 0 0 2px var(--magenta) inset; }
 .wardrobe-card.locked{ cursor:not-allowed; }
 .wardrobe-card-img{ position:relative; width:100%; height:150px; display:flex; align-items:flex-end; justify-content:center; overflow:hidden; }
-.wardrobe-card-img img{ height:100%; width:auto; image-rendering:pixelated; filter:drop-shadow(0 3px 4px rgba(120,30,90,.3)); }
+.wardrobe-card-img img{ height:100%; width:auto; image-rendering:auto; filter:drop-shadow(0 3px 4px rgba(120,30,90,.3)); }
 .wardrobe-card.locked .wardrobe-card-img img{ filter:grayscale(1) brightness(.35) contrast(.8); }
 .wardrobe-lock{ position:absolute; top:6px; right:6px; font-size:18px; }
 .wardrobe-active{

@@ -1,6 +1,5 @@
 import { COSTUMES, type Costume, type UnlockState } from '../game/wardrobe';
-import { costumeBaseImage } from '../game/mascotLines';
-import type { Form } from '../game/mascotImages';
+import { baseImageName, thumbPath, type Form } from '../game/mascotImages';
 
 /* ════════════════════════════════════════════════════════════════════
    옷장 — 의상 카드 격자. StatsModal 과 같은 .modal 골격.
@@ -38,7 +37,7 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
           )}
           <div className="wardrobe-grid">
             <WardrobeCard
-              img={costumeBaseImage(form, null)} label="교복" desc="언제나의 그 모습"
+              img={thumbPath(baseImageName(form, null))} label="교복" desc="언제나의 그 모습"
               locked={false} active={selected === null} onClick={() => onSelect(null)}
             />
             {COSTUMES.map((c) => {
@@ -51,7 +50,7 @@ export default function WardrobeModal({ form, selected, unlocks, loggedIn, onSel
               return (
                 <WardrobeCard
                   key={c.id}
-                  img={costumeBaseImage(form, c.id)} label={c.label} desc={c.desc}
+                  img={thumbPath(baseImageName(form, c.id))} label={c.label} desc={c.desc}
                   locked={locked} active={selected === c.id}
                   condition={p ? p.label : undefined}
                   progress={p && (locked || p.parts) ? p : undefined}
