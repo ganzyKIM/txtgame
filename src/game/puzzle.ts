@@ -191,7 +191,7 @@ export function buildSetupPrompt(categoryLabel: string, theme: string, difficult
       ]
     : [];
 
-  // ⚠ 순서 중요: 앞부분(정적 규칙)은 매 호출 동일하게 유지해 Gemini 암시적
+  // 순서 중요: 앞부분(정적 규칙)은 매 호출 동일하게 유지해 Gemini 암시적
   // 프롬프트 캐싱(공통 프리픽스 할인)을 태우고, 호출마다 달라지는 조건은
   // 전부 맨 뒤【이번 출제 조건】블록에 모은다.
   return [
