@@ -7,7 +7,6 @@ tmp/
 supabase/.temp/
 data/quiz-seed/
 data/soup-seed/
-data/pending/
 cut/
 .DS_Store
 data/review/
