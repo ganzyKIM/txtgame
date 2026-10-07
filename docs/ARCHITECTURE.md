@@ -465,3 +465,35 @@ DB 비밀번호를 루틴에 줄 이유가 없다. `tools/seed-load.mjs` 가 이
 
 옷장 카드는 400px 원본을 150px 에 `image-rendering:pixelated` 로 욱여넣어 선이 깨졌다.
 `tools/char-thumbs.mjs` 가 만든 320px LANCZOS 축소본(`public/char/thumb/`)을 쓴다.
+
+## 로컬 판정 모델 서버 (040, 2026-10-07)
+
+판정·예/아니오·힌트·최종추측처럼 짧고 잦은 호출(tier `quiz_judge`: `judge.ts`, `SoupGame.tsx`)은
+Gemini 대신 **맥의 Ollama** 가 처리한다. 출제(`quiz_gen`)는 그대로 Gemini(주제 직접입력일 때만 호출됨).
+
+```
+브라우저 ─ proxyGenerateText('quiz_judge') ─▶ 엣지 generate-text
+   ├─ config.local_llm 있음 → POST {url}/judge (Bearer token, 8초) → 성공이면 credits 0, via:'local'
+   └─ 없음·실패·타임아웃 → 종전 Gemini 경로 (크레딧 차감)
+{url} = cloudflared 임시 터널 ─▶ tools/local-llm/server.mjs (:8787) ─▶ ollama (:11434, gemma3:4b)
+```
+
+- 서버: `tools/local-llm/server.mjs`. LaunchAgent `~/Library/LaunchAgents/com.txtgame.local-llm.plist`
+  (로그인 시 자동, 로그 `~/Library/Logs/txtgame-local-llm.log`). Ollama 가 없으면 직접 띄우고 모델을
+  24h 상주시킨다. 터널 주소가 바뀌면 `set_local_llm(seed_token, url, llm_token, model)` RPC 로
+  `config.local_llm` 을 갱신한다(10분마다 자가진단·재공개). 동시 4건 초과는 503 → 엣지가 Gemini 로.
+- 비밀: `.env.local` 의 `LOCAL_LLM_TOKEN`(터널 호출 인증), `SEED_TOKEN`(RPC 인증). `config` 는
+  service_role 만 읽으므로 클라에 새지 않는다.
+- 엣지 함수 소스 사본: `supabase/functions/generate-text/index.ts`. 배포는 대시보드 Edge Functions
+  편집기에 붙여 "Deploy updates" (CLI 로그인 없이 쓰는 경로).
+- 모델 선택 실측(M4 16GB, 실제 프롬프트): gemma3:4b 퀴즈 판정 11/12·수프 최종추측 4/4·예/아니오 3/5,
+  중앙 1.7~3.9초. gemma3:12b 는 수프 4/5 지만 중앙 6초·최대 30초라 탈락. exaone3.5:2.4b 는 8/12 로 탈락.
+  수프 예/아니오에서 "진상에 없는 사실" 질문을 '아니오' 대신 '상관없음' 으로 답하는 경향이 있다(허용).
+- 운영: 맥이 꺼지거나 터널이 죽으면 자동으로 Gemini 폴백 — 유저는 1~2초 느려질 뿐 끊기지 않는다.
+  상태 확인 `curl localhost:8787/health`, 재시작 `launchctl kickstart -k gui/$(id -u)/com.txtgame.local-llm`.
+
+### 주제 직접입력 퀴즈 (040)
+
+유저가 주제를 써 넣으면 `pick_quiz_bank_puzzle_theme` 가 은행에서 주제 토큰(2글자 이상, 최대 4개)이
+정답·별칭·힌트 텍스트에 **모두** 들어 있는 문제를 찾는다(같은 난이도 우선, 없으면 다른 난이도).
+적중하면 크레딧 0 으로 즉시 출제, 없을 때만 종전처럼 Gemini 즉석 생성(검증 파이프라인 포함).
