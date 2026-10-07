@@ -21,7 +21,7 @@ import { loadBank, addToBank, updateBankStats, recordAppealUpheld, getDifficulty
 import { judgeGuess, appealGuess, verifyPuzzle } from './game/judge';
 import { computeScore } from './game/scoring';
 import { saveResult, saveRun } from './save/cloudSave';
-import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, recordQuizServe } from './save/quizBank';
+import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, pickServerBankPuzzleByTheme, recordQuizServe } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import WardrobeModal from './components/WardrobeModal';
 import { evaluateUnlocks, newlyUnlocked, isCostume, isMasterEmail, type Costume, type UnlockState } from './game/wardrobe';
@@ -322,10 +322,12 @@ export default function App() {
     // ① 서버 문제은행 우선 — 시드로 채워져 있어 사실상 항상 적중(0크레딧, ~0.3초).
     //    저장된 힌트 세트는 전부 검증 파이프라인 통과분이라 재검증 생략.
     //    서버가 유저별 "최근 10문제 정답" 창을 자동 제외·기록한다 (migration 034).
-    //    유저가 주제·컨셉을 직접 입력했을 때만 즉석 AI 생성으로 — 뱅크 문제는
-    //    주제를 반영하지 못하므로 (종전 65% 확률 재사용은 주제를 무시하는 문제가 있었다).
-    if (!cfg.theme) {
-      const hit = await pickServerBankPuzzle(catKey, cfg.difficulty, baseExclusions);
+    //    유저가 주제·컨셉을 직접 입력했으면 주제 단어가 든 은행 문제를 검색해서 쓰고(040),
+    //    그런 문제가 없을 때만 즉석 AI 생성으로 — 아무 뱅크 문제나 주면 주제를 무시하게 된다.
+    {
+      const hit = cfg.theme
+        ? await pickServerBankPuzzleByTheme(catKey, cfg.difficulty, cfg.theme, baseExclusions)
+        : await pickServerBankPuzzle(catKey, cfg.difficulty, baseExclusions);
       if (hit) {
         const reused: Puzzle = {
           answer: hit.answer,

@@ -183,6 +183,31 @@ export async function pickServerBankPuzzle(
 }
 
 /**
+ * 주제 직접입력용 — 주제 단어가 정답·별칭·힌트에 모두 들어 있는 은행 문제를 찾는다 (migration 040).
+ * 같은 난이도를 우선하되 없으면 다른 난이도도 허용. 못 찾으면 null → 호출부가 즉석 생성으로.
+ */
+export async function pickServerBankPuzzleByTheme(
+  categoryKey: string,
+  difficulty: string,
+  theme: string,
+  excludeAnswers: string[],
+): Promise<ServerBankPuzzle | null> {
+  if (!categoryKey || !theme.trim()) return null;
+  try {
+    const { data, error } = await rpc.rpc('pick_quiz_bank_puzzle_theme', {
+      p_category_key: categoryKey,
+      p_difficulty: difficulty,
+      p_theme: theme.trim(),
+      p_exclude_keys: excludeAnswers.map(normAnswerKey).filter(Boolean),
+    }) as { data: { answer: string; acceptable: string[]; hints: string[]; max_hints: number }[] | null; error: unknown };
+    if (error || !data || data.length === 0) return null;
+    const r = data[0];
+    if (!r.answer || !Array.isArray(r.hints) || r.hints.length === 0) return null;
+    return { answer: r.answer, acceptable: r.acceptable ?? [], hints: r.hints, maxHints: r.max_hints || r.hints.length };
+  } catch { return null; }
+}
+
+/**
  * AI 즉석 생성으로 출제가 확정된 정답을 서버 "최근 10문제 창"에 기록 (migration 034).
  * 뱅크 픽 경로는 RPC가 스스로 기록하므로 이 함수는 ai_fresh 채택 시에만 부른다.
  */
