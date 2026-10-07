@@ -12,12 +12,13 @@
 import type { MyStats } from '../save/cloudSave';
 
 /** 기본 교복은 의상이 아니라 null 이다 */
-export type Costume = 'kimono' | 'bunny' | 'pajama' | 'lounge' | 'casual' | 'summer' | 'knit' | 'nurse' | 'swim';
+export type Costume = 'kimono' | 'bunny' | 'pajama' | 'lounge' | 'casual' | 'summer' | 'knit' | 'nurse' | 'saint' | 'swim';
 
 /** my_stats 에서 뽑아 쓰는 지표 하나 */
 export type StatKey =
   | 'plays_total' | 'soup_plays' | 'gomoku_plays' | 'gomoku_wins' | 'center_best'
-  | 'holdem_hands' | 'holdem_multi_wins' | 'gomoku_hard_wins' | 'hensachi' | 'soup_no_hint';
+  | 'holdem_hands' | 'holdem_multi_wins' | 'gomoku_hard_wins' | 'hensachi' | 'soup_no_hint'
+  | 'quiz_wins' | 'soup_solved';
 
 export interface UnlockRule { key: StatKey; need: number; label: string }
 
@@ -55,6 +56,12 @@ export const COSTUMES: readonly CostumeDef[] = [
       { key: 'gomoku_hard_wins', need: 1, label: '오목 진심 격파 1회' },
       { key: 'hensachi', need: 60, label: '편차치 60 이상' },
     ] },
+  // 성자 세트(2026-10-06): 초텐은 가톨릭 성녀풍, 아메는 그 짝인 흑미사 사제. 퀴즈·수프 — 지혜를 보인 사람에게(여태 퀴즈 보상 옷이 없었다)
+  { id: 'saint',  label: '성녀·흑미사', desc: '초텐은 성녀, 아메는 흑미사 사제. 같은 옷인데 믿는 쪽이 정반대',
+    unlock: [
+      { key: 'quiz_wins', need: 10, label: '퀴즈 10승' },
+      { key: 'soup_solved', need: 5, label: '바다거북 수프 정답 5회' },
+    ] },
   // 최종 의상. 다섯 게임을 전부 깊게 파야 하는 복합 조건 — 하나라도 빠지면 안 열린다
   { id: 'swim',   label: '수영복', desc: '여름 한정. 튜브까지 챙겨 왔어',
     all: true,
@@ -88,6 +95,8 @@ export function statValue(stats: MyStats, key: StatKey): number {
     case 'gomoku_hard_wins':  return stats.gomoku.hard_wins;
     case 'hensachi':          return stats.hensachi ?? 0;
     case 'soup_no_hint':      return stats.soup.no_hint;
+    case 'quiz_wins':         return stats.quiz.wins;
+    case 'soup_solved':       return stats.soup.solved;
   }
 }
 

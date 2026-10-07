@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = resolve(ROOT, 'public/char');
 const W = 400, H = 658, ALPHA_MIN = 16;
-const COSTUMES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse', 'swim'];
+const COSTUMES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse', 'saint', 'swim'];
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
 const ONLY = args.includes('--only') ? args[args.indexOf('--only') + 1] : undefined;

@@ -16,7 +16,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = resolve(ROOT, 'public/char');
 const OUT = resolve(DIR, 'thumb');
 const HEIGHT = 320;
-const COSTUMES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse', 'swim'];
+const COSTUMES = ['kimono', 'bunny', 'pajama', 'lounge', 'casual', 'summer', 'knit', 'nurse', 'saint', 'swim'];
 
 mkdirSync(OUT, { recursive: true });
 let n = 0;

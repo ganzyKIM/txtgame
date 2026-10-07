@@ -6,14 +6,14 @@ import type { MyStats } from '../src/save/cloudSave';
 function stats(over: Partial<{
   quizPlays: number; centerRuns: number; centerBest: number; hensachi: number | null;
   soupPlays: number; soupNoHint: number; holdemHands: number; holdemMultiWins: number;
-  gomokuPlays: number; gomokuWins: number; gomokuHardWins: number;
+  gomokuPlays: number; gomokuWins: number; gomokuHardWins: number; quizWins: number; soupSolved: number;
 }> = {}): MyStats {
   return {
     center: { runs: over.centerRuns ?? 0, best: over.centerBest ?? 0, avg: 0 },
     hensachi: over.hensachi ?? null,
     players: 1, beaten: 0,
-    quiz: { plays: over.quizPlays ?? 0, wins: 0 },
-    soup: { plays: over.soupPlays ?? 0, solved: 0, no_hint: over.soupNoHint ?? 0 },
+    quiz: { plays: over.quizPlays ?? 0, wins: over.quizWins ?? 0 },
+    soup: { plays: over.soupPlays ?? 0, solved: over.soupSolved ?? 0, no_hint: over.soupNoHint ?? 0 },
     holdem: { hands: over.holdemHands ?? 0, wins: 0, best_pot: 0, multi_wins: over.holdemMultiWins ?? 0 },
     gomoku: { plays: over.gomokuPlays ?? 0, wins: over.gomokuWins ?? 0, draws: 0,
       hard_wins: over.gomokuHardWins ?? 0, multi_plays: 0, multi_wins: 0 },
@@ -91,10 +91,10 @@ test('모든 의상에 조건이 있다 (교복만 기본)', () => {
 
 test('마스터: 전부 열리지만 달성 여부는 전적대로', () => {
   const s = evaluateUnlocks(stats({ soupPlays: 1 }), { master: true });
-  assert.equal(s.unlocked.size, 9);
+  assert.equal(s.unlocked.size, 10);
   assert.deepEqual([...s.achieved], ['lounge']);
   assert.equal(s.master, true);
-  assert.equal(evaluateUnlocks(null, { master: true }).unlocked.size, 9);
+  assert.equal(evaluateUnlocks(null, { master: true }).unlocked.size, 10);
 });
 
 test('마스터 이메일 판정은 대소문자·공백 무시', () => {
@@ -105,7 +105,7 @@ test('마스터 이메일 판정은 대소문자·공백 무시', () => {
 });
 
 test('카탈로그에는 9종이 있고 id 가 겹치지 않는다', () => {
-  assert.equal(new Set(COSTUMES.map((c) => c.id)).size, 9);
+  assert.equal(new Set(COSTUMES.map((c) => c.id)).size, 10);
 });
 
 test('수영복: 다섯 조건을 전부 채워야 열린다 (AND)', () => {
@@ -122,4 +122,14 @@ test('수영복: 다섯 조건을 전부 채워야 열린다 (AND)', () => {
   assert.ok(s2.achieved.has('swim'));
   // 다른 옷들처럼 OR 로 새지 않는다
   assert.ok(!evaluateUnlocks(stats({ centerBest: 10000 })).unlocked.has('swim'));
+});
+
+test('성녀·흑미사(2026-10-06): 퀴즈 10승 또는 수프 정답 5회 중 하나', () => {
+  assert.ok(!evaluateUnlocks(stats({ quizWins: 9, soupSolved: 4 })).unlocked.has('saint'));
+  assert.ok(evaluateUnlocks(stats({ quizWins: 10 })).unlocked.has('saint'));
+  assert.ok(evaluateUnlocks(stats({ soupSolved: 5 })).unlocked.has('saint'));
+  const p = evaluateUnlocks(stats({ quizWins: 3, soupSolved: 4 })).progress.saint;
+  assert.equal(p?.label, '바다거북 수프 정답 5회'); // 더 앞선 쪽(4/5)을 보여 준다
+  assert.equal(statValue(stats({ quizWins: 7 }), 'quiz_wins'), 7);
+  assert.equal(statValue(stats({ soupSolved: 2 }), 'soup_solved'), 2);
 });
