@@ -181,6 +181,8 @@ node tools/seed-load.mjs soup data/soup-seed/<cycle>_final     # SEED_TOKEN 필�
 
 ## 8. 신고·이의제기 검토 (매 사이클 처음에)
 
+운영자가 앱의 🛠 검토 창(041)에서 이미 처리했을 수 있다 — `list` 가 비어 있으면 건너뛴다.
+
 유저가 신고하거나 이의제기가 인용된 문제는 즉시 `status = 'review'` 로 숨겨지고
 `quiz_review_queue` 에 쌓인다(migration 038). 사이클마다 이걸 먼저 비운다.
 

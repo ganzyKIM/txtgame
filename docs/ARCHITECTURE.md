@@ -497,3 +497,17 @@ Gemini 대신 **맥의 Ollama** 가 처리한다. 출제(`quiz_gen`)는 그대�
 유저가 주제를 써 넣으면 `pick_quiz_bank_puzzle_theme` 가 은행에서 주제 토큰(2글자 이상, 최대 4개)이
 정답·별칭·힌트 텍스트에 **모두** 들어 있는 문제를 찾는다(같은 난이도 우선, 없으면 다른 난이도).
 적중하면 크레딧 0 으로 즉시 출제, 없을 때만 종전처럼 Gemini 즉석 생성(검증 파이프라인 포함).
+
+## 관리자 인앱 검토 (041, 2026-10-09)
+
+신고(퀴즈 환각·주제 부적합, 수프 진상 오류)와 인용된 이의제기는 038 대로 즉시 `status='review'` 로
+숨겨져 `quiz_review_queue` 에 쌓인다. 처리는 두 경로:
+- **운영자 직접**: 관리자 계정(`admin_emails`, 클라의 `MASTER_EMAILS` 와 같은 목록)으로 로그인하면
+  도구 막대에 🛠 검토 버튼과 대기 수 배지가 뜬다(로그인 시·5분마다·처리 후 갱신).
+  `AdminReviewModal` 이 카드마다 신고 사유·메모·전적과 본문(정답·인정 표기·힌트·공개 힌트 수 /
+  제목·문제·진상·핵심 사실)을 보여 주고, 복구 · 수정·복구 · 삭제(확인 2단계) 를 누르면
+  `admin_review_resolve` 가 적용한다. "처리 이력" 탭은 최근 30건.
+- **Claude 주간 루틴 / CLI**: 종전대로 `tools/review.mjs` + seed_token (`review_resolve`).
+서버는 `is_admin()`(JWT 이메일 ∈ admin_emails) 으로 판정하고, 두 경로 모두 `review_apply` 하나를 부른다.
+관리자를 더 두려면 `admin_emails` 에 insert + `MASTER_EMAILS` 에 추가(버튼 표시용).
+
