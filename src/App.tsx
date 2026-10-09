@@ -24,6 +24,8 @@ import { saveResult, saveRun } from './save/cloudSave';
 import { saveQuizGeneration, updateQuizBankStats, recordQuizAppeal, saveQuizRejection, getChronicFailures, getFailurePatterns, reportQuizProblem, pickServerBankPuzzle, pickServerBankPuzzleByTheme, recordQuizServe } from './save/quizBank';
 import StatsModal from './components/StatsModal';
 import WardrobeModal from './components/WardrobeModal';
+import AdminReviewModal from './components/AdminReviewModal';
+import { getReviewPending } from './save/adminReview';
 import { evaluateUnlocks, newlyUnlocked, isCostume, isMasterEmail, type Costume, type UnlockState } from './game/wardrobe';
 import { getMyStats, RECORDED_EVENT } from './save/cloudSave';
 import type { Form } from './game/mascotImages';
@@ -151,6 +153,17 @@ export default function App() {
   const [appealing, setAppealing] = useState(false);
   const [tier, setTier] = useState<TextTier>('quiz_gen');
   const [statsOpen, setStatsOpen] = useState(false);
+  // ── 관리자 검토 (041) — 관리자 계정에만 배지·창. 서버가 다시 한 번 권한을 본다 ──
+  const isAdmin = isMasterEmail(user?.email);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewPending, setReviewPending] = useState(0);
+  const refreshReviewPending = () => { if (isAdmin) void getReviewPending().then(setReviewPending); else setReviewPending(0); };
+  useEffect(() => { refreshReviewPending(); }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isAdmin) return;
+    const t = window.setInterval(refreshReviewPending, 5 * 60 * 1000); // 켜 둔 동안 5분마다
+    return () => window.clearInterval(t);
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
   // ── 옷장 ──────────────────────────────────────────────
   // 고른 의상은 기기에 기억한다. 해금 여부는 서버 전적(my_stats)으로 매번 다시 계산하고,
   // "이미 축하한 의상" 목록만 기기에 남겨 같은 해금 연출을 반복하지 않는다.
@@ -952,6 +965,12 @@ export default function App() {
                 <span className="menu-icon">👗</span> 옷장
               </button>
             )}
+            {isAdmin && (
+              <button className="menu-btn" onClick={() => setReviewOpen(true)} title="관리자 — 신고된 문제 검토">
+                <span className="menu-icon">🛠</span> 검토
+                {reviewPending > 0 && <span className="menu-badge">{reviewPending}</span>}
+              </button>
+            )}
             {!officeMode && (
               <button className="menu-btn" onClick={handleEnterOffice} title="사회인모드 (업무용 배색으로 전환)">
                 <span className="menu-icon">🗂️</span>
@@ -1173,6 +1192,9 @@ export default function App() {
       )}
       {holdemRulesOpen && (
         <HoldemRulesModal onClose={() => setHoldemRulesOpen(false)} />
+      )}
+      {reviewOpen && isAdmin && (
+        <AdminReviewModal onClose={() => setReviewOpen(false)} onChanged={refreshReviewPending} />
       )}
       <DialogHost />
     </>

@@ -1613,3 +1613,31 @@ body.mode-ame .soup-busy-bar::after{background:repeating-linear-gradient(90deg,#
 .wardrobe-parts small{ opacity:.7; }
 body.mode-ame .wardrobe-card{ color:var(--ink); }
 body.office-mode .wardrobe-card-img img{ filter:grayscale(1); }
+
+/* ── 관리자 검토 창 (041) ── */
+.admin-modal{ width:min(96vw, 760px); }
+.admin-tabs{ display:flex; gap:6px; align-items:center; }
+.admin-tab-on{ background:linear-gradient(var(--pink-2),var(--pink-3)); font-weight:bold; }
+.admin-card{ display:flex; flex-direction:column; gap:8px; }
+.admin-reasons{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; }
+.admin-reason{ background:#ffd6ee; color:var(--magenta-d); border:1px solid var(--pink-3); padding:1px 7px; border-radius:8px; font-weight:bold; }
+.admin-meta{ font-size:11px; color:var(--ink-soft); }
+.admin-notes{ margin:0; padding-left:18px; font-size:12px; color:var(--ink); }
+.admin-fields{ display:flex; flex-direction:column; gap:6px; font-size:12px; }
+.admin-fields label{ display:flex; flex-direction:column; gap:3px; color:var(--magenta-d); font-weight:bold; }
+.admin-fields label.admin-inline{ flex-direction:row; align-items:center; gap:8px; }
+.admin-fields input, .admin-fields textarea{
+  font:inherit; font-size:12px; font-weight:normal; color:var(--ink); padding:4px 6px;
+  background:#fff; border:2px solid; border-color:var(--bevel-dk2) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk2);
+  resize:vertical;
+}
+.admin-actions{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.admin-error{ font-size:12px; color:#b0003a; background:#ffe3ec; padding:4px 8px; border:1px solid #f4a3bf; }
+.admin-history{ width:100%; border-collapse:collapse; font-size:12px; }
+.admin-history td{ padding:3px 6px; border-bottom:1px solid var(--pink-2); vertical-align:top; }
+.admin-history-label{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-history-date{ color:var(--ink-soft); white-space:nowrap; }
+.menu-badge{
+  display:inline-block; min-width:16px; padding:0 5px; margin-left:4px; border-radius:9px;
+  background:#e0004f; color:#fff; font-size:10px; font-weight:bold; line-height:16px; text-align:center;
+}
