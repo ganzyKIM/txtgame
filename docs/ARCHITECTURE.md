@@ -475,7 +475,7 @@ Gemini 대신 **맥의 Ollama** 가 처리한다. 출제(`quiz_gen`)는 그대�
 브라우저 ─ proxyGenerateText('quiz_judge') ─▶ 엣지 generate-text
    ├─ config.local_llm 있음 → POST {url}/judge (Bearer token, 8초) → 성공이면 credits 0, via:'local'
    └─ 없음·실패·타임아웃 → 종전 Gemini 경로 (크레딧 차감)
-{url} = cloudflared 임시 터널 ─▶ tools/local-llm/server.mjs (:8787) ─▶ ollama (:11434, gemma3:4b)
+{url} = cloudflared 임시 터널 ─▶ tools/local-llm/server.mjs (:8787) ─▶ ollama (:11434, qwen2.5:7b)
 ```
 
 - 서버: `tools/local-llm/server.mjs`. LaunchAgent `~/Library/LaunchAgents/com.txtgame.local-llm.plist`
@@ -486,6 +486,12 @@ Gemini 대신 **맥의 Ollama** 가 처리한다. 출제(`quiz_gen`)는 그대�
   service_role 만 읽으므로 클라에 새지 않는다.
 - 엣지 함수 소스 사본: `supabase/functions/generate-text/index.ts`. 배포는 대시보드 Edge Functions
   편집기에 붙여 "Deploy updates" (CLI 로그인 없이 쓰는 경로).
+- **오탐 사고(2026-10-11)**: gemma3:4b 가 "우치하 이타치" 문제에서 "오로치마루" 를 정답으로 인정. 같은 작품의
+  다른 인물·형제 관계(마리오←루이지)·같은 유형의 다른 사건(임진왜란←병자호란)에서 3/15 오탐.
+  두 가지로 고쳤다. ① 판정 모델을 **qwen2.5:7b** 로 교체 — 같은 오탐 세트 18/18, 오탐 0 (gemma3:12b 는
+  4 오탐으로 더 나빴다). ② 엣지 함수가 로컬 응답을 파싱해 `correct:true` 또는 `verdict:"정답"` 이면
+  **Gemini 로 한 번 더 확인**하고 Gemini 판정을 돌려준다(`via:'gemini-confirm'` 경로 = 일반 Gemini 응답).
+  틀린 추측이 대부분이라 확인 호출은 드물다. Gemini 가 실패하면 로컬 판정을 `via:'local-unconfirmed'` 로 쓴다.
 - 모델 선택 실측(M4 16GB, 실제 프롬프트): gemma3:4b 퀴즈 판정 11/12·수프 최종추측 4/4·예/아니오 3/5,
   중앙 1.7~3.9초. gemma3:12b 는 수프 4/5 지만 중앙 6초·최대 30초라 탈락. exaone3.5:2.4b 는 8/12 로 탈락.
   수프 예/아니오에서 "진상에 없는 사실" 질문을 '아니오' 대신 '상관없음' 으로 답하는 경향이 있다(허용).

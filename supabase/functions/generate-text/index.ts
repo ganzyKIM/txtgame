@@ -23,6 +23,17 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+/** 판정 응답이 "정답" 인가 — 퀴즈 {correct:true} / 수프 {verdict:"정답"} / 수프 최종추측 {correct:true} */
+function localSaysCorrect(text: string): boolean {
+  try {
+    const s = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    const o = JSON.parse(s) as { correct?: unknown; verdict?: unknown };
+    return o.correct === true || o.verdict === '정답';
+  } catch {
+    return false;
+  }
+}
+
 function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -85,6 +96,7 @@ Deno.serve(async (req) => {
     // 터널 주소를 올려 둔다. 판정·예/아니오·힌트처럼 짧고 잦은 호출은 거기로 보내 크레딧을
     // 안 깎고, 꺼져 있거나 8초 안에 답이 없으면 아래 Gemini 경로로 그대로 내려간다.
     const local = cfg.local_llm as { url?: string; token?: string; model?: string } | undefined;
+    let localPositive: string | null = null; // 로컬이 정답이라 한 응답 — Gemini 가 실패하면 이걸 쓴다
     if (tier === 'quiz_judge' && local?.url && local?.token) {
       try {
         const lRes = await fetch(`${local.url}/judge`, {
@@ -96,7 +108,13 @@ Deno.serve(async (req) => {
         if (lRes.ok) {
           const lData = await lRes.json();
           if (typeof lData.text === 'string' && lData.text.trim()) {
-            return json({ text: lData.text, balance: prof.credits, credits: 0, usage: { in: lData.in ?? 0, out: lData.out ?? 0 }, via: 'local' });
+            // 로컬이 "정답" 이라고 하면 Gemini 로 한 번 더 확인한다 — 작은 모델은 같은 작품의
+            // 다른 인물을 정답으로 봐 주는 오탐이 있었다(우치하 이타치 ← 오로치마루). 틀린
+            // 추측이 대부분이라 확인 호출은 드물고, 오답 판정은 로컬 그대로 쓴다.
+            if (!localSaysCorrect(lData.text)) {
+              return json({ text: lData.text, balance: prof.credits, credits: 0, usage: { in: lData.in ?? 0, out: lData.out ?? 0 }, via: 'local' });
+            }
+            localPositive = lData.text;
           }
         }
       } catch (_e) {
@@ -123,7 +141,10 @@ Deno.serve(async (req) => {
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     );
     const gData = await gRes.json();
-    if (gData.error) return json({ error: gData.error.message }, 502);
+    if (gData.error) {
+      if (localPositive) return json({ text: localPositive, balance: prof.credits, credits: 0, usage: { in: 0, out: 0 }, via: 'local-unconfirmed' });
+      return json({ error: gData.error.message }, 502);
+    }
 
     const text: string = (gData.candidates?.[0]?.content?.parts ?? [])
       .map((p: { text?: string }) => p.text ?? '').join('');
