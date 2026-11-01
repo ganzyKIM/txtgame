@@ -1,0 +1,22 @@
+[
+{"answer":"백년 전쟁","acceptable":["100년 전쟁","백년전쟁"],"note":"14~15세기 잉글랜드와 프랑스의 왕위 계승 전쟁, 잔 다르크 활약","wikiTitle":"백년 전쟁","wikiTitleEn":"Hundred Years' War"},
+{"answer":"장미 전쟁","acceptable":["장미전쟁"],"note":"15세기 잉글랜드 랭커스터가와 요크가의 왕위 다툼","wikiTitleEn":"Wars of the Roses"},
+{"answer":"30년 전쟁","acceptable":["삼십년 전쟁","삼십년전쟁","30년전쟁"],"note":"1618년 보헤미아 반란으로 시작된 신성 로마 제국 중심의 종교 전쟁","wikiTitleEn":"Thirty Years' War"},
+{"answer":"베스트팔렌 조약","acceptable":["웨스트팔리아 조약","베스트팔리아 조약","베스트팔렌 평화 조약"],"note":"1648년 30년 전쟁을 끝낸 조약, 주권 국가 체제의 기원","wikiTitleEn":"Peace of Westphalia"},
+{"answer":"빈 회의","acceptable":["비엔나 회의","빈 체제 회의"],"note":"1814~1815년 나폴레옹 전쟁 이후 유럽 질서를 재편한 국제회의","wikiTitleEn":"Congress of Vienna"},
+{"answer":"크림 전쟁","acceptable":["크림전쟁","크리미아 전쟁"],"note":"1853~1856년 러시아와 오스만·영국·프랑스 연합의 전쟁, 나이팅게일 활약","wikiTitleEn":"Crimean War"},
+{"answer":"아편 전쟁","acceptable":["아편전쟁","제1차 아편 전쟁"],"note":"1840년대 영국과 청나라 사이의 전쟁, 난징 조약으로 종결","wikiTitleEn":"First Opium War"},
+{"answer":"러일 전쟁","acceptable":["러일전쟁","노일 전쟁"],"note":"1904~1905년 만주와 한반도를 두고 일본과 러시아가 벌인 전쟁","wikiTitleEn":"Russo-Japanese War"},
+{"answer":"청일 전쟁","acceptable":["청일전쟁","갑오 전쟁"],"note":"1894~1895년 조선 문제로 일본과 청나라가 싸우고 시모노세키 조약으로 종결","wikiTitleEn":"First Sino-Japanese War"},
+{"answer":"보불 전쟁","acceptable":["프로이센-프랑스 전쟁","프랑스-프로이센 전쟁","독불 전쟁"],"note":"1870~1871년 프로이센과 프랑스의 전쟁, 독일 제국 성립으로 이어짐","wikiTitle":"프로이센-프랑스 전쟁","wikiTitleEn":"Franco-Prussian War"},
+{"answer":"베르사유 조약","acceptable":["베르사이유 조약","베르사유조약"],"note":"1919년 제1차 세계 대전 후 독일에 막대한 배상을 부과한 강화 조약","wikiTitleEn":"Treaty of Versailles"},
+{"answer":"명예혁명","acceptable":["명예 혁명"],"note":"1688년 제임스 2세를 몰아내고 윌리엄 3세를 옹립한 영국의 무혈 혁명","wikiTitleEn":"Glorious Revolution"},
+{"answer":"10월 혁명","acceptable":["러시아 10월 혁명","시월 혁명","볼셰비키 혁명"],"note":"1917년 레닌의 볼셰비키가 임시정부를 무너뜨린 러시아 혁명","wikiTitleEn":"October Revolution"},
+{"answer":"신해혁명","acceptable":["신해 혁명","중국 신해혁명"],"note":"1911년 청나라를 무너뜨리고 중화민국을 세운 중국의 혁명","wikiTitleEn":"Xinhai Revolution"},
+{"answer":"메이지 유신","acceptable":["명치유신","메이지유신"],"note":"19세기 후반 에도 막부가 무너지고 일본이 근대화를 추진한 개혁","wikiTitleEn":"Meiji Restoration"},
+{"answer":"펠로폰네소스 전쟁","acceptable":["펠로폰네소스전쟁","펠레폰네소스 전쟁"],"note":"기원전 5세기 아테네와 스파르타가 그리스 패권을 두고 싸운 전쟁","wikiTitleEn":"Peloponnesian War"},
+{"answer":"포에니 전쟁","acceptable":["포에니전쟁","포에니 전쟁들"],"note":"로마와 카르타고가 지중해 패권을 놓고 벌인 세 차례 전쟁, 한니발 등장","wikiTitleEn":"Punic Wars"},
+{"answer":"7년 전쟁","acceptable":["칠년 전쟁","7년전쟁"],"note":"1756~1763년 프로이센·영국과 오스트리아·프랑스 등이 맞선 유럽 전쟁","wikiTitleEn":"Seven Years' War"},
+{"answer":"태평천국 운동","acceptable":["태평천국의 난","태평천국","태평천국 운동"],"note":"19세기 홍수전이 이끈 청나라 말기 대규모 농민 봉기","wikiTitleEn":"Taiping Rebellion"},
+{"answer":"이란 혁명","acceptable":["이란 이슬람 혁명","이슬람 혁명","1979년 이란 혁명"],"note":"1979년 팔레비 왕조가 무너지고 호메이니가 이슬람 공화국을 세운 혁명","wikiTitleEn":"Iranian Revolution"}
+]

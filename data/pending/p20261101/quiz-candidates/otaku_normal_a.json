@@ -1,0 +1,22 @@
+[
+{"answer":"페르소나 5","acceptable":["페르소나5","Persona 5","P5"],"note":"아틀러스 JRPG, 괴도단 소재","wikiTitle":"페르소나 5","wikiTitleEn":"Persona 5","wikiTitleJa":"ペルソナ5"},
+{"answer":"드래곤 퀘스트","acceptable":["드래곤퀘스트","Dragon Quest","드퀘"],"note":"스퀘어 에닉스의 국민 JRPG 시리즈","wikiTitle":"드래곤 퀘스트","wikiTitleEn":"Dragon Quest","wikiTitleJa":"ドラゴンクエスト"},
+{"answer":"클라나드","acceptable":["CLANNAD","Clannad"],"note":"Key의 눈물 나는 비주얼 노벨","wikiTitle":"클라나드","wikiTitleEn":"Clannad (visual novel)","wikiTitleJa":"CLANNAD"},
+{"answer":"Fate/stay night","acceptable":["페이트 스테이 나이트","페이트/스테이 나이트","Fate stay night","페스나"],"note":"TYPE-MOON의 성배전쟁 비주얼 노벨","wikiTitle":"Fate/stay night","wikiTitleEn":"Fate/stay night","wikiTitleJa":"Fate/stay night"},
+{"answer":"슈타인즈 게이트","acceptable":["STEINS;GATE","Steins;Gate","슈타게"],"note":"타임리프 소재 비주얼 노벨","wikiTitle":"슈타인즈 게이트","wikiTitleEn":"Steins;Gate","wikiTitleJa":"STEINS;GATE"},
+{"answer":"도키메키 메모리얼","acceptable":["도키도키 메모리얼","ときめきメモリアル","Tokimeki Memorial"],"note":"코나미의 연애 시뮬레이션 원조","wikiTitle":"도키메키 메모리얼","wikiTitleEn":"Tokimeki Memorial","wikiTitleJa":"ときめきメモリアル"},
+{"answer":"태고의 달인","acceptable":["Taiko no Tatsujin","太鼓の達人","태고"],"note":"북을 두드리는 남코 리듬게임","wikiTitle":"태고의 달인","wikiTitleEn":"Taiko no Tatsujin","wikiTitleJa":"太鼓の達人"},
+{"answer":"아이돌마스터","acceptable":["THE IDOLM@STER","The Idolmaster","아이마스"],"note":"반다이 남코의 아이돌 프로듀스 게임","wikiTitle":"아이돌마스터","wikiTitleEn":"The Idolmaster","wikiTitleJa":"アイドルマスター"},
+{"answer":"러브 라이브!","acceptable":["러브라이브","Love Live!","러브라이브!"],"note":"스쿨 아이돌 프로젝트 미디어믹스","wikiTitle":"러브 라이브!","wikiTitleEn":"Love Live!","wikiTitleJa":"ラブライブ!"},
+{"answer":"미즈키 나나","acceptable":["水樹奈々","Nana Mizuki","미즈키나나"],"note":"성우이자 홍백 출장한 애니송 가수","wikiTitle":"미즈키 나나","wikiTitleEn":"Nana Mizuki","wikiTitleJa":"水樹奈々"},
+{"answer":"하야미 사오리","acceptable":["早見沙織","Saori Hayami","하야미사오리"],"note":"성우 겸 가수, 카미야 다이스케 아님","wikiTitle":"하야미 사오리","wikiTitleEn":"Saori Hayami","wikiTitleJa":"早見沙織"},
+{"answer":"스기타 토모카즈","acceptable":["杉田智和","Tomokazu Sugita","스기타토모카즈"],"note":"긴토키 역으로 유명한 남성 성우","wikiTitle":"스기타 도모카즈","wikiTitleEn":"Tomokazu Sugita","wikiTitleJa":"杉田智和"},
+{"answer":"키즈나 아이","acceptable":["キズナアイ","Kizuna AI","키즈나아이"],"note":"브이튜버 용어를 퍼뜨린 선구자","wikiTitle":"키즈나 아이","wikiTitleEn":"Kizuna AI","wikiTitleJa":"キズナアイ"},
+{"answer":"호로라이브","acceptable":["hololive","Hololive Production","홀로라이브"],"note":"커버 주식회사의 대형 VTuber 사무소","wikiTitle":"홀로라이브 프로덕션","wikiTitleEn":"Hololive Production","wikiTitleJa":"ホロライブプロダクション"},
+{"answer":"니지산지","acceptable":["にじさんじ","Nijisanji","NIJISANJI"],"note":"애니커러 운영 VTuber 그룹","wikiTitle":"니지산지","wikiTitleEn":"Nijisanji","wikiTitleJa":"にじさんじ"},
+{"answer":"스즈미야 하루히의 우울","acceptable":["涼宮ハルヒの憂鬱","The Melancholy of Haruhi Suzumiya","하루히"],"note":"다니가와 나가루의 대표 라이트노벨","wikiTitle":"스즈미야 하루히의 우울","wikiTitleEn":"The Melancholy of Haruhi Suzumiya","wikiTitleJa":"涼宮ハルヒシリーズ"},
+{"answer":"이 멋진 세계에 축복을!","acceptable":["이 멋진 세계에 축복을","KonoSuba","코노스바"],"note":"카즈마 일행의 이세계 코미디 라노벨","wikiTitle":"이 멋진 세계에 축복을!","wikiTitleEn":"KonoSuba","wikiTitleJa":"この素晴らしい世界に祝福を!"},
+{"answer":"Re:제로부터 시작하는 이세계 생활","acceptable":["리제로","Re:Zero","Re:ZERO"],"note":"죽어서 되돌아오는 스바루의 이야기","wikiTitle":"Re:제로부터 시작하는 이세계 생활","wikiTitleEn":"Re:Zero − Starting Life in Another World","wikiTitleJa":"Re:ゼロから始める異世界生活"},
+{"answer":"코믹마켓","acceptable":["코미케","Comiket","コミックマーケット"],"note":"일본 최대 동인지 즉매회","wikiTitle":"코믹 마켓","wikiTitleEn":"Comiket","wikiTitleJa":"コミックマーケット"},
+{"answer":"아키하바라","acceptable":["秋葉原","Akihabara","아키바"],"note":"도쿄의 오타쿠 성지 전자상가","wikiTitle":"아키하바라","wikiTitleEn":"Akihabara","wikiTitleJa":"秋葉原"}
+]
