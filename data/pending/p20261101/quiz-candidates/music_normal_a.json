@@ -1,0 +1,20 @@
+[
+{"answer":"비치 보이스","acceptable":["비치보이스","The Beach Boys","Beach Boys"],"note":"서핑 뮤직으로 유명한 미국 록 밴드","wikiTitle":"비치 보이스","wikiTitleEn":"The Beach Boys","wikiTitleJa":"ザ・ビーチ・ボーイズ"},
+{"answer":"레드 제플린","acceptable":["레드제플린","Led Zeppelin","레드 제플렌"],"note":"Stairway to Heaven을 남긴 영국 하드 록 밴드","wikiTitle":"레드 제플린","wikiTitleEn":"Led Zeppelin","wikiTitleJa":"レッド・ツェッペリン"},
+{"answer":"핑크 플로이드","acceptable":["핑크플로이드","Pink Floyd"],"note":"앨범 The Dark Side of the Moon의 영국 프로그레시브 록 밴드","wikiTitle":"핑크 플로이드","wikiTitleEn":"Pink Floyd","wikiTitleJa":"ピンク・フロイド"},
+{"answer":"마일스 데이비스","acceptable":["마일즈 데이비스","Miles Davis","마일스 데이비스"],"note":"Kind of Blue를 녹음한 미국 재즈 트럼펫 연주자","wikiTitle":"마일스 데이비스","wikiTitleEn":"Miles Davis","wikiTitleJa":"マイルス・デイヴィス"},
+{"answer":"루이 암스트롱","acceptable":["루이 암스트롱","Louis Armstrong","루이스 암스트롱","새치모"],"note":"What a Wonderful World를 부른 재즈 트럼펫 연주자","wikiTitle":"루이 암스트롱","wikiTitleEn":"Louis Armstrong","wikiTitleJa":"ルイ・アームストロング"},
+{"answer":"쇼팽","acceptable":["프레데리크 쇼팽","프레데릭 쇼팽","Chopin","Frédéric Chopin"],"note":"피아노의 시인으로 불린 폴란드 낭만주의 작곡가","wikiTitle":"프레데리크 쇼팽","wikiTitleEn":"Frédéric Chopin","wikiTitleJa":"フレデリック・ショパン"},
+{"answer":"비발디","acceptable":["안토니오 비발디","Vivaldi","Antonio Vivaldi"],"note":"사계를 작곡한 이탈리아 바로크 작곡가","wikiTitle":"안토니오 비발디","wikiTitleEn":"Antonio Vivaldi","wikiTitleJa":"アントニオ・ヴィヴァルディ"},
+{"answer":"프랭크 시나트라","acceptable":["시나트라","Frank Sinatra","프랭크 시나트라"],"note":"My Way로 유명한 미국 크루너 가수","wikiTitle":"프랭크 시나트라","wikiTitleEn":"Frank Sinatra","wikiTitleJa":"フランク・シナトラ"},
+{"answer":"아바","acceptable":["ABBA","Abba"],"note":"Dancing Queen을 부른 스웨덴 4인조 팝 그룹","wikiTitle":"ABBA","wikiTitleEn":"ABBA","wikiTitleJa":"ABBA"},
+{"answer":"건즈 앤 로지스","acceptable":["건즈 앤 로지스","건즈 엔 로지스","건스 앤 로지스","Guns N' Roses","GNR"],"note":"Sweet Child o' Mine의 미국 하드 록 밴드","wikiTitle":"건즈 앤 로지스","wikiTitleEn":"Guns N' Roses","wikiTitleJa":"ガンズ・アンド・ローゼズ"},
+{"answer":"메탈리카","acceptable":["Metallica","메탈리카"],"note":"Master of Puppets를 낸 미국 스래시 메탈 밴드","wikiTitle":"메탈리카","wikiTitleEn":"Metallica","wikiTitleJa":"メタリカ"},
+{"answer":"소녀시대","acceptable":["SNSD","Girls' Generation","소시"],"note":"Gee, Genie로 알려진 SM 소속 9인조 걸그룹","wikiTitle":"소녀시대","wikiTitleEn":"Girls' Generation","wikiTitleJa":"少女時代"},
+{"answer":"엘튼 존","acceptable":["엘튼존","Elton John","엘턴 존"],"note":"Your Song, Rocket Man의 영국 피아노 팝 가수","wikiTitle":"엘턴 존","wikiTitleEn":"Elton John","wikiTitleJa":"エルトン・ジョン"},
+{"answer":"데이비드 보위","acceptable":["데이빗 보위","David Bowie","보위","지기 스타더스트"],"note":"Space Oddity, Heroes의 영국 글램 록 가수","wikiTitle":"데이비드 보위","wikiTitleEn":"David Bowie","wikiTitleJa":"デヴィッド・ボウイ"},
+{"answer":"존 콜트레인","acceptable":["존 콜트레인","콜트레인","John Coltrane","존 콜트레인"],"note":"A Love Supreme을 녹음한 미국 재즈 색소폰 연주자","wikiTitle":"존 콜트레인","wikiTitleEn":"John Coltrane","wikiTitleJa":"ジョン・コルトレーン"},
+{"answer":"아델","acceptable":["Adele","아델"],"note":"Hello, Rolling in the Deep를 부른 영국 여가수","wikiTitle":"아델","wikiTitleEn":"Adele","wikiTitleJa":"アデル"},
+{"answer":"라디오헤드","acceptable":["Radiohead","라디오 헤드"],"note":"Creep, OK Computer의 영국 얼터너티브 록 밴드","wikiTitle":"라디오헤드","wikiTitleEn":"Radiohead","wikiTitleJa":"レディオヘッド"},
+{"answer":"에어로스미스","acceptable":["Aerosmith","에어로 스미스"],"note":"I Don't Want to Miss a Thing의 미국 하드 록 밴드","wikiTitle":"에어로스미스","wikiTitleEn":"Aerosmith","wikiTitleJa":"エアロスミス"}
+]

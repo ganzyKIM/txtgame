@@ -1,0 +1,22 @@
+[
+{"answer":"장영실","acceptable":["蔣英實"],"note":"조선 세종 때 자격루를 만든 천문기구 제작자"},
+{"answer":"이븐 시나","acceptable":["아비센나","Avicenna","이븐시나"],"note":"『의학정전』을 저술한 페르시아의 의학자·철학자","wikiTitle":"이븐 시나"},
+{"answer":"알하이삼","acceptable":["이븐 알하이삼","알하젠","Alhazen"],"note":"『광학서』를 저술한 중세 이슬람 광학자","wikiTitle":"이븐 알하이삼"},
+{"answer":"티코 브라헤","acceptable":["튀코 브라헤","Tycho Brahe"],"note":"케플러의 스승이었던 덴마크의 관측 천문학자"},
+{"answer":"알렉산더 폰 훔볼트","acceptable":["훔볼트","Alexander von Humboldt"],"note":"남미를 탐험하고 『코스모스』를 쓴 독일 박물학자"},
+{"answer":"가스파르 몽주","acceptable":["Gaspard Monge","몽주"],"note":"화법기하학을 창시한 프랑스 수학자"},
+{"answer":"안토니 판 레이우엔훅","acceptable":["레이우엔훅","Antonie van Leeuwenhoek"],"note":"현미경으로 미생물을 처음 관찰한 네덜란드인"},
+{"answer":"카를 린네","acceptable":["칼 린네","Carl Linnaeus","린네"],"note":"이명법을 확립한 스웨덴의 분류학자"},
+{"answer":"비투스 베링","acceptable":["Vitus Bering","베링"],"note":"베링 해협에 이름을 남긴 덴마크 출신 러시아 탐험가"},
+{"answer":"아문센","acceptable":["로알 아문센","로알드 아문센","Roald Amundsen"],"note":"최초로 남극점에 도달한 노르웨이 탐험가","wikiTitle":"로알 아문센"},
+{"answer":"어니스트 섀클턴","acceptable":["섀클턴","어니스트 섀클튼","Ernest Shackleton"],"note":"인듀어런스호 탐험을 이끈 영국계 아일랜드 극지 탐험가"},
+{"answer":"이븐 바투타","acceptable":["Ibn Battuta"],"note":"『여행기』를 남긴 14세기 모로코 출신 여행가"},
+{"answer":"정약용","acceptable":["다산 정약용","茶山"],"note":"『목민심서』를 저술한 조선 후기 실학자"},
+{"answer":"김정호","acceptable":["고산자 김정호"],"note":"『대동여지도』를 제작한 조선 후기 지리학자","wikiTitle":"김정호 (지리학자)"},
+{"answer":"혜초","acceptable":["慧超"],"note":"『왕오천축국전』을 저술한 신라 승려"},
+{"answer":"심괄","acceptable":["선쿼","Shen Kuo","沈括"],"note":"『몽계필담』을 저술한 북송의 박학자"},
+{"answer":"조충지","acceptable":["Zu Chongzhi","祖沖之"],"note":"원주율을 소수 일곱째 자리까지 계산한 남북조 시대 수학자"},
+{"answer":"세키 다카카즈","acceptable":["세키 고와","Seki Takakazu","관효화"],"note":"일본 화산(和算)을 발전시킨 에도 시대 수학자","wikiTitle":"세키 다카카즈"},
+{"answer":"에바리스트 갈루아","acceptable":["갈루아","Évariste Galois"],"note":"군론의 기초를 놓고 결투로 요절한 프랑스 수학자"},
+{"answer":"마리 퀴리","acceptable":["퀴리 부인","Marie Curie"],"note":"방사능을 연구해 노벨상을 두 번 받은 폴란드 출신 과학자"}
+]
