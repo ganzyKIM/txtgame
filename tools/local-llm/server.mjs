@@ -23,7 +23,7 @@ const OLLAMA = env.OLLAMA_HOST?.startsWith('http') ? env.OLLAMA_HOST : 'http://1
 const MODEL = env.LOCAL_LLM_MODEL ?? 'gemma3:4b';
 const TOKEN = env.LOCAL_LLM_TOKEN;
 const KEEP_ALIVE = '24h'; // 모델을 메모리에 상주 — 첫 토큰 지연(수 초) 제거
-const GEN_TIMEOUT_MS = 12000;
+const GEN_TIMEOUT_MS = 30000; // 엣지가 20초·25초로 끊는다 — 서버는 그보다 넉넉히
 if (!TOKEN) { console.error('LOCAL_LLM_TOKEN 이 .env.local 에 없다'); process.exit(1); }
 
 function loadEnv(file) {
@@ -54,7 +54,7 @@ async function ensureOllama() {
 }
 async function warm() {
   try {
-    await fetch(`${OLLAMA}/api/chat`, { method: 'POST', body: JSON.stringify({ model: MODEL, stream: false, keep_alive: KEEP_ALIVE, messages: [{ role: 'user', content: 'ok' }], options: { num_predict: 1 } }) });
+    await fetch(`${OLLAMA}/api/chat`, { method: 'POST', body: JSON.stringify({ model: MODEL, stream: false, keep_alive: KEEP_ALIVE, messages: [{ role: 'user', content: 'ok' }], options: { num_predict: 1, num_ctx: 2048 } }) /* 판정과 같은 ctx 로 올려야 첫 판정에서 모델을 다시 안 싣는다 */ });
     log(`모델 워밍업 완료: ${MODEL}`);
   } catch (e) { log('워밍업 실패', e.message); }
 }
@@ -70,7 +70,7 @@ async function judge(body) {
     signal: AbortSignal.timeout(GEN_TIMEOUT_MS),
     body: JSON.stringify({
       model: body.model ?? MODEL, stream: false, format: 'json', keep_alive: KEEP_ALIVE, messages,
-      options: { temperature: body.temperature ?? 0, num_predict: 220, num_ctx: 4096 },
+      options: { temperature: body.temperature ?? 0, num_predict: 160, num_ctx: 2048 }, // 판정 프롬프트는 ~500토큰
     }),
   });
   if (!r.ok) throw new Error(`ollama ${r.status}`);

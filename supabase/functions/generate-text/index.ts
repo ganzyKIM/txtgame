@@ -93,32 +93,40 @@ Deno.serve(async (req) => {
 
     // ── 로컬 판정 모델 우선 (tier quiz_judge) ──
     // 맥에서 도는 Ollama 판정 서버(tools/local-llm/server.mjs)가 config.local_llm 에 자기
-    // 터널 주소를 올려 둔다. 판정·예/아니오·힌트처럼 짧고 잦은 호출은 거기로 보내 크레딧을
-    // 안 깎고, 꺼져 있거나 8초 안에 답이 없으면 아래 Gemini 경로로 그대로 내려간다.
+    // 터널 주소를 올려 둔다. 판정·예/아니오·힌트·최종추측은 거기로 보내 크레딧을 안 깎는다.
+    // 순서: 로컬(20초) → Gemini → (Gemini 도 실패하면) 로컬 한 번 더(25초).
+    // 2026-11-12: 맥 부하가 높을 때 로컬이 8초를 넘겨 Gemini 로 갔고, 그 Gemini 선불 잔액이
+    // 바닥나 수프 판정이 통째로 실패했다 — 첫 타임아웃을 늘리고 Gemini 실패 시 로컬 재시도를 둔다.
     const local = cfg.local_llm as { url?: string; token?: string; model?: string } | undefined;
-    let localPositive: string | null = null; // 로컬이 정답이라 한 응답 — Gemini 가 실패하면 이걸 쓴다
-    if (tier === 'quiz_judge' && local?.url && local?.token) {
+    const useLocal = tier === 'quiz_judge' && !!local?.url && !!local?.token;
+    let localPositive: string | null = null; // 로컬이 정답이라 한 응답 — Gemini 확인이 실패하면 이걸 쓴다
+    const callLocal = async (timeoutMs: number): Promise<{ text: string; in: number; out: number } | null> => {
       try {
-        const lRes = await fetch(`${local.url}/judge`, {
+        const lRes = await fetch(`${local!.url}/judge`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${local.token}` },
-          body: JSON.stringify({ messages, system, temperature: temperature ?? 0, model: local.model }),
-          signal: AbortSignal.timeout(8000),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${local!.token}` },
+          body: JSON.stringify({ messages, system, temperature: temperature ?? 0, model: local!.model }),
+          signal: AbortSignal.timeout(timeoutMs),
         });
-        if (lRes.ok) {
-          const lData = await lRes.json();
-          if (typeof lData.text === 'string' && lData.text.trim()) {
-            // 로컬이 "정답" 이라고 하면 Gemini 로 한 번 더 확인한다 — 작은 모델은 같은 작품의
-            // 다른 인물을 정답으로 봐 주는 오탐이 있었다(우치하 이타치 ← 오로치마루). 틀린
-            // 추측이 대부분이라 확인 호출은 드물고, 오답 판정은 로컬 그대로 쓴다.
-            if (!localSaysCorrect(lData.text)) {
-              return json({ text: lData.text, balance: prof.credits, credits: 0, usage: { in: lData.in ?? 0, out: lData.out ?? 0 }, via: 'local' });
-            }
-            localPositive = lData.text;
-          }
-        }
+        if (!lRes.ok) return null;
+        const lData = await lRes.json();
+        if (typeof lData.text !== 'string' || !lData.text.trim()) return null;
+        return { text: lData.text, in: lData.in ?? 0, out: lData.out ?? 0 };
       } catch (_e) {
-        // 로컬 불가 → Gemini 폴백
+        return null;
+      }
+    };
+    const localReply = (r: { text: string; in: number; out: number }, via: string) =>
+      json({ text: r.text, balance: prof.credits, credits: 0, usage: { in: r.in, out: r.out }, via });
+
+    if (useLocal) {
+      const first = await callLocal(20000);
+      if (first) {
+        // 로컬이 "정답" 이라고 하면 Gemini 로 한 번 더 확인한다 — 작은 모델은 같은 작품의
+        // 다른 인물을 정답으로 봐 주는 오탐이 있었다(우치하 이타치 ← 오로치마루). 틀린
+        // 추측이 대부분이라 확인 호출은 드물고, 오답 판정은 로컬 그대로 쓴다.
+        if (!localSaysCorrect(first.text)) return localReply(first, 'local');
+        localPositive = first.text;
       }
     }
 
@@ -136,14 +144,28 @@ Deno.serve(async (req) => {
     };
     if (system) body.system_instruction = { parts: [{ text: system }] };
 
-    const gRes = await fetch(
-      `${GEMINI_BASE}/models/${m.model}:generateContent?key=${GEMINI_API_KEY}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
-    );
-    const gData = await gRes.json();
+    let gData: any;
+    try {
+      const gRes = await fetch(
+        `${GEMINI_BASE}/models/${m.model}:generateContent?key=${GEMINI_API_KEY}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+      );
+      gData = await gRes.json();
+    } catch (e) {
+      gData = { error: { message: String((e as Error)?.message ?? e) } };
+    }
     if (gData.error) {
+      // Gemini 불가(선불 잔액 소진·장애) — 판정이면 로컬로 마무리한다
       if (localPositive) return json({ text: localPositive, balance: prof.credits, credits: 0, usage: { in: 0, out: 0 }, via: 'local-unconfirmed' });
-      return json({ error: gData.error.message }, 502);
+      if (useLocal) {
+        const retry = await callLocal(25000);
+        if (retry) return localReply(retry, 'local-retry');
+      }
+      const msg = String(gData.error.message ?? '');
+      if (/prepay|credits are depleted|billing|quota|RESOURCE_EXHAUSTED/i.test(msg)) {
+        return json({ error: 'AI 서버가 잠시 바빠요. 잠시 후 다시 시도해 주세요.' }, 503);
+      }
+      return json({ error: msg }, 502);
     }
 
     const text: string = (gData.candidates?.[0]?.content?.parts ?? [])

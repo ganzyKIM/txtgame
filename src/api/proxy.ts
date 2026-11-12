@@ -31,7 +31,8 @@ export interface TextResult {
 // 멈추면 이 호출이 영원히 안 끝나서 출제(generatePuzzle)가 "무한 로딩"에 빠진다.
 // 클라이언트 쪽에서 강제로 끊어 에러로 던지면, 호출부의 기존 try/catch가
 // "출제 실패, 다시 시도해줘" 흐름으로 정상 복구한다.
-const TEXT_TIMEOUT_MS = 45000;
+// 판정은 서버에서 로컬(20초) → Gemini → 로컬 재시도(25초) 까지 갈 수 있어 넉넉히 둔다
+const TEXT_TIMEOUT_MS = 60000;
 
 // 데스크톱 PWA(독립 창)는 포커스를 오래 안 받으면 OS가 JS 타이머를 스로틀링해서
 // Supabase의 자동 토큰 갱신 타이머가 제때 안 돌 수 있다 — 그 상태로 오래 놔뒀다가
