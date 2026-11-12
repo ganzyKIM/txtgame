@@ -63,7 +63,9 @@ async function warm() {
 let inflight = 0, served = 0, failed = 0;
 async function judge(body) {
   const messages = [];
-  if (body.system) messages.push({ role: 'system', content: String(body.system) });
+  // 응답 길이가 곧 지연이다 — 판정 JSON 의 설명 필드는 짧게. (힌트 본문은 건드리지 않는다)
+  const BREVITY = 'JSON 의 comment·reason 값은 25자 이내의 한 문장으로 짧게 써라.';
+  messages.push({ role: 'system', content: body.system ? `${String(body.system)}\n${BREVITY}` : BREVITY });
   for (const m of body.messages ?? []) messages.push({ role: m.role === 'model' ? 'assistant' : 'user', content: String(m.text ?? m.content ?? '') });
   const r = await fetch(`${OLLAMA}/api/chat`, {
     method: 'POST',
