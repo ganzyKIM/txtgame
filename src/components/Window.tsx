@@ -50,7 +50,7 @@ export default function Window({
         {/* 타이틀바 — 사회인모드는 위장 문구만 (게임 정체를 드러내는 유일한 텍스트라 계속 가림) */}
         <div className="titlebar">
           {officeMode ? (
-            <span className="title-text">2026년_1분기_실적현황.xlsx - Excel</span>
+            <span className="title-text">2027년_1분기_실적현황.xlsx - Excel</span>
           ) : (
             <span className="title-text">초텐짱의 편차치99 ✞퀴즈대합전✞ <span className="blink">♥</span></span>
           )}
